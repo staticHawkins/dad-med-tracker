@@ -415,7 +415,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 
 <script type="module">
 import { initializeApp }                        from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup,
+import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult,
          signOut, onAuthStateChanged }           from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { getFirestore, collection, doc,
          setDoc, deleteDoc, onSnapshot }         from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -436,6 +436,10 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+
+// Handle redirect result for mobile browsers (e.g. iOS Safari) that fall back
+// from signInWithPopup to a redirect flow due to storage partitioning.
+getRedirectResult(auth).catch(() => {});
 
 // ── STATE ──
 let meds = [], filter = 'all', editId = null, unsubMeds = null;
