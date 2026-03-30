@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Appointments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F1117; --panel:#181B23; --panel2:#1E2230;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
+  --text:#E8EAF0; --text2:#8B8FA8; --text3:#555870;
+  --red:#FF5C5C; --red-dim:rgba(255,92,92,.12); --red-border:rgba(255,92,92,.25);
+  --amber:#F0A030; --amber-dim:rgba(240,160,48,.12); --amber-border:rgba(240,160,48,.25);
+  --green:#3DD68C; --green-dim:rgba(61,214,140,.10); --green-border:rgba(61,214,140,.22);
+  --blue:#4D9EFF; --blue-dim:rgba(77,158,255,.12); --blue-border:rgba(77,158,255,.25);
+  --ff:'Inter',sans-serif; --ffm:'JetBrains Mono',monospace;
+}
+html,body{height:100%}
+body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* ── MOCKUP BANNER ── */
+.mockup-banner{
+  background:rgba(77,158,255,.1);border-bottom:1px solid rgba(77,158,255,.2);
+  padding:8px 28px;font-size:12px;color:var(--blue);text-align:center;font-family:var(--ffm);
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;height:54px;gap:16px;position:sticky;top:0;z-index:10;
+}
+.brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--text);white-space:nowrap}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);flex-shrink:0}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-date{font-size:12px;color:var(--text2);font-family:var(--ffm)}
+.topbar-user{font-size:12px;color:var(--text3);font-family:var(--ffm)}
+.btn-add{
+  font-family:var(--ff);font-size:13px;font-weight:600;
+  background:var(--green);color:#071a0e;border:none;border-radius:7px;
+  padding:7px 16px;cursor:pointer;display:flex;align-items:center;gap:5px;
+  transition:opacity .15s;white-space:nowrap;flex-shrink:0;
+}
+.btn-add:hover{opacity:.85}
+.btn-ghost{
+  font-family:var(--ff);font-size:12px;font-weight:500;
+  padding:6px 11px;border:1px solid var(--border2);border-radius:7px;
+  background:transparent;color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.btn-ghost:hover{background:var(--panel2);color:var(--text)}
+
+/* ── PAGE ── */
+.page{max-width:860px;margin:0 auto;padding:20px 24px 64px}
+
+/* ── PAGE TABS ── */
+.page-tabs{
+  display:flex;gap:2px;margin-bottom:28px;border-bottom:1px solid var(--border);
+}
+.ptab{
+  font-family:var(--ff);font-size:13px;font-weight:600;
+  padding:10px 20px;border:none;background:transparent;
+  color:var(--text2);cursor:pointer;position:relative;transition:color .15s;
+}
+.ptab:hover{color:var(--text)}
+.ptab.active{color:var(--text)}
+.ptab.active::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;
+  background:var(--green);border-radius:2px 2px 0 0;
+}
+
+/* ── HERO CARD ── */
+.hero-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:20px 24px;margin-bottom:28px;
+  display:flex;align-items:center;gap:20px;
+  position:relative;overflow:hidden;
+}
+.hero-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--green);
+}
+.hero-card-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--green);margin-bottom:6px;
+}
+.hero-card-title{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.3px;margin-bottom:6px}
+.hero-card-time{
+  font-family:var(--ffm);font-size:16px;font-weight:600;color:var(--green);
+  margin-bottom:6px;letter-spacing:-.3px;
+}
+.hero-card-meta{font-size:13px;color:var(--text2)}
+.hero-date-block{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--green-dim);border:1px solid var(--green-border);
+  border-radius:10px;padding:12px 16px;min-width:72px;text-align:center;flex-shrink:0;
+}
+.hero-date-month{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);font-family:var(--ffm)}
+.hero-date-day{font-size:38px;font-weight:700;letter-spacing:-2px;line-height:1;color:var(--green);font-family:var(--ffm)}
+.hero-body{flex:1;min-width:0}
+
+/* ── SEARCH ── */
+.agenda-controls{margin-bottom:20px}
+.search-wrap{position:relative;max-width:240px}
+.search-input{
+  width:100%;font-family:var(--ff);font-size:13px;
+  padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:8px;
+  background:var(--panel);color:var(--text);outline:none;transition:border-color .15s;
+}
+.search-input:focus{border-color:rgba(255,255,255,.22)}
+.search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px;pointer-events:none}
+
+/* ── AGENDA GROUPS ── */
+.agenda-group{margin-bottom:24px}
+.group-hdr{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.group-label{
+  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text3);white-space:nowrap;
+}
+.group-label.today-lbl{color:var(--blue)}
+.group-line{flex:1;height:1px;background:var(--border)}
+.group-count{
+  font-size:11px;font-family:var(--ffm);color:var(--text3);
+  background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:1px 8px;
+}
+
+/* ── APPOINTMENT CARD ── */
+.apt-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;display:flex;align-items:center;gap:14px;
+  margin-bottom:6px;transition:background .12s,border-color .12s;position:relative;overflow:hidden;
+  cursor:default;
+}
+.apt-card:hover{background:var(--panel2);border-color:var(--border2)}
+.apt-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.apt-card.today::before{background:var(--blue)}
+.apt-card.soon::before{background:var(--amber)}
+.apt-card.upcoming::before{background:var(--green)}
+.apt-card.past::before{background:rgba(255,255,255,.08)}
+
+/* date block */
+.apt-date{
+  display:flex;flex-direction:column;align-items:center;
+  min-width:40px;flex-shrink:0;text-align:center;
+}
+.apt-date-month{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-family:var(--ffm)}
+.apt-date-day{font-size:22px;font-weight:700;letter-spacing:-1px;line-height:1.1;font-family:var(--ffm);color:var(--text)}
+.apt-card.today .apt-date-day{color:var(--blue)}
+.apt-card.past .apt-date-day,.apt-card.past .apt-date-month{color:var(--text3)}
+
+.apt-divider{width:1px;background:var(--border);align-self:stretch;flex-shrink:0;margin:2px 0}
+
+/* body */
+.apt-body{flex:1;min-width:0}
+.apt-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apt-card.past .apt-title{color:var(--text2)}
+.apt-time{font-family:var(--ffm);font-size:13px;font-weight:600;color:var(--text);margin-top:3px}
+.apt-card.past .apt-time{color:var(--text3)}
+.apt-card.today .apt-time{color:var(--blue)}
+.apt-card.soon .apt-time{color:var(--amber)}
+.apt-card.upcoming .apt-time{color:var(--green)}
+.apt-meta{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.apt-doctor,.apt-location{font-size:12px;color:var(--text2)}
+.apt-card.past .apt-doctor,.apt-card.past .apt-location{color:var(--text3)}
+.apt-sep{color:var(--border2);font-size:11px}
+.type-chip{
+  font-size:10px;font-weight:600;letter-spacing:.3px;
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:4px;padding:2px 6px;font-family:var(--ffm);color:var(--text3);white-space:nowrap;
+}
+.notes-icon{
+  font-size:12px;color:var(--text3);cursor:default;
+  title:"Has notes";
+}
+
+/* actions — icon only */
+.apt-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.act-icon{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;border:1px solid transparent;background:transparent;
+  cursor:pointer;transition:all .12s;color:var(--text3);font-size:14px;
+}
+.act-icon:hover{background:var(--panel2);border-color:var(--border2);color:var(--text)}
+.act-icon.del:hover{background:var(--red-dim);border-color:var(--red-border);color:var(--red)}
+
+/* ── PAST TOGGLE ── */
+.past-toggle{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:12px;color:var(--text3);padding:8px 0;
+  border:none;background:transparent;font-family:var(--ff);
+  transition:color .12s;
+}
+.past-toggle:hover{color:var(--text2)}
+.past-toggle-icon{font-size:11px;transition:transform .2s}
+.past-toggle-icon.open{transform:rotate(180deg)}
+.past-content{display:none}
+.past-content.open{display:block}
+
+/* past cards dimmed */
+.past-group-wrap{opacity:.55;transition:opacity .15s}
+.past-group-wrap:hover{opacity:.8}
+
+/* ── MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.72);
+  display:none;align-items:center;justify-content:center;z-index:300;padding:1rem;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--panel);border:1px solid var(--border2);border-radius:13px;
+  padding:1.75rem;width:100%;max-width:500px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);animation:mIn .18s ease;max-height:90vh;overflow-y:auto;
+}
+@keyframes mIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.modal h2{font-size:16px;font-weight:700;color:var(--text);margin-bottom:1.25rem}
+.fr{margin-bottom:11px}
+.fr label{display:block;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.req{color:var(--red)}
+.fr input,.fr textarea,.fr select{
+  width:100%;font-family:var(--ff);font-size:14px;
+  padding:9px 11px;border:1px solid var(--border2);border-radius:7px;
+  background:var(--panel2);color:var(--text);outline:none;transition:border-color .15s;appearance:none;
+}
+.fr input:focus,.fr textarea:focus,.fr select:focus{border-color:rgba(255,255,255,.26)}
+.fr textarea{resize:vertical;min-height:72px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mf{display:flex;justify-content:flex-end;gap:8px;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)}
+.btn-cx{font-family:var(--ff);font-size:13px;font-weight:500;padding:8px 15px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
+.btn-cx:hover{background:var(--panel2)}
+.btn-sv{font-family:var(--ff);font-size:13px;font-weight:600;padding:8px 20px;border-radius:7px;border:none;background:var(--green);color:#071a0e;cursor:pointer;transition:opacity .15s}
+.btn-sv:hover{opacity:.87}
+.modal-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+/* meds placeholder */
+.meds-placeholder{text-align:center;padding:64px 24px;color:var(--text2)}
+
+@media(max-width:700px){
+  .page{padding:14px 14px 48px}
+  .topbar-user,.topbar-date{display:none}
+  .topbar{padding:8px;gap:6px;height:auto}
+  .brand{font-size:14px}
+  .btn-add{font-size:12px;padding:6px 10px}
+  .ptab{font-size:12px;padding:8px 14px}
+  .hero-card{flex-direction:column;align-items:flex-start;gap:12px}
+  .hero-date-block{flex-direction:row;align-items:baseline;gap:8px;padding:8px 14px}
+  .hero-date-day{font-size:28px}
+  .hero-card-title{font-size:17px}
+  .apt-card{gap:10px}
+  .f2{grid-template-columns:1fr}
+  .modal{padding:1.25rem}
+  .search-wrap{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-banner">DESIGN MOCKUP — Static preview, no data is saved</div>
+
+<header class="topbar">
+  <div class="brand"><div class="brand-dot"></div>Dad's Medications</div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="today-lbl"></span>
+    <span class="topbar-user">dad@example.com</span>
+    <button class="btn-ghost">Sign out</button>
+    <button class="btn-add" id="add-btn" onclick="handleAdd()">＋ Add appointment</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- PAGE TABS -->
+  <div class="page-tabs">
+    <button class="ptab" id="tab-meds" onclick="switchTab('meds')">Medications</button>
+    <button class="ptab active" id="tab-apts" onclick="switchTab('apts')">Appointments</button>
+  </div>
+
+  <!-- MEDICATIONS VIEW -->
+  <div id="view-meds" style="display:none">
+    <div class="meds-placeholder">← Existing medications view is unchanged</div>
+  </div>
+
+  <!-- APPOINTMENTS VIEW -->
+  <div id="view-apts">
+
+    <!-- HERO: Next Appointment -->
+    <div class="hero-card">
+      <div class="hero-date-block">
+        <div class="hero-date-month">Apr</div>
+        <div class="hero-date-day">2</div>
+      </div>
+      <div class="hero-body">
+        <div class="hero-card-label">Next appointment</div>
+        <div class="hero-card-title">Cardiology follow-up</div>
+        <div class="hero-card-time">2:00 PM · Thursday</div>
+        <div class="hero-card-meta">Dr. Chen &nbsp;·&nbsp; Heart Institute, Rm 4B</div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="agenda-controls">
+      <div class="search-wrap">
+        <span class="search-ico">🔍</span>
+        <input class="search-input" placeholder="Search appointments…">
+      </div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="agenda-group">
+      <div class="group-hdr">
+        <span class="group-label today-lbl">Today — Mar 30</span>
+        <div class="group-line"></div>
+        <span class="group-count">1</span>
+      </div>
+      <div class="apt-card today">
+        <div class="apt-date">
+          <div class="apt-date-month">Mar</div>
+          <div class="apt-date-day">30</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Primary care check-in</div>
+          <div class="apt-time">11:30 AM</div>
+          <div class="apt-meta">
+            <span class="apt-doctor">Dr. Williams</span>
+            <span class="apt-sep">·</span>
+            <span class="apt-location">MGH, Building A</span>
+            <span class="type-chip">Checkup</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- THIS WEEK -->
+    <div class="agenda-group">
+      <div class="group-hdr">
+        <span class="group-label">This week — Mar 31–Apr 5</span>
+        <div class="group-line"></div>
+        <span class="group-count">2</span>
+      </div>
+
+      <div class="apt-card soon">
+        <div class="apt-date">
+          <div class="apt-date-month">Apr</div>
+          <div class="apt-date-day">2</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Cardiology follow-up</div>
+          <div class="apt-time">2:00 PM</div>
+          <div class="apt-meta">
+            <span class="apt-doctor">Dr. Chen</span>
+            <span class="apt-sep">·</span>
+            <span class="apt-location">Heart Institute, Rm 4B</span>
+            <span class="type-chip">Specialist</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+
+      <div class="apt-card soon">
+        <div class="apt-date">
+          <div class="apt-date-month">Apr</div>
+          <div class="apt-date-day">3</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Eye exam</div>
+          <div class="apt-time">9:15 AM</div>
+          <div class="apt-meta">
+            <span class="apt-doctor">Dr. Nguyen</span>
+            <span class="apt-sep">·</span>
+            <span class="apt-location">Vision Center</span>
+            <span class="type-chip">Checkup</span>
+            <span class="notes-icon" title="Has notes">📋</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPCOMING -->
+    <div class="agenda-group">
+      <div class="group-hdr">
+        <span class="group-label">Upcoming</span>
+        <div class="group-line"></div>
+        <span class="group-count">3</span>
+      </div>
+
+      <div class="apt-card upcoming">
+        <div class="apt-date">
+          <div class="apt-date-month">Apr</div>
+          <div class="apt-date-day">14</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Kidney ultrasound</div>
+          <div class="apt-time">10:00 AM</div>
+          <div class="apt-meta">
+            <span class="apt-doctor">Dr. Patel</span>
+            <span class="apt-sep">·</span>
+            <span class="apt-location">Radiology Dept, Floor 2</span>
+            <span class="type-chip">Imaging</span>
+            <span class="notes-icon" title="Has notes">📋</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+
+      <div class="apt-card upcoming">
+        <div class="apt-date">
+          <div class="apt-date-month">Apr</div>
+          <div class="apt-date-day">20</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Pharmacy pickup</div>
+          <div class="apt-meta">
+            <span class="apt-location">CVS, Main St</span>
+            <span class="type-chip">Other</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+
+      <div class="apt-card upcoming">
+        <div class="apt-date">
+          <div class="apt-date-month">May</div>
+          <div class="apt-date-day">6</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">Annual physical</div>
+          <div class="apt-time">8:30 AM</div>
+          <div class="apt-meta">
+            <span class="apt-doctor">Dr. Williams</span>
+            <span class="apt-sep">·</span>
+            <span class="apt-location">MGH, Building A</span>
+            <span class="type-chip">Checkup</span>
+          </div>
+        </div>
+        <div class="apt-actions">
+          <button class="act-icon" title="Edit">✏</button>
+          <button class="act-icon del" title="Delete">🗑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAST (collapsed by default) -->
+    <div class="agenda-group">
+      <button class="past-toggle" onclick="togglePast(this)">
+        <span class="past-toggle-icon" id="past-icon">▼</span>
+        Show 1 past appointment
+      </button>
+      <div class="past-content" id="past-content">
+        <div class="group-hdr" style="margin-top:10px">
+          <span class="group-label">Past</span>
+          <div class="group-line"></div>
+          <span class="group-count">1</span>
+        </div>
+        <div class="past-group-wrap">
+          <div class="apt-card past">
+            <div class="apt-date">
+              <div class="apt-date-month">Mar</div>
+              <div class="apt-date-day">25</div>
+            </div>
+            <div class="apt-divider"></div>
+            <div class="apt-body">
+              <div class="apt-title">Blood work panel</div>
+              <div class="apt-time">8:00 AM</div>
+              <div class="apt-meta">
+                <span class="apt-doctor">Dr. Patel</span>
+                <span class="apt-sep">·</span>
+                <span class="apt-location">Quest Diagnostics</span>
+                <span class="type-chip">Lab</span>
+              </div>
+            </div>
+            <div class="apt-actions">
+              <button class="act-icon" title="Edit">✏</button>
+              <button class="act-icon del" title="Delete">🗑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end view-apts -->
+</div><!-- end page -->
+
+<!-- ADD APPOINTMENT MODAL -->
+<div class="modal-bg" id="apt-modal" onclick="modalBgClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Add appointment</h2>
+
+    <div class="modal-section">Appointment details</div>
+    <div class="fr">
+      <label>Title <span class="req">*</span></label>
+      <input placeholder="e.g. Cardiology follow-up">
+    </div>
+    <div class="f2">
+      <div class="fr">
+        <label>Date &amp; time <span class="req">*</span></label>
+        <input type="datetime-local">
+      </div>
+      <div class="fr">
+        <label>Type</label>
+        <select>
+          <option value="">— Select —</option>
+          <option>Checkup</option>
+          <option>Specialist visit</option>
+          <option>Lab / blood work</option>
+          <option>Imaging</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-section">Provider &amp; location</div>
+    <div class="f2">
+      <div class="fr">
+        <label>Doctor / provider</label>
+        <input placeholder="Dr. Patel">
+      </div>
+      <div class="fr">
+        <label>Location</label>
+        <input placeholder="MGH, Building B">
+      </div>
+    </div>
+
+    <div class="modal-section">Notes</div>
+    <div class="fr">
+      <textarea placeholder="Prep instructions, questions to ask…"></textarea>
+    </div>
+
+    <div class="mf">
+      <button class="btn-cx" onclick="closeModal()">Cancel</button>
+      <button class="btn-sv">Save appointment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('today-lbl').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  function switchTab(tab) {
+    document.getElementById('tab-meds').classList.toggle('active', tab === 'meds');
+    document.getElementById('tab-apts').classList.toggle('active', tab === 'apts');
+    document.getElementById('view-meds').style.display = tab === 'meds' ? '' : 'none';
+    document.getElementById('view-apts').style.display = tab === 'apts' ? '' : 'none';
+    document.getElementById('add-btn').textContent =
+      tab === 'meds' ? '＋ Add medication' : '＋ Add appointment';
+  }
+
+  function togglePast(btn) {
+    const content = document.getElementById('past-content');
+    const icon = document.getElementById('past-icon');
+    const open = content.classList.toggle('open');
+    icon.classList.toggle('open', open);
+    btn.childNodes[2].textContent = open ? ' Hide past appointments' : ' Show 1 past appointment';
+  }
+
+  function handleAdd() { document.getElementById('apt-modal').classList.add('open'); }
+  function closeModal() { document.getElementById('apt-modal').classList.remove('open'); }
+  function modalBgClick(e) { if (e.target === document.getElementById('apt-modal')) closeModal(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
