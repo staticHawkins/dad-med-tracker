@@ -308,9 +308,9 @@ async function markRefilled(id){
 function exportCSV(){
   const rows=[['Name','Dose','Freq/day','Last Filled','Supply','Refill Date','Pharmacy','Rx #','Doctor','Instructions','Notes']];
   meds.forEach(m=>rows.push([m.name,m.dose,m.frequency,m.filledDate,m.supply,m.refillDate,m.pharmacy,m.rxNum,m.doctor,m.instructions,m.notes]));
-  dl('dad-medications.csv',rows.map(r=>r.map(c=>'"'+(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');
+  dl('familycarehub-medications.csv',rows.map(r=>r.map(c=>'"'+(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');
 }
-function exportJSON(){ dl('dad-meds-backup.json',JSON.stringify(meds,null,2),'application/json'); }
+function exportJSON(){ dl('familycarehub-backup.json',JSON.stringify(meds,null,2),'application/json'); }
 function importJSON(){ $('file-in').click(); }
 
 async function handleImport(e){
