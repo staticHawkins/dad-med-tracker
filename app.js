@@ -433,7 +433,7 @@ function renderApts() {
     const covHtml = cov ? `<span class="covering-pill ${esc(cov)}">${esc(coveringLabel(cov))}</span>` : '';
     heroEl.innerHTML = `
       <div class="hero-card ${s}" onclick="toggleHeroCard()" style="cursor:pointer;flex-wrap:wrap" id="hero-card-el">
-        <div style="display:flex;align-items:center;gap:20px;width:100%">
+        <div class="hero-inner">
           <div class="hero-date-block">
             <div class="hero-date-month">${esc(db2.month)}</div>
             <div class="hero-date-day">${db2.day}</div>
@@ -476,8 +476,7 @@ function renderApts() {
     const tl = typeLabel(a.type);
     const metaParts = [
       a.doctor   ? `<span class="apt-doctor">${esc(a.doctor)}</span>` : '',
-      a.doctor && a.location ? '<span class="apt-sep">·</span>' : '',
-      a.location ? `<span class="apt-location">${esc(a.location)}</span>` : '',
+      a.location ? `<span class="apt-location${a.doctor ? ' has-doctor' : ''}">${esc(a.location)}</span>` : '',
       tl ? `<span class="type-chip">${esc(tl)}</span>` : '',
     ].filter(Boolean).join('');
 
@@ -495,7 +494,7 @@ function renderApts() {
         </div>
         ${covHtml}
         <div class="apt-actions" onclick="event.stopPropagation()">
-          <button class="act-icon" title="Edit" onclick="openAptModal('${esc(a.id)}')">✏</button>
+          <button class="act-icon" title="Edit" onclick="openAptModal('${esc(a.id)}')">✏️</button>
           <button class="act-icon del" title="Delete" onclick="delApt('${esc(a.id)}')">🗑</button>
         </div>
         <span class="apt-chevron">▼</span>
