@@ -39,11 +39,20 @@
     <span class="topbar-date" id="today-lbl"></span>
     <span class="topbar-user" id="user-email"></span>
     <button class="btn-ghost" onclick="logout()">Sign out</button>
-    <button class="btn-add" onclick="openModal()">＋ Add medication</button>
+    <button class="btn-add" id="add-btn" onclick="handleAddBtn()">＋ Add medication</button>
   </div>
 </header>
 
 <div class="page">
+
+  <!-- PAGE TABS -->
+  <div class="page-tabs">
+    <button class="ptab active" id="tab-meds" onclick="switchTab('meds')">Medications</button>
+    <button class="ptab" id="tab-apts" onclick="switchTab('apts')">Appointments</button>
+  </div>
+
+  <!-- MEDICATIONS VIEW -->
+  <div id="view-meds">
 
   <!-- KPIs -->
   <div class="kpi-row">
@@ -106,9 +115,48 @@
       </thead>
       <tbody id="tbody"></tbody>
     </table>
-  </div>
+  </div><!-- end tbl-wrap -->
 
-</div>
+  </div><!-- end view-meds -->
+
+  <!-- APPOINTMENTS VIEW -->
+  <div id="view-apts" style="display:none">
+    <div class="apt-layout">
+
+      <!-- SIDEBAR: Mini Calendar -->
+      <div class="apt-sidebar">
+        <div class="mini-cal">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+            <div class="cal-month-label" id="cal-month-label"></div>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-dow">Su</div><div class="cal-dow">Mo</div>
+            <div class="cal-dow">Tu</div><div class="cal-dow">We</div>
+            <div class="cal-dow">Th</div><div class="cal-dow">Fr</div>
+            <div class="cal-dow">Sa</div>
+          </div>
+          <div class="cal-grid" id="cal-days"></div>
+        </div>
+      </div>
+
+      <!-- MAIN: Hero + Agenda -->
+      <div class="apt-main">
+        <div id="apt-hero"></div>
+        <div class="agenda-controls">
+          <div class="search-wrap">
+            <span class="search-ico">🔍</span>
+            <input class="search-input" id="apt-search" placeholder="Search appointments…" oninput="renderApts()">
+          </div>
+        </div>
+        <div id="apt-agenda"></div>
+      </div>
+
+    </div>
+  </div><!-- end view-apts -->
+
+</div><!-- end page -->
 
 </div><!-- end #app -->
 
@@ -162,6 +210,57 @@
 </div>
 
 <input type="file" id="file-in" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<!-- APPOINTMENT MODAL -->
+<div class="modal-bg" id="apt-modal" style="display:none" onclick="aptBgClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="apt-modal-h">Add appointment</h2>
+
+    <div class="modal-section">Appointment details</div>
+    <div class="fr"><label>Title <span class="req">*</span></label><input id="apt-f-title" placeholder="e.g. Cardiology follow-up"></div>
+    <div class="f2">
+      <div class="fr"><label>Date &amp; time <span class="req">*</span></label><input id="apt-f-datetime" type="datetime-local"></div>
+      <div class="fr">
+        <label>Type</label>
+        <select id="apt-f-type">
+          <option value="">— Select —</option>
+          <option value="checkup">Checkup</option>
+          <option value="specialist">Specialist visit</option>
+          <option value="lab">Lab / blood work</option>
+          <option value="imaging">Imaging</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-section">Provider &amp; location</div>
+    <div class="f2">
+      <div class="fr"><label>Doctor / provider</label><input id="apt-f-doctor" placeholder="Dr. Patel"></div>
+      <div class="fr"><label>Location</label><input id="apt-f-location" placeholder="MGH, Building B"></div>
+    </div>
+    <div class="fr">
+      <label>Who's covering</label>
+      <select id="apt-f-covering">
+        <option value="">— Select —</option>
+        <option value="fanuel">Fanuel</option>
+        <option value="saron">Saron</option>
+        <option value="both">Both</option>
+        <option value="tbd">TBD</option>
+      </select>
+    </div>
+
+    <div class="modal-section">Prep instructions &amp; questions</div>
+    <div class="fr"><textarea id="apt-f-prep" placeholder="e.g. Fast for 12 hours, bring insurance card, ask about A1C results…" style="min-height:100px"></textarea></div>
+
+    <div class="modal-section">Post appointment notes</div>
+    <div class="fr"><textarea id="apt-f-postnotes" placeholder="e.g. Doctor said to increase Lisinopril, follow-up in 3 months…" style="min-height:100px"></textarea></div>
+
+    <div class="mf">
+      <button class="btn-cx" onclick="closeAptModal()">Cancel</button>
+      <button class="btn-sv" onclick="saveApt()">Save appointment</button>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="app.js"></script>
 </body>
