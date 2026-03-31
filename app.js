@@ -25,6 +25,8 @@ getRedirectResult(auth).catch(() => {});
 
 // ── STATE ──
 let meds = [], filter = 'all', editId = null, unsubMeds = null;
+let apts = [], editAptId = null, unsubApts = null;
+let activeTab = 'meds', calYear, calMonth;
 const $ = id => document.getElementById(id);
 
 // ── AUTH STATE ──
@@ -34,11 +36,14 @@ onAuthStateChanged(auth, user => {
     $('app').style.display = '';
     $('user-email').textContent = user.email;
     startMedsListener();
+    startAptsListener();
+    initCal();
   } else {
     $('login-screen').style.display = 'flex';
     $('app').style.display = 'none';
     if (unsubMeds) { unsubMeds(); unsubMeds = null; }
-    meds = [];
+    if (unsubApts) { unsubApts(); unsubApts = null; }
+    meds = []; apts = [];
   }
 });
 
@@ -234,7 +239,7 @@ function openModal(id){
 }
 function closeModal(){ $('modal').style.display='none'; editId=null; }
 function bgClick(e){ if(e.target===$('modal')) closeModal(); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeModal(); closeAptModal(); } });
 
 // ── CRUD → FIRESTORE ──
 async function saveMed(){
@@ -331,9 +336,448 @@ function dl(name,content,type){
   a.download=name; a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ── APPOINTMENTS: FIRESTORE LISTENER ──
+function startAptsListener() {
+  if (unsubApts) unsubApts();
+  unsubApts = onSnapshot(collection(db, 'appointments'), snap => {
+    apts = snap.docs.map(d => d.data());
+    renderApts();
+  }, err => { console.error('Appointments Firestore error:', err); });
+}
+
+// ── APPOINTMENTS: TAB SWITCHING ──
+function switchTab(tab) {
+  activeTab = tab;
+  $('tab-meds').classList.toggle('active', tab === 'meds');
+  $('tab-apts').classList.toggle('active', tab === 'apts');
+  $('view-meds').style.display = tab === 'meds' ? '' : 'none';
+  $('view-apts').style.display = tab === 'apts' ? 'block' : 'none';
+  $('add-btn').textContent = tab === 'meds' ? '＋ Add medication' : '＋ Add appointment';
+}
+
+function handleAddBtn() {
+  if (activeTab === 'apts') openAptModal();
+  else openModal();
+}
+
+// ── APPOINTMENTS: HELPERS ──
+function aptStatus(a) {
+  const dt = new Date(a.dateTime);
+  const t = today();
+  const todayEnd = new Date(t); todayEnd.setHours(23,59,59,999);
+  const weekEnd  = new Date(t); weekEnd.setDate(t.getDate() + 7);
+  if (dt < t) return 'past';
+  if (dt <= todayEnd) return 'today';
+  if (dt <= weekEnd)  return 'soon';
+  return 'upcoming';
+}
+
+function fmtAptDateTime(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  const timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const dayPart  = d.toLocaleDateString('en-US', { weekday: 'long' });
+  return `${timePart} · ${dayPart}`;
+}
+
+function fmtAptDateBlock(str) {
+  if (!str) return { month: '—', day: '—' };
+  const d = new Date(str);
+  return {
+    month: d.toLocaleDateString('en-US', { month: 'short' }),
+    day:   d.getDate()
+  };
+}
+
+function fmtAptTime(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  // If time is midnight (00:00), treat as all-day — show no time
+  if (d.getHours() === 0 && d.getMinutes() === 0) return '';
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function coveringLabel(c) {
+  return { fanuel: 'Fanuel', saron: 'Saron', both: 'Both', tbd: 'TBD' }[c] || 'TBD';
+}
+
+function typeLabel(t) {
+  return { checkup: 'Checkup', specialist: 'Specialist', lab: 'Lab', imaging: 'Imaging', other: 'Other' }[t] || '';
+}
+
+// ── APPOINTMENTS: RENDER ──
+function renderApts() {
+  const q = ($('apt-search')?.value || '').toLowerCase();
+  const now2 = new Date();
+
+  let rows = [...apts].filter(a =>
+    !q ||
+    (a.title||'').toLowerCase().includes(q) ||
+    (a.doctor||'').toLowerCase().includes(q) ||
+    (a.location||'').toLowerCase().includes(q)
+  ).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  const grouped = { today: [], soon: [], upcoming: [], past: [] };
+  rows.forEach(a => grouped[aptStatus(a)].push(a));
+
+  // Hero card — first non-past appointment
+  const nextApt = grouped.today[0] || grouped.soon[0] || grouped.upcoming[0] || null;
+  const heroEl = $('apt-hero');
+  if (nextApt) {
+    const s = aptStatus(nextApt);
+    const db2 = fmtAptDateBlock(nextApt.dateTime);
+    const time = fmtAptTime(nextApt.dateTime);
+    const timeLine = [time, new Date(nextApt.dateTime).toLocaleDateString('en-US',{weekday:'long'})].filter(Boolean).join(' · ');
+    const meta = [nextApt.doctor, nextApt.location].filter(Boolean).join(' · ');
+    const cov  = nextApt.covering;
+    const covHtml = cov ? `<span class="covering-pill ${esc(cov)}">${esc(coveringLabel(cov))}</span>` : '';
+    heroEl.innerHTML = `
+      <div class="hero-card ${s}" onclick="toggleHeroCard()" style="cursor:pointer;flex-wrap:wrap" id="hero-card-el">
+        <div style="display:flex;align-items:center;gap:20px;width:100%">
+          <div class="hero-date-block">
+            <div class="hero-date-month">${esc(db2.month)}</div>
+            <div class="hero-date-day">${db2.day}</div>
+          </div>
+          <div class="hero-body">
+            <div class="hero-card-label">Next appointment</div>
+            <div class="hero-card-title">${esc(nextApt.title)}</div>
+            ${timeLine ? `<div class="hero-card-time">${esc(timeLine)}</div>` : ''}
+            ${meta ? `<div class="hero-card-meta">${esc(meta)}</div>` : ''}
+            ${covHtml ? `<div style="margin-top:8px">${covHtml}</div>` : ''}
+          </div>
+          <span class="apt-chevron" id="hero-chevron">▼</span>
+        </div>
+        <div class="apt-expand" id="hero-expand">
+          <div class="apt-expand-grid">
+            <div>
+              <div class="expand-section-label">Prep &amp; questions</div>
+              ${nextApt.prep ? `<div class="expand-text">${esc(nextApt.prep)}</div>` : '<div class="expand-empty">None added</div>'}
+            </div>
+            <div>
+              <div class="expand-section-label">Post appointment notes</div>
+              ${nextApt.postNotes ? `<div class="expand-text">${esc(nextApt.postNotes)}</div>` : '<div class="expand-empty">None added</div>'}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    heroEl.innerHTML = '';
+  }
+
+  // Agenda
+  const agendaEl = $('apt-agenda');
+  let html = '';
+
+  function aptCardHtml(a, statusClass) {
+    const db3 = fmtAptDateBlock(a.dateTime);
+    const time = fmtAptTime(a.dateTime);
+    const cov  = a.covering;
+    const covHtml = cov ? `<span class="covering-pill ${esc(cov)}">${esc(coveringLabel(cov))}</span>` : '';
+    const tl = typeLabel(a.type);
+    const metaParts = [
+      a.doctor   ? `<span class="apt-doctor">${esc(a.doctor)}</span>` : '',
+      a.doctor && a.location ? '<span class="apt-sep">·</span>' : '',
+      a.location ? `<span class="apt-location">${esc(a.location)}</span>` : '',
+      tl ? `<span class="type-chip">${esc(tl)}</span>` : '',
+    ].filter(Boolean).join('');
+
+    return `<div class="apt-card ${statusClass}" data-apt-id="${esc(a.id)}" onclick="toggleAptCard(this)">
+      <div class="apt-card-top">
+        <div class="apt-date">
+          <div class="apt-date-month">${esc(db3.month)}</div>
+          <div class="apt-date-day">${db3.day}</div>
+        </div>
+        <div class="apt-divider"></div>
+        <div class="apt-body">
+          <div class="apt-title">${esc(a.title)}</div>
+          ${time ? `<div class="apt-time">${esc(time)}</div>` : ''}
+          ${metaParts ? `<div class="apt-meta">${metaParts}</div>` : ''}
+        </div>
+        ${covHtml}
+        <div class="apt-actions" onclick="event.stopPropagation()">
+          <button class="act-icon" title="Edit" onclick="openAptModal('${esc(a.id)}')">✏</button>
+          <button class="act-icon del" title="Delete" onclick="delApt('${esc(a.id)}')">🗑</button>
+        </div>
+        <span class="apt-chevron">▼</span>
+      </div>
+      <div class="apt-expand">
+        <div class="apt-expand-grid">
+          <div>
+            <div class="expand-section-label">Prep &amp; questions</div>
+            ${a.prep ? `<div class="expand-text">${esc(a.prep)}</div>` : '<div class="expand-empty">None added</div>'}
+          </div>
+          <div>
+            <div class="expand-section-label">Post appointment notes</div>
+            ${a.postNotes ? `<div class="expand-text">${esc(a.postNotes)}</div>` : '<div class="expand-empty">None added</div>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Today
+  if (grouped.today.length) {
+    const d = new Date(); const dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    html += `<div class="agenda-group"><div class="group-hdr">
+      <span class="group-label today-lbl">Today — ${dateStr}</span>
+      <div class="group-line"></div><span class="group-count">${grouped.today.length}</span>
+    </div>${grouped.today.map(a => aptCardHtml(a, 'today')).join('')}</div>`;
+  }
+
+  // This week
+  if (grouped.soon.length) {
+    const t2 = today();
+    const start = new Date(t2); start.setDate(t2.getDate() + 1);
+    const end   = new Date(t2); end.setDate(t2.getDate() + 7);
+    const range = `${start.toLocaleDateString('en-US',{month:'short',day:'numeric'})}–${end.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+    html += `<div class="agenda-group"><div class="group-hdr">
+      <span class="group-label">This week — ${range}</span>
+      <div class="group-line"></div><span class="group-count">${grouped.soon.length}</span>
+    </div>${grouped.soon.map(a => aptCardHtml(a, 'soon')).join('')}</div>`;
+  }
+
+  // Upcoming
+  if (grouped.upcoming.length) {
+    html += `<div class="agenda-group"><div class="group-hdr">
+      <span class="group-label">Upcoming</span>
+      <div class="group-line"></div><span class="group-count">${grouped.upcoming.length}</span>
+    </div>${grouped.upcoming.map(a => aptCardHtml(a, 'upcoming')).join('')}</div>`;
+  }
+
+  // Past (collapsed)
+  if (grouped.past.length) {
+    const pastCards = [...grouped.past].reverse().map(a => aptCardHtml(a, 'past')).join('');
+    html += `<div class="agenda-group">
+      <button class="past-toggle" onclick="togglePastGroup(this)">
+        <span class="past-toggle-icon" id="past-toggle-icon">▼</span>
+        Show ${grouped.past.length} past appointment${grouped.past.length !== 1 ? 's' : ''}
+      </button>
+      <div class="past-content" id="past-content">
+        <div class="group-hdr" style="margin-top:10px">
+          <span class="group-label">Past</span>
+          <div class="group-line"></div><span class="group-count">${grouped.past.length}</span>
+        </div>
+        <div class="past-group-wrap">${pastCards}</div>
+      </div>
+    </div>`;
+  }
+
+  if (!html && apts.length === 0) {
+    html = `<div style="text-align:center;padding:3rem;color:var(--text2)">No appointments yet. Click "+ Add appointment" to get started.</div>`;
+  } else if (!html) {
+    html = `<div style="text-align:center;padding:3rem;color:var(--text2)">No appointments match your search.</div>`;
+  }
+
+  agendaEl.innerHTML = html;
+  renderCal();
+}
+
+// ── APPOINTMENTS: CARD EXPAND ──
+function toggleAptCard(card) {
+  const expand  = card.querySelector('.apt-expand');
+  const chevron = card.querySelector('.apt-chevron');
+  expand.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function toggleHeroCard() {
+  $('hero-expand')?.classList.toggle('open');
+  $('hero-chevron')?.classList.toggle('open');
+}
+
+function togglePastGroup(btn) {
+  const content = btn.nextElementSibling;
+  const icon    = btn.querySelector('.past-toggle-icon');
+  const open    = content.classList.toggle('open');
+  icon.classList.toggle('open', open);
+  const n = content.querySelectorAll('.apt-card').length;
+  btn.childNodes[2].textContent = open
+    ? ' Hide past appointments'
+    : ` Show ${n} past appointment${n !== 1 ? 's' : ''}`;
+}
+
+// ── APPOINTMENTS: MINI CALENDAR ──
+function initCal() {
+  const now2 = new Date();
+  calYear  = now2.getFullYear();
+  calMonth = now2.getMonth();
+  renderCal();
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function renderCal() {
+  const labelEl = $('cal-month-label');
+  const gridEl  = $('cal-days');
+  if (!labelEl || !gridEl) return;
+
+  labelEl.textContent = new Date(calYear, calMonth, 1)
+    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  gridEl.innerHTML = '';
+  const now2       = new Date();
+  const firstDow   = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  // Build a map: "YYYY-M-D" → assignee[]
+  const dotMap = {};
+  apts.forEach(a => {
+    if (!a.dateTime) return;
+    const d = new Date(a.dateTime);
+    const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+    if (!dotMap[key]) dotMap[key] = new Set();
+    const c = a.covering || 'tbd';
+    if (c === 'both') { dotMap[key].add('fanuel'); dotMap[key].add('saron'); }
+    else dotMap[key].add(c);
+  });
+
+  for (let i = 0; i < firstDow; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day empty';
+    gridEl.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${calYear}-${calMonth+1}-${d}`;
+    const isToday = d === now2.getDate() && calMonth === now2.getMonth() && calYear === now2.getFullYear();
+    const assignees = dotMap[key];
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-day' +
+      (isToday   ? ' today'   : '') +
+      (assignees ? ' has-apt' : '') +
+      (!isToday && calMonth < now2.getMonth() && calYear <= now2.getFullYear() ? ' faded' : '');
+
+    const num = document.createElement('div');
+    num.className = 'cal-day-num';
+    num.textContent = d;
+    cell.appendChild(num);
+
+    if (assignees) {
+      const dots = document.createElement('div');
+      dots.className = 'cal-dots';
+      assignees.forEach(a => {
+        const dot = document.createElement('div');
+        dot.className = `cal-dot ${a}`;
+        dots.appendChild(dot);
+      });
+      cell.appendChild(dots);
+      cell.onclick = () => calDayClick(calYear, calMonth + 1, d);
+    }
+
+    gridEl.appendChild(cell);
+  }
+}
+
+function calDayClick(year, month, day) {
+  // Find appointments on this date
+  const matches = apts.filter(a => {
+    if (!a.dateTime) return false;
+    const d = new Date(a.dateTime);
+    return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
+  });
+  if (!matches.length) return;
+
+  // If any are past, expand the past group first
+  const hasPast = matches.some(a => aptStatus(a) === 'past');
+  if (hasPast) {
+    const pastContent = $('past-content');
+    const pastIcon    = document.querySelector('.past-toggle-icon');
+    const pastBtn     = document.querySelector('.past-toggle');
+    if (pastContent && !pastContent.classList.contains('open')) {
+      pastContent.classList.add('open');
+      if (pastIcon) pastIcon.classList.add('open');
+      if (pastBtn) {
+        const n = pastContent.querySelectorAll('.apt-card').length;
+        const textNode = pastBtn.childNodes[2];
+        if (textNode) textNode.textContent = ' Hide past appointments';
+      }
+    }
+  }
+
+  // Scroll to first matching card
+  const firstId = matches[0].id;
+  const card = document.querySelector(`[data-apt-id="${firstId}"]`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── APPOINTMENTS: MODAL ──
+function openAptModal(id) {
+  editAptId = id || null;
+  const a = editAptId ? apts.find(x => x.id === editAptId) : {};
+  $('apt-modal-h').textContent = editAptId ? 'Edit appointment' : 'Add appointment';
+  $('apt-f-title').value     = a.title    || '';
+  $('apt-f-datetime').value  = a.dateTime || '';
+  $('apt-f-type').value      = a.type     || '';
+  $('apt-f-doctor').value    = a.doctor   || '';
+  $('apt-f-location').value  = a.location || '';
+  $('apt-f-covering').value  = a.covering || '';
+  $('apt-f-prep').value      = a.prep     || '';
+  $('apt-f-postnotes').value = a.postNotes|| '';
+  $('apt-modal').style.display = 'flex';
+  setTimeout(() => $('apt-f-title').focus(), 50);
+}
+
+function closeAptModal() {
+  $('apt-modal').style.display = 'none';
+  editAptId = null;
+}
+
+function aptBgClick(e) {
+  if (e.target === $('apt-modal')) closeAptModal();
+}
+
+
+// ── APPOINTMENTS: CRUD ──
+async function saveApt() {
+  const title    = $('apt-f-title').value.trim();
+  const dateTime = $('apt-f-datetime').value;
+  if (!title)    { alert('Please enter the appointment title.'); return; }
+  if (!dateTime) { alert('Please enter the date and time.'); return; }
+
+  const apt = {
+    id:        editAptId || Date.now().toString(36) + Math.random().toString(36).slice(2),
+    title,
+    dateTime,
+    type:      $('apt-f-type').value,
+    doctor:    $('apt-f-doctor').value.trim(),
+    location:  $('apt-f-location').value.trim(),
+    covering:  $('apt-f-covering').value,
+    prep:      $('apt-f-prep').value.trim(),
+    postNotes: $('apt-f-postnotes').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    await setDoc(doc(db, 'appointments', apt.id), apt);
+    closeAptModal();
+  } catch(e) {
+    alert('Failed to save. Please check your connection and try again.');
+    console.error(e);
+  }
+}
+
+async function delApt(id) {
+  const a = apts.find(x => x.id === id); if (!a) return;
+  if (!confirm(`Remove "${a.title}"?`)) return;
+  try {
+    await deleteDoc(doc(db, 'appointments', id));
+  } catch(e) {
+    alert('Failed to delete. Please check your connection and try again.');
+    console.error(e);
+  }
+}
+
 // ── EXPOSE TO HTML ONCLICK HANDLERS ──
 Object.assign(window, {
   login, logout, openModal, closeModal, bgClick, saveMed,
   delMed, markRefilled, exportCSV, exportJSON, importJSON,
-  handleImport, setFilter, render
+  handleImport, setFilter, render,
+  switchTab, handleAddBtn, openAptModal, closeAptModal, aptBgClick,
+  saveApt, delApt, changeMonth, toggleAptCard, toggleHeroCard, togglePastGroup, calDayClick
 });

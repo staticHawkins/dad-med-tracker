@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Import — Appointments</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0F1117;color:#E8EAF0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+  .card{background:#181B23;border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:2rem;width:100%;max-width:500px;text-align:center}
+  h1{font-size:18px;font-weight:700;margin-bottom:.5rem}
+  p{font-size:13px;color:#8B8FA8;margin-bottom:1.5rem;line-height:1.6}
+  .btn{font-size:14px;font-weight:600;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;transition:opacity .15s;margin:6px}
+  .btn-primary{background:#3DD68C;color:#071a0e}
+  .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-secondary{background:transparent;color:#8B8FA8;border:1px solid rgba(255,255,255,.13)}
+  .btn-secondary:hover{background:#1E2230}
+  .status{margin-top:1.25rem;font-size:13px;color:#8B8FA8;min-height:24px;font-family:monospace;line-height:1.7;text-align:left;background:#0F1117;border-radius:8px;padding:12px;display:none}
+  .status.active{display:block}
+  .done{color:#3DD68C;font-weight:600}
+  .err{color:#FF5C5C}
+  #user-row{font-size:12px;color:#555870;margin-bottom:1rem;min-height:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Appointment Bulk Import</h1>
+  <p>This will import <strong>38 past appointments</strong> into Firestore.<br>Sign in first, then click Import.</p>
+  <div id="user-row"></div>
+  <button class="btn btn-secondary" id="sign-in-btn" onclick="doSignIn()">Sign in with Google</button>
+  <button class="btn btn-primary" id="import-btn" onclick="doImport()" disabled>Import 38 appointments</button>
+  <div class="status" id="status"></div>
+</div>
+
+<script type="module">
+import { initializeApp }                                     from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup,
+         onAuthStateChanged }                                from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc }             from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyCD1uMNkBMdbArrv4zKppc54Lgxg66xMdo",
+  authDomain:        "dad-med-tracker.firebaseapp.com",
+  projectId:         "dad-med-tracker",
+  storageBucket:     "dad-med-tracker.firebasestorage.app",
+  messagingSenderId: "1043260614123",
+  appId:             "1:1043260614123:web:352f4cfa5ee621f22425ae"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+onAuthStateChanged(auth, user => {
+  const row = document.getElementById('user-row');
+  const btn = document.getElementById('import-btn');
+  const signInBtn = document.getElementById('sign-in-btn');
+  if (user) {
+    row.textContent = '✓ Signed in as ' + user.email;
+    btn.disabled = false;
+    signInBtn.style.display = 'none';
+  } else {
+    row.textContent = '';
+    btn.disabled = true;
+    signInBtn.style.display = '';
+  }
+});
+
+window.doSignIn = async () => {
+  try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
+};
+
+const TS = new Date().toISOString();
+
+const APPOINTMENTS = [
+  {
+    id:'imp-001', title:'Liver Consultants — Initial Visit',
+    dateTime:'2024-10-29T12:15', doctor:'Dr. Amar Mahgoub',
+    location:'Liver Consultants of Texas', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- Status of pain (2–3/10 sitting, 6–7/10 sleeping on side, 4–5/10 chest pain)\n- Blood still in abdomen? Next steps?\n- Current cancer stage and spread\n- Calcium buildup in artery (cardiologist referral from Dr. Reddy)',
+    postNotes:'Weight 139 lbs, BP 105/64\nFirst meeting with Mahgoub. Reviewed overall liver and cancer status.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-002', title:'Oncology — Immunotherapy #1',
+    dateTime:'2024-11-11T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 140.8 lbs, BP 124/70, Temp 98.5, HR 67\nFirst immunotherapy session. 1 dose of 2 drugs via IV. No pre-medication. Every 4 weeks.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-003', title:'Oncology — Immunotherapy #2',
+    dateTime:'2024-12-09T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Dad feeling anxious/breathing heavily, poor sleep, very fatigued. Request dietitian referral.',
+    postNotes:'Weight 136.8 lbs, BP 134/70\nLabs + Abushahin appt + immunotherapy completed. New narco prescription.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-004', title:'Psychiatry — Follow Up',
+    dateTime:'2024-12-11T11:00', doctor:'Dr. Humaira Khalid',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Prescribed: Cymbalta 20mg (×2), Remeron 15mg at bedtime. Follow up in 1 month.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-005', title:'Oncology — Immunotherapy #3',
+    dateTime:'2025-01-06T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Spoke with dietician. Increase caloric intake recommended.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-006', title:'Psychiatry — Follow Up',
+    dateTime:'2025-01-08T11:00', doctor:'Dr. Humaira Khalid',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Dad sleeping 3–4 hrs/night max. Remeron increased to 30mg. Call if no improvement in 10 days. May add Seroquel next. Cymbalta same dosage. Next appt 02/05 11AM.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-007', title:'Oncology — Immunotherapy #4',
+    dateTime:'2025-02-03T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 141 lbs, BP 110/60\nDad mentioned pain in a specific spot on belly.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-008', title:'Psychiatry — Follow Up',
+    dateTime:'2025-02-05T11:00', doctor:'Dr. Humaira Khalid',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Everything went well. Dad gave update on immunotherapy. Continue Seroquel and Remeron same dosage. Next appt April 30 at 11am.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-009', title:'Hepatology — Liver Follow Up',
+    dateTime:'2025-02-17T10:00', doctor:'Dr. Amar Mahgoub',
+    location:'Liver Consultants of Texas', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- Status of liver?\n- Plan to address liver issues?\n- Continue acid medication?\n- Share abdomen pain on right side (1+ month)',
+    postNotes:'Temp 97.9, BP 119/69, HR 72\n\n1. Cymbalta is hard on liver — Mahgoub asked psychiatrist to wean off or switch to gabapentin/lyrica.\n2. Starting Entecavir (Baraclude) to prevent Hep B flare-up — must continue indefinitely.\n3. Abdomen pain on right side: likely procedure, constipation, or chemo side effect. Use heating pad or Icy Hot.\n4. Liver transplant earliest discussion: Sept/Oct 2025 after 1 year of treatment with no cancer evidence.\n\nNext appt: May 19 at 11:30am.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-010', title:'Nephrology — Kidney Follow Up',
+    dateTime:'2025-02-25T10:00', doctor:'Dr. Deeba Ali',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Blood work and urine test results good. Kidney functioning well, no complications. Doc concerned about weight loss (138.6 lbs). Next appt in 6 months.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-011', title:'Oncology — Immunotherapy #5',
+    dateTime:'2025-03-03T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 137.5 lbs (4 lbs less than last appt).\nClarified Mahgoub vs. Gupta confusion — Dad continuing with Abushahin for immunotherapy through rest of year, possibly longer.\nCT scan to be scheduled before or day of next immunotherapy.\nNext appt: 03/31 8:20am.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-012', title:'Oncology — Immunotherapy #6',
+    dateTime:'2025-03-31T08:20', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Blood work normal. CT scan normal except back of abdomen (near pancreas) showing inflammation — lighter spot of unknown cause (cancer cells vs. chemo side effect).\nAbushahin recommending advanced endoscopy biopsy. Will call Mahgoub to arrange.\nNext immunotherapy #7: April 28, labs 8:30AM, appt 9AM.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-013', title:'Oncology — Immunotherapy #7',
+    dateTime:'2025-04-28T08:30', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Labs 8:30AM, Abushahin 9AM.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-014', title:'Psychiatry — Follow Up',
+    dateTime:'2025-04-30T11:00', doctor:'Dr. Humaira Khalid',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Follow up from Feb 5 appointment.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-015', title:'Hepatology — Liver Follow Up',
+    dateTime:'2025-05-19T11:30', doctor:'Dr. Amar Mahgoub',
+    location:'Liver Consultants of Texas', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 134.3 lbs. Overall numbers look good. WBC high 5% from 4/28 scan. Tissue looking different. During open enrollment, check that transplant is added.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-016', title:'Oncology — Immunotherapy + May Scan Recap',
+    dateTime:'2025-05-28T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'May scan results:\n- Original liver area (where it ruptured): smaller vs March — immunotherapy likely working.\n- Back of abdomen tissue: worse vs March and vs October. More bulky/prominent. Unknown — could be cancer or treatment side effect. Tissue is between organs, hard to reach (vein blocking).\n\nNext steps:\n- Gupta to be consulted on how to sample the tissue\n- Additional blood work ordered (tumor markers)\n\nSymptoms to watch: loose stool, diarrhea, swelling legs/abdomen, intense back pain.\nNext immunotherapy: 06/25 8AM labs, 9AM Laith.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-017', title:'Surgery Consult — Laparoscopy Planning (Gupta)',
+    dateTime:'2025-05-29T10:00', doctor:'Dr. Amar Gupta',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- How long is the procedure?\n- What are the risks?\n- What is the goal?\n- Who performs it?\n- When is it scheduled?\n- Post-procedure recovery?\n- Next steps after procedure — Gupta or Abushahin?',
+    postNotes:'Gupta consulted with Abushahin on May scan. Excisional lymph node biopsy planned to sample tissue in back of abdomen. Gupta nurse Megan called same day to schedule. Procedure: less than 1 hour.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-018', title:'Surgery — Excisional Lymph Node Biopsy (Gupta)',
+    dateTime:'2025-06-11T08:00', doctor:'Dr. Amar Gupta',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Excisional lymph node biopsy completed. 8AM check-in.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-019', title:'Post-Op Follow Up (Gupta)',
+    dateTime:'2025-06-24T10:00', doctor:'Dr. Amar Gupta',
+    location:'', type:'specialist', covering:'tbd',
+    prep:'Questions:\n1. Can dad mow grass without harming incisions?\n2. Why did lymph node size increase — will it continue?',
+    postNotes:'Weight 131.2 lbs, Temp 98.8\n\nGupta confirmed: sample from lymph node near pancreas is cancerous — same liver cancer cells. Not a different cancer type.\nGupta did not remove full lymph node — too invasive; goal was biopsy only.\nCannot rule out spread to other areas (only visible once large enough on scan).\nGupta informed Abushahin day of surgery.\n\nNext steps: Abushahin to discuss treatment options at next appointment.\n\nHealing instructions: eat/drink, keep clean, don\'t pick the glue off.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-020', title:'Oncology — Cabometyx Prescribed',
+    dateTime:'2025-06-25T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Dad prescribed Cabometyx 40mg sample (15 days). Stopped Tibsovo per Abushahin.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-021', title:'Oncology — Cabometyx Check-In',
+    dateTime:'2025-07-03T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- Weight going down — speak with dietitian?\n- Cabometyx 40mg (15 tablets): how long? How to get more? Food restrictions (grape, grapefruit, star fruit)?\n- Blood pressure machine error',
+    postNotes:'Weight 128.2 lbs, BP 133/71, Temp 98.3, Pain 4–5/10\nPA: Erica\n\nNext steps:\n- Telehealth with Leah or Morgan (dietician) at next appt\n- Pharmacy to confirm if Cabometyx timing can move to earlier morning\n- Next Abushahin appt: 7/17\n- 60mg sample sent to 3rd floor pharmacy\n- Imodium (OTC) for diarrhea as needed',
+    updatedAt:TS
+  },
+  {
+    id:'imp-022', title:'Oncology — Cabometyx + Tibsovo Discussion',
+    dateTime:'2025-09-09T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Topics:\n- Abdominal pain 6–7/10, lower ribs, lower back\n- Diarrhea continuing\n- Metal taste (Cabometyx side effect)\n- Amlodipine update from kidney/PCP — stopping until weight up',
+    postNotes:'Weight 124.8 lbs, BP 119/67\nNurse: Sheri Zadina\n\nAbushahin thinks Cabometyx may not be working given pain. Requesting Tibsovo (insurance may push back). Continue Cabometyx until Tibsovo ready.\nTibsovo targets IDH-1 mutation in liver/bile duct cancer.\n\nNext appt: 9/17 8AM labs + Abushahin. Dietician to visit.\nCT scan scheduled for week of Sept 20.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-023', title:'Oncology — CT Scan + Tibsovo Start',
+    dateTime:'2025-09-17T08:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 122.8 lbs, BP 128/68\nTibsovo medication ready to pick up. Dad stopped Cabometyx.\nNutritional consult with Leah Wilson (dietician) — handout sent to dad\'s email.\nCT Scan done (1st floor, suite 150).\nEKG to be scheduled — scheduling will call Fanuel.\nNext Abushahin appt: September 29 10AM.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-024', title:'Oncology — Scan Results Review',
+    dateTime:'2025-09-29T10:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Questions:\n1. Sept 17 scan results (size?)\n2. Continuous abdominal pain 6–7/10\n3. Tramadol not effective — alternatives besides oxycodone?\n4. Tibsovo timing — when to take, with food?\n5. Dietician update',
+    postNotes:'Weight 121.2 lbs, Temp 98.1\n\nScan results (9/17): Slightly larger than August (10%). Liver same. Soft tissue 6.23×3.7 (Sept) vs 5.5×3.1 (Aug). Another area in abdomen being monitored.\nMet with dietician Morgan.\nOxycodone prescribed (every 6 hrs as needed) + Senakot morning & night for constipation.\nAbushahin: stop Lisinopril — monitor BP (150+ → resume).\nTibsovo: can be taken with food.\nNext scan: late October.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-025', title:'Oncology — Tibsovo Check-In',
+    dateTime:'2025-10-14T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Questions:\n1. When will next scan be scheduled?\n2. Next step if Tibsovo isn\'t working?',
+    postNotes:'Weight 120.6 lbs, BP 131/76\n\nScan scheduled for end of October + same-day Abushahin appt.\nIf Tibsovo not working, will consider medication in same category as Cabometyx.\nAbushahin optimistic about next scan.\nDietician: Increase Kate Farms Peptide to 1.5–2/day. Can run through insurance.\nTibsovo: 50g fat limit — whole milk from Silk is fine.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-026', title:'Oncology — CT Scan Results (Oct)',
+    dateTime:'2025-10-29T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- Follow up on CT scan from morning\n- Update on peptide through insurance from dietician',
+    postNotes:'Weight 120.4 lbs, BP 146/76\n\nCT Scan results: Size 6.0×3.5 (was 6.2×3.7 — slightly smaller).\nCreon prescribed — pancreatic enzyme taken during each meal.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-027', title:'Labs — Blood Work',
+    dateTime:'2025-11-24T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'lab', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 121 lbs. Blood work went well. Scan planned for 3 weeks.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-028', title:'CT Scan + Hepatology (Mahgoub)',
+    dateTime:'2025-12-29T07:30', doctor:'Dr. Amar Mahgoub',
+    location:'Liver Consultants of Texas', type:'specialist', covering:'tbd',
+    prep:'Questions for Mahgoub:\n1. Purpose of Omeprazole? How long to continue?\n2. How long to take Entecavir?\n3. Current status of liver?',
+    postNotes:'Blood work + CT scan (7:30AM). Mahgoub appt 11:30AM.\nWeight 124.7 lbs, BP 135/70\n\n5 Key Takeaways:\n1. Liver stable — ALT/AST normal, bilirubin normal, alkaline phosphatase good.\n2. Entecavir critical — continue indefinitely to prevent Hep B flare-up.\n3. Omeprazole optional — taper (every other day → stop). Can restart if needed.\n4. Watch for: abdominal fluid, yellowing of skin/eyes, constant itching, confusion/brain fog.\n5. Liver transplant: premature — need sustained cancer clearance first.\n\nNext Mahgoub appt: March 31, 2026.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-029', title:'Oncology — Chemo + Immuno Infusion',
+    dateTime:'2026-01-22T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'fanuel',
+    prep:'',
+    postNotes:'Fanuel at appt. Weight 126 lbs.\nLabs done. Chatted with Finance — initiated hardship application.\nPre-meds: Fosaprepitant, Dexamethasone, Dilaudid (pain, one-time), Magnesium.\n2 chemo + 1 immuno: Imfinzi (1hr), Gemzar (30min), Cisplatin (1hr).\n\nMorphine 15mg refill requested — pick up at 3rd floor or Wylie pharmacy.\nOlanzapine refill needed — order possibly tied to old treatment, nurse to investigate.\nEntecavir + Omeprazole refill confirmed — FedEx delivery.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-030', title:'Oncology — Chemo + Immuno Infusion',
+    dateTime:'2026-01-29T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'saron',
+    prep:'Topics:\n- Continuous fatigue/exhaustion\n- Hiccups (first few days, especially at night)\n- Swelling on legs + pelvic area — kidney/creatinine impact?\n- Pain medication dosage (morphine/oxycodone)\n- Dulcolax for constipation — how often?\n- When is next scan planned?',
+    postNotes:'Saron at appt.\nWeight 125.8 lbs, Temp 97.8, BP 110/66, Oxygen 94\n\nNew prescriptions (Walgreens Wylie):\n- Spironolactone (Aldactone): every other day for fluid retention\n- Baclofen: for hiccups, as needed up to 3×/day\n- Olanzapine: every evening for appetite + nausea\n\nPre-meds: Fosaprepitant, Methylprednisolone (replaced Dex to prevent hiccups), Magnesium.\nChemo: Gemzar (30min) + Cisplatin (slightly lower dose for kidneys).\n\nKidney update: Creatinine rose to 1.22 (baseline 0.9) — monitoring closely.\nWeight 125 lbs includes fluid retention.\n\nNext blood work: Feb 6 9AM (kidney check + steroid dosage review).',
+    updatedAt:TS
+  },
+  {
+    id:'imp-031', title:'Labs — Blood Work (Kidney + Steroid Check)',
+    dateTime:'2026-02-06T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'lab', covering:'tbd',
+    prep:'',
+    postNotes:'Scheduled to gauge kidney function and steroid dosage adjustment after Jan 29 chemo.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-032', title:'Oncology — Chemo Infusion',
+    dateTime:'2026-02-12T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'fanuel',
+    prep:'',
+    postNotes:'Fanuel at appt.\nWeight 129 lbs, BP 126/76\nPre-meds: Fosaprepitant, Palonosetron, Methylprednisolone, Magnesium Sulfate.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-033', title:'Oncology — Labs + Infusion (No Abushahin)',
+    dateTime:'2026-02-19T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Blood work + infusion only. No Abushahin appt today.\n\nPre-hydration: Magnesium Sulfate, Sodium Chloride IV.\nPre-meds: Fosaprepitant (Emend), Palonosetron (Aloxi), Methylprednisolone (Solumedrol).\nChemo: Gemcitabine (Gemzar) + Cisplatin.\n\nMorphine 15mg refill confirmed. Olanzapine 2.5mg refill — order possibly denied, nurse investigating. Entecavir + Omeprazole refill confirmed, FedEx delivery.\n\nNote: Tag Sheri Zadina on messages to Abushahin going forward.\nUpcoming: Feb 24 Terauchi 1PM telemedicine, Mar 5 labs 9:10 / Abushahin 10:00 / infusion 10:45.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-034', title:'Palliative Care — Telemedicine (Dr. Terauchi)',
+    dateTime:'2026-02-24T13:00', doctor:'Dr. Stephanie Terauchi',
+    location:'Telemedicine', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Dr. Stephanie Terauchi — 214-361-2025\n\nDaily diet recommendations:\n- Set timer every 3 hours to eat\n- 1 green tea (caffeinated) in the morning\n- 2000 calories/day + 80g protein/day to stabilize weight\n\nProtein stores: 2.6 (Jan 2026), 2.2 (Feb 19) — goal: close to 3.\n2 full Peptide cans/day goal (take 1/4 at a time).\n\nPrescriptions: Ondansetron. Follow up in ~2 weeks, start Megace.\nCommunication: Send messages through portal — goes directly to her and her nurse.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-035', title:'Oncology — Labs + Abushahin + Infusion',
+    dateTime:'2026-03-05T09:10', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Weight 117.8 lbs, BP 108/62, Protein 2.4\nLabs 9:10, Abushahin 10:00, infusion 10:45AM\n\nImodium with peptide. Scan to be scheduled.\nRefill: Lasix (drop to 20mg) and Olanzapine (5mg).\nInfusion pre-meds: Fosaprepitant, Palonosetron, Methylprednisolone, Imfinzi, Magnesium Sulfate.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-036', title:'Oncology — Chemo on Hold (Low ANC)',
+    dateTime:'2026-03-12T09:00', doctor:'Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'Chemo on hold today — ANC 0.42 (too low, high infection risk).\nKnown side effect of Cisplatin.\nNo fever, vitals stable.\nWaiting for Abushahin to confirm IV hydration or supportive fluids while at clinic.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-037', title:'Oncology — Chemo + Immuno Infusion (Dr. Dweck)',
+    dateTime:'2026-03-26T09:00', doctor:'Dr. Bradley Dweck / Dr. Laith Abushahin',
+    location:'Texas Oncology', type:'specialist', covering:'tbd',
+    prep:'Questions:\n- CT Scan (Mar 13): findings, changes vs last scan, next steps?\n- Potassium 5.1 (normal) — stop potassium chloride? At what level to restart?\n- Medication review: Spironolactone 50mg, Lasix 20mg, Potassium Chloride ER 20mEq — purpose, overlap, long-term?\n- Weight loss (118 lbs) — supplements, appetite stimulants, nutrition referral?\n- Fatigue/energy — how to improve?',
+    postNotes:'Weight 118 lbs, BP 108/67, Temp 98\nANC 2.2 (better), WBC 3.6 (better), Potassium 5.1 (normal)\nDr. Bradley Dweck (fellow) + Abushahin\n\nANC normal enough — chemo/immuno infusion done today.\nPotassium normal — likely stop potassium chloride (awaiting Abushahin confirmation).\nDad had nausea this morning — Zofran/Ondansetron as needed? Awaiting confirmation.\n\nCT Scan (Mar 13): everything worse vs Sept 2025 (radiology compared to Sept, not Dec scan — needs correction).\nAbushahin considering treatment schedule change, limited alternatives. Will print all 3 scan comparisons.\nTwo populations of cancer cells: liver + bile duct.',
+    updatedAt:TS
+  },
+  {
+    id:'imp-038', title:'Hepatology — Follow Up (Mahgoub)',
+    dateTime:'2026-03-31T09:45', doctor:'Dr. Amar Mahgoub',
+    location:'Liver Consultants of Texas', type:'specialist', covering:'tbd',
+    prep:'',
+    postNotes:'',
+    updatedAt:TS
+  }
+];
+
+window.doImport = async () => {
+  const btn    = document.getElementById('import-btn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status active';
+  status.innerHTML = '';
+
+  let done = 0, failed = 0;
+  for (const apt of APPOINTMENTS) {
+    const line = document.createElement('div');
+    line.textContent = `⏳ [${apt.id}] ${apt.title}`;
+    status.appendChild(line);
+    try {
+      await setDoc(doc(db, 'appointments', apt.id), apt);
+      done++;
+      line.textContent = `✓ [${apt.id}] ${apt.title}`;
+      line.style.color = '#3DD68C';
+    } catch(e) {
+      failed++;
+      line.textContent = `✗ [${apt.id}] ${apt.title} — ${e.message}`;
+      line.style.color = '#FF5C5C';
+    }
+    status.scrollTop = status.scrollHeight;
+  }
+
+  const summary = document.createElement('div');
+  summary.style.marginTop = '12px';
+  summary.style.fontWeight = '700';
+  if (failed === 0) {
+    summary.textContent = `✅ Done — ${done} appointments imported successfully.`;
+    summary.style.color = '#3DD68C';
+  } else {
+    summary.textContent = `⚠️ ${done} imported, ${failed} failed.`;
+    summary.style.color = '#F0A030';
+  }
+  status.appendChild(summary);
+  btn.textContent = 'Import complete';
+};
+</script>
+</body>
+</html>
