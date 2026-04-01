@@ -18,24 +18,56 @@ FamilyCareHub is a family caregiver tool for tracking a family member's medicati
 
 ## 2. Stack & Architecture
 
-| Layer       | Technology                              |
-|-------------|-----------------------------------------|
-| Frontend    | Vanilla JS, HTML, CSS — no framework    |
-| Backend     | Firebase (Firestore + Google Auth)      |
-| SDK         | Firebase JS SDK v10.14.1 via CDN        |
-| Hosting     | Any static file server (no build step)  |
+| Layer       | Technology                                        |
+|-------------|---------------------------------------------------|
+| Frontend    | React 18 (Vite build tool)                        |
+| Backend     | Firebase (Firestore + Google Auth)                |
+| SDK         | Firebase JS SDK v10.14.1 via npm                  |
+| Hosting     | GitHub Pages (via GitHub Actions CI/CD)           |
+| Testing     | Vitest + React Testing Library + jsdom            |
 
-**Files:**
-- `index.html` — HTML structure, modals, forms
-- `styles.css` — Dark theme, responsive layout (≤700px breakpoint)
-- `app.js` — All business logic, Firebase integration, state management
+**Project layout:**
+```
+client/                        ← Vite project root
+  src/
+    main.jsx                   ← React entry point
+    App.jsx                    ← Auth gate: LoginScreen or MainApp
+    firebase.js                ← Firebase init; exports auth, provider, db
+    hooks/
+      useAuth.js               ← onAuthStateChanged wrapper
+      useMeds.js               ← Firestore onSnapshot → meds[]
+      useApts.js               ← Firestore onSnapshot → apts[]
+    lib/
+      medUtils.js              ← Pure fns: pillsNow, st, getRefillDate, fmtDate, …
+      aptUtils.js              ← Pure fns: aptStatus, fmtAptDateBlock, fmtAptTime, …
+      firestore.js             ← saveMed, delMed, markRefilled, saveApt, delApt, exportCSV, exportJSON, importMeds
+    components/
+      LoginScreen.jsx
+      MainApp.jsx              ← Tab bar; owns medModalOpen / aptModalOpen state
+      meds/
+        MedicationsView.jsx    ← filter, search, editId state; renders KPIRow + MedsTable + MedModal
+        KPIRow.jsx             ← 4 KPI cards (total, urgent, soon, stocked)
+        MedsTable.jsx          ← Sorted table; status pills; progress bars
+        MedModal.jsx           ← Add/edit form (9 fields)
+      apts/
+        AppointmentsView.jsx   ← Two-column layout; owns pastExpanded state
+        MiniCalendar.jsx       ← Month grid with dot markers; click → expand past
+        HeroCard.jsx           ← Next upcoming appointment highlight
+        AgendaGroups.jsx       ← Today / This week / Upcoming / Past sections
+        AptCard.jsx            ← Expandable appointment card
+        AptModal.jsx           ← Add/edit form
+  vite.config.js               ← base: '/dad-med-tracker/', test config
+  package.json
+  dist/                        ← Build output (git-ignored); deployed by CI
+```
 
 **Data flow:**
 ```
-onAuthStateChanged
-  └── startMedsListener()   → Firestore onSnapshot → meds[] → render()
-  └── startAptsListener()   → Firestore onSnapshot → apts[] → renderApts()
-  └── initCal()
+useAuth()
+  → null (logged out) → LoginScreen
+  → user object       → MainApp
+      ├── useMeds()   → Firestore onSnapshot → meds[] (live)
+      └── useApts()   → Firestore onSnapshot → apts[] (live)
 ```
 
 All Firestore reads/writes happen directly from the browser. No server-side code.
@@ -81,26 +113,30 @@ All Firestore reads/writes happen directly from the browser. No server-side code
 
 ## 4. State Management
 
-All state lives in module-scoped variables in `app.js`. No external state library.
+State is managed via React hooks — no external state library.
 
-```js
-// Medications
-let meds = []          // Live array from Firestore
-let filter = 'all'     // 'all' | 'urgent' | 'soon' | 'ok'
-let editId = null      // Medication ID being edited, or null for new
-let unsubMeds = null   // Firestore unsubscribe fn
+```
+App.jsx
+  useAuth()                    → undefined (loading) | null (logged out) | user
 
-// Appointments
-let apts = []          // Live array from Firestore
-let editAptId = null   // Appointment ID being edited, or null for new
-let unsubApts = null   // Firestore unsubscribe fn
+MainApp.jsx
+  medModalOpen: boolean        → controls "Add medication" modal from topbar
+  aptModalOpen: boolean        → controls "Add appointment" modal from topbar
+  addTrigger / onAddHandled    → increment-and-reset pattern for child modal open
 
-// UI
-let activeTab = 'meds' // 'meds' | 'apts'
-let calYear, calMonth  // Mini calendar display month
+MedicationsView.jsx
+  filter: 'all'|'urgent'|'soon'|'ok'
+  search: string
+  editId: undefined|null|string  → undefined = closed, null = new, string = editing
+
+AppointmentsView.jsx
+  pastExpanded: boolean        → shared between MiniCalendar (write) and AgendaGroups (read)
+
+MiniCalendar.jsx
+  calYear, calMonth            → local display month (independent of today)
 ```
 
-On logout: unsubscribe fns are called, arrays cleared, login screen shown.
+On logout: `useAuth` returns `null`, App unmounts MainApp entirely, Firestore listeners are cleaned up via hook effect cleanup.
 
 ---
 
@@ -151,7 +187,7 @@ Returns `{ rem, tot, runOutDate, daysToZero }`.
 
 ### Appointments view
 
-- **Mini calendar** — Shows current month. Days with appointments have colored dots (Fanuel = violet, Saron = teal). Today = blue circle. Click a date to scroll to that appointment.
+- **Mini calendar** — Shows current month. Days with appointments have colored dots (Fanuel = violet, Saron = teal). Today = blue circle. Click a past date to expand the Past section.
 - **Hero card** — Highlights the next upcoming appointment. Color-coded: blue (today), amber (this week), green (upcoming). Expandable for prep and post-appointment notes.
 - **Agenda** — Appointments grouped into: Today / This week / Upcoming / Past (collapsed by default). Each card is expandable.
 - **Covering** — Fanuel (violet), Saron (teal), Both (split), TBD (gray). Shown as colored pill on cards and dots on calendar.
@@ -164,21 +200,69 @@ Returns `{ rem, tot, runOutDate, daysToZero }`.
 
 ---
 
-## 7. Design Decisions
+## 7. Build & Deployment
 
-| Decision | Rationale |
-|---|---|
-| Firebase API keys embedded in `app.js` | Intentional for client-side app — security enforced via Firestore rules in Firebase console, not in code |
-| `esc()` applied to all user data in innerHTML | XSS prevention; replaces `&`, `<`, `>`, `"` before inserting into DOM |
-| No npm / no bundler | Simplicity — open `index.html` directly, zero setup |
-| Module-scoped state only | Avoids global namespace pollution without a framework |
-| IDs as `Date.now().toString(36) + random` | Lightweight unique ID without a library |
-| `filledDate` + `supply` + `frequency` model | Allows auto-calculating remaining pills without manual updates each day |
-| `refillDate` as optional override | Accommodates pharmacies that set a specific pickup date different from the calculated runout |
+**Local development:**
+```bash
+cd client
+npm_config_cache=/tmp/npm-cache npm install
+npm run dev        # Vite dev server at http://localhost:5173
+npm test           # Vitest (44 tests)
+npm run build      # Output to client/dist/
+```
+
+**CI/CD — GitHub Actions (`.github/workflows/deploy.yml`):**
+- Triggers on push to `main`
+- Installs deps, runs `npm run build`, uploads `client/dist/` as Pages artifact
+- Deploys to GitHub Pages at `https://staticHawkins.github.io/dad-med-tracker/`
+- Requires GitHub repo settings: Pages source = GitHub Actions
+
+**Base path:** Vite is configured with `base: '/dad-med-tracker/'` so all asset URLs resolve correctly under the GitHub Pages subdirectory URL.
 
 ---
 
-## 8. Known Limitations / TODOs
+## 8. Testing
+
+**Framework:** Vitest + React Testing Library + jsdom
+
+**Setup:** `client/src/test/setup.js` imports `@testing-library/jest-dom` for DOM matchers.
+
+**Test files:**
+
+| File | Tests | What it covers |
+|------|-------|----------------|
+| `medUtils.test.js` | 15 | `pillsNow`, `st`, `stLabel`, `getRefillDate`, `fmtDate` |
+| `aptUtils.test.js` | 13 | `aptStatus`, `fmtAptDateBlock`, `fmtAptTime`, `coveringLabel`, `typeLabel` |
+| `KPIRow.test.jsx` | 5 | KPI card rendering, urgent counts, empty state |
+| `MedsTable.test.jsx` | 7 | Table render, filtering, sorting, status pills |
+
+All date-dependent tests use `vi.useFakeTimers()` / `vi.setSystemTime()` pinned to `2026-03-31`.
+
+**Run tests:**
+```bash
+cd client && npm_config_cache=/tmp/npm-cache npm test
+```
+
+---
+
+## 9. Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| React + Vite (not vanilla JS) | Enables component-based UI, proper test infrastructure, and CI/CD build pipeline |
+| Vite over webpack/CRA | Fast HMR, minimal config, native ESM, built-in Vitest support |
+| `base: '/dad-med-tracker/'` in vite.config | Required for correct asset resolution on GitHub Pages subdirectory URL |
+| Firebase API keys embedded in `firebase.js` | Intentional for client-side app — security enforced via Firestore rules in Firebase console |
+| `addTrigger` + `onAddHandled` prop pattern | Allows topbar "Add" button in MainApp to open modals owned by child views without lifting all modal state |
+| `pastExpanded` lifted to AppointmentsView | Both MiniCalendar (writes it) and AgendaGroups (reads it) need it — lifted to their common parent |
+| `editId: undefined` = modal closed | Three-value state (undefined/null/string) cleanly distinguishes closed / new / editing without a separate boolean |
+| `filledDate` + `supply` + `frequency` model | Allows auto-calculating remaining pills without manual updates each day |
+| `refillDate` as optional override | Accommodates pharmacies that set a specific pickup date different from the calculated runout |
+| IDs as `Date.now().toString(36)` + random | Lightweight unique ID without a library |
+
+---
+
+## 10. Known Limitations / TODOs
 
 _Update this section as limitations are discovered or resolved._
 
@@ -186,3 +270,4 @@ _Update this section as limitations are discovered or resolved._
 - [ ] Single-user only — no multi-user data isolation (one Firestore project per user)
 - [ ] No push notifications or reminders
 - [ ] Appointment search does not filter by doctor, location, or type — only by title
+- [ ] CLAUDE.md still describes the old vanilla JS app — needs updating after React migration merges
