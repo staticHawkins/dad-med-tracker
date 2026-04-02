@@ -10,3 +10,6 @@ node_modules/
 # Secrets
 .env
 .env.local
+
+# Vite dev cache
+client/.vite/
