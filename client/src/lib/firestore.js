@@ -58,9 +58,15 @@ export async function saveApt(fields, editId) {
     covering: fields.covering,
     prep: fields.prep,
     postNotes: fields.postNotes,
+    specialty: fields.specialty || '',
+    clinicalNoteId: fields.clinicalNoteId || '',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'appointments', apt.id), apt)
+}
+
+export async function saveClinicalNote(note) {
+  await setDoc(doc(db, 'clinicalNotes', note.id), note)
 }
 
 export async function delApt(id) {

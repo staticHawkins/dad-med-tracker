@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { fmtAptDateBlock, fmtAptTime, coveringLabel, typeLabel } from '../../lib/aptUtils'
+import { SPECIALTIES } from '../../lib/noteUtils'
 import { delApt } from '../../lib/firestore'
+import ClinicalNoteModal from './ClinicalNoteModal'
 
-export default function AptCard({ apt, status, onEdit }) {
+export default function AptCard({ apt, status, onEdit, note }) {
   const [open, setOpen] = useState(false)
+  const [showNote, setShowNote] = useState(false)
   const db = fmtAptDateBlock(apt.dateTime)
   const time = fmtAptTime(apt.dateTime)
   const tl = typeLabel(apt.type)
@@ -29,6 +32,11 @@ export default function AptCard({ apt, status, onEdit }) {
             {apt.doctor && <span className="apt-doctor">{apt.doctor}</span>}
             {apt.location && <span className={`apt-location${apt.doctor ? ' has-doctor' : ''}`}>{apt.location}</span>}
             {tl && <span className="type-chip">{tl}</span>}
+            {apt.specialty && (
+              <span className={`specialty-chip ${apt.specialty}`}>
+                {SPECIALTIES[apt.specialty] || apt.specialty}
+              </span>
+            )}
           </div>
         </div>
         {apt.covering && (
@@ -55,7 +63,18 @@ export default function AptCard({ apt, status, onEdit }) {
               : <div className="expand-empty">None added</div>}
           </div>
         </div>
+        {note && (
+          <div style={{ marginTop: 10 }}>
+            <button className="note-btn" onClick={e => { e.stopPropagation(); setShowNote(true) }}>
+              📋 Clinical Note
+            </button>
+          </div>
+        )}
       </div>
+
+      {showNote && note && (
+        <ClinicalNoteModal note={note} onClose={() => setShowNote(false)} />
+      )}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { saveApt } from '../../lib/firestore'
+import { SPECIALTIES } from '../../lib/noteUtils'
 
 const EMPTY = {
-  title: '', dateTime: '', type: '', doctor: '', location: '', covering: '', prep: '', postNotes: ''
+  title: '', dateTime: '', type: '', doctor: '', location: '', covering: '',
+  specialty: '', prep: '', postNotes: ''
 }
 
 export default function AptModal({ apts, editId, onClose }) {
@@ -15,7 +17,7 @@ export default function AptModal({ apts, editId, onClose }) {
     if (a) setForm({
       title: a.title || '', dateTime: a.dateTime || '', type: a.type || '',
       doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
-      prep: a.prep || '', postNotes: a.postNotes || ''
+      specialty: a.specialty || '', prep: a.prep || '', postNotes: a.postNotes || ''
     })
   }, [editId, apts])
 
@@ -61,6 +63,14 @@ export default function AptModal({ apts, editId, onClose }) {
               <option value="lab">Lab / blood work</option>
               <option value="imaging">Imaging</option>
               <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="fr"><label>Specialty</label>
+            <select value={form.specialty} onChange={set('specialty')}>
+              <option value="">Select specialty…</option>
+              {Object.entries(SPECIALTIES).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
             </select>
           </div>
         </div>

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { aptStatus } from '../../lib/aptUtils'
+import { SPECIALTIES } from '../../lib/noteUtils'
+import { useNotes } from '../../hooks/useNotes'
 import MiniCalendar from './MiniCalendar'
 import HeroCard from './HeroCard'
 import AgendaGroups from './AgendaGroups'
@@ -7,8 +9,14 @@ import AptModal from './AptModal'
 
 export default function AppointmentsView({ apts }) {
   const [search, setSearch] = useState('')
+  const [specialty, setSpecialty] = useState('')
   const [editId, setEditId] = useState(undefined)
   const [pastExpanded, setPastExpanded] = useState(false)
+  const noteById = useNotes()
+
+  const availableSpecialties = Object.keys(SPECIALTIES).filter(s =>
+    apts.some(a => a.specialty === s)
+  )
 
   function openModal(id = null) { setEditId(id) }
   function closeModal() { setEditId(undefined) }
@@ -29,6 +37,21 @@ export default function AppointmentsView({ apts }) {
           <div id="apt-hero">
             <HeroCard apt={nextApt} />
           </div>
+          {availableSpecialties.length > 0 && (
+            <div className="specialty-filters">
+              <button
+                className={`sf-chip${specialty === '' ? ' active' : ''}`}
+                onClick={() => setSpecialty('')}
+              >All</button>
+              {availableSpecialties.map(s => (
+                <button
+                  key={s}
+                  className={`sf-chip${specialty === s ? ' active' : ''}`}
+                  onClick={() => setSpecialty(o => o === s ? '' : s)}
+                >{SPECIALTIES[s]}</button>
+              ))}
+            </div>
+          )}
           <div className="agenda-controls">
             <div className="search-wrap">
               <span className="search-ico">🔍</span>
@@ -45,6 +68,8 @@ export default function AppointmentsView({ apts }) {
             <AgendaGroups
               apts={apts}
               search={search}
+              specialty={specialty}
+              noteById={noteById}
               onEdit={openModal}
               pastExpanded={pastExpanded}
               onPastExpand={() => setPastExpanded(o => !o)}
