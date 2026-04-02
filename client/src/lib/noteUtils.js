@@ -1,10 +1,10 @@
 export function parseSection(text, sectionName) {
   const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  // Match the section header (line by itself with optional colon)
-  // Capture until next section-like header or e-signature block
+  // Match section header preceded by newline (or start of string) — no 'm' flag
+  // so '$' anchors to end-of-string, not end-of-line (fixes lazy capture stopping too early)
   const re = new RegExp(
-    `^${escaped}:?[\\t ]*\\n([\\s\\S]*?)(?=\\n[A-Z][\\w &/,()-]*:[\\t ]*\\n|\\n_ESign|$)`,
-    'im'
+    `(?:^|\\n)${escaped}:?[ \\t]*\\n([\\s\\S]*?)(?=\\n[A-Z][\\w &/,()\\-*]+:[ \\t]*\\n|\\n_ESign|$)`,
+    'i'
   )
   const m = text.match(re)
   if (!m || !m[1]) return ''

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Import Clinical Notes</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0F1117;color:#E8EAF0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+  .card{background:#181B23;border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:2rem;width:100%;max-width:560px}
+  h1{font-size:18px;font-weight:700;margin-bottom:.4rem}
+  p{font-size:13px;color:#8B8FA8;margin-bottom:1.25rem;line-height:1.6}
+  .btn{font-size:14px;font-weight:600;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;transition:opacity .15s;margin:6px}
+  .btn-primary{background:#3DD68C;color:#071a0e}
+  .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-secondary{background:transparent;color:#8B8FA8;border:1px solid rgba(255,255,255,.13)}
+  .btn-secondary:hover{background:#1E2230}
+  .file-label{display:inline-block;font-size:13px;font-weight:600;padding:8px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#1E2230;color:#E8EAF0;cursor:pointer;margin:6px}
+  .file-label:hover{background:#252838}
+  #file-input{display:none}
+  #file-chosen{font-size:12px;color:#8B8FA8;margin:4px 6px;display:inline-block}
+  #user-row{font-size:12px;color:#555870;margin-bottom:1rem;min-height:16px}
+  .status{margin-top:1.25rem;font-size:12px;color:#8B8FA8;min-height:24px;font-family:monospace;line-height:1.7;text-align:left;background:#0F1117;border-radius:8px;padding:12px;display:none;max-height:320px;overflow-y:auto}
+  .status.active{display:block}
+  .done{color:#3DD68C;font-weight:600}
+  .err{color:#FF5C5C}
+  .warn{color:#F0A030}
+  hr{border:none;border-top:1px solid rgba(255,255,255,.08);margin:1rem 0}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Import Clinical Notes</h1>
+  <p>Imports Texas Oncology clinical notes into Firestore, links them to existing appointments, corrects near-match dates, and creates new appointment records for any visits not yet tracked.</p>
+  <hr>
+  <div id="user-row"></div>
+  <div>
+    <button class="btn btn-secondary" id="sign-in-btn" onclick="doSignIn()">Sign in with Google</button>
+    <label class="file-label" for="file-input">Choose JSON file</label>
+    <input type="file" id="file-input" accept=".json" onchange="onFileChosen(this)">
+    <span id="file-chosen">No file chosen</span>
+  </div>
+  <div style="margin-top:12px">
+    <button class="btn btn-primary" id="import-btn" onclick="doImport()" disabled>Import</button>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<script type="module">
+import { initializeApp }                                      from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup,
+         onAuthStateChanged }                                 from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc,
+         getDocs }                                            from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyCD1uMNkBMdbArrv4zKppc54Lgxg66xMdo",
+  authDomain:        "dad-med-tracker.firebaseapp.com",
+  projectId:         "dad-med-tracker",
+  storageBucket:     "dad-med-tracker.firebasestorage.app",
+  messagingSenderId: "1043260614123",
+  appId:             "1:1043260614123:web:352f4cfa5ee621f22425ae"
+};
+
+const app      = initializeApp(firebaseConfig);
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// Hard-coded near-matches: note date → existing appointment id
+const NEAR_MATCHES = {
+  '2024-11-10': 'imp-002',
+  '2025-02-02': 'imp-007',
+  '2025-09-30': 'imp-024',
+  '2025-12-30': 'imp-028',
+};
+
+function deriveSpecialty(noteName) {
+  if (/hemonc|oncol/i.test(noteName))  return 'oncology';
+  if (/palliativ/i.test(noteName))      return 'palliative';
+  if (/liver|hepat/i.test(noteName))    return 'liver';
+  if (/kidney|nephro/i.test(noteName))  return 'kidney';
+  return 'other';
+}
+
+function cleanTitle(noteName) {
+  return noteName
+    .replace(/\{Dragon\}/gi, '')
+    .replace(/\*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+let isSignedIn = false;
+let chosenFile = null;
+
+onAuthStateChanged(auth, user => {
+  const row      = document.getElementById('user-row');
+  const signInBtn = document.getElementById('sign-in-btn');
+  if (user) {
+    row.textContent      = '✓ Signed in as ' + user.email;
+    signInBtn.style.display = 'none';
+    isSignedIn = true;
+    updateImportBtn();
+  } else {
+    row.textContent = '';
+    signInBtn.style.display = '';
+    isSignedIn = false;
+    updateImportBtn();
+  }
+});
+
+function updateImportBtn() {
+  document.getElementById('import-btn').disabled = !(isSignedIn && chosenFile);
+}
+
+window.doSignIn = async () => {
+  try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
+};
+
+window.onFileChosen = (input) => {
+  chosenFile = input.files[0] || null;
+  document.getElementById('file-chosen').textContent = chosenFile ? chosenFile.name : 'No file chosen';
+  updateImportBtn();
+};
+
+window.doImport = async () => {
+  if (!chosenFile) return;
+  const btn    = document.getElementById('import-btn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status active';
+  status.innerHTML = '';
+
+  function log(msg, cls) {
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = msg;
+    status.appendChild(div);
+    status.scrollTop = status.scrollHeight;
+  }
+
+  let notes;
+  try {
+    const text = await chosenFile.text();
+    notes = JSON.parse(text);
+    if (!Array.isArray(notes)) throw new Error('Expected a JSON array');
+  } catch(e) {
+    log('✗ Failed to parse file: ' + e.message, 'err');
+    btn.disabled = false;
+    return;
+  }
+
+  log(`Loaded ${notes.length} clinical notes. Fetching existing appointments…`);
+
+  // Fetch existing appointments keyed by date
+  const aptSnap = await getDocs(collection(db, 'appointments'));
+  const aptByDate = {};
+  const aptById   = {};
+  aptSnap.docs.forEach(d => {
+    const a = d.data();
+    aptById[a.id] = a;
+    if (a.dateTime) aptByDate[a.dateTime.slice(0, 10)] = a;
+  });
+
+  log(`Found ${aptSnap.size} existing appointments.`);
+  log('');
+
+  const TS = new Date().toISOString();
+  let linked = 0, created = 0, corrected = 0, noteFailed = 0, aptFailed = 0;
+
+  for (const note of notes) {
+    const noteDate   = note.date.slice(0, 10);
+    const specialty  = deriveSpecialty(note.noteName);
+    const noteDoc = {
+      id:          note.id,
+      date:        note.date,
+      author:      note.author,
+      noteName:    note.noteName,
+      textContent: note.textContent,
+      specialty,
+      status:      note.status    || '',
+      docStatus:   note.docStatus || '',
+      createdAt:   note.createdAt || note.date,
+      updatedAt:   note.updatedAt || note.date,
+    };
+
+    // Write clinical note
+    try {
+      await setDoc(doc(db, 'clinicalNotes', note.id), noteDoc);
+    } catch(e) {
+      log(`✗ Failed to save note ${noteDate}: ${e.message}`, 'err');
+      noteFailed++;
+      continue;
+    }
+
+    // Determine apt action
+    const nearMatchId   = NEAR_MATCHES[noteDate];
+    const exactMatchApt = aptByDate[noteDate];
+
+    if (exactMatchApt) {
+      // Exact match — link + set specialty
+      const existing = exactMatchApt;
+      try {
+        await setDoc(doc(db, 'appointments', existing.id), {
+          ...existing,
+          clinicalNoteId: note.id,
+          specialty,
+          updatedAt: TS,
+        });
+        log(`  ✓ linked    ${noteDate}  →  ${existing.title}`, 'done');
+        linked++;
+      } catch(e) {
+        log(`  ✗ link failed ${noteDate}: ${e.message}`, 'err');
+        aptFailed++;
+      }
+    } else if (nearMatchId && aptById[nearMatchId]) {
+      // Near match — correct date + link
+      const existing = aptById[nearMatchId];
+      const originalDate = existing.dateTime;
+      const correctedDateTime = noteDate + (originalDate.includes('T') ? originalDate.slice(10) : 'T09:00');
+      try {
+        await setDoc(doc(db, 'appointments', existing.id), {
+          ...existing,
+          dateTime: correctedDateTime,
+          clinicalNoteId: note.id,
+          specialty,
+          updatedAt: TS,
+        });
+        log(`  ✓ corrected ${originalDate.slice(0,10)} → ${noteDate}  (${existing.title})`, 'done');
+        corrected++;
+        linked++;
+      } catch(e) {
+        log(`  ✗ correct failed ${noteDate}: ${e.message}`, 'err');
+        aptFailed++;
+      }
+    } else if (!exactMatchApt) {
+      // No match — create new appointment
+      const newApt = {
+        id:             note.id,
+        title:          cleanTitle(note.noteName),
+        dateTime:       noteDate + 'T09:00',
+        type:           'specialist',
+        doctor:         note.author,
+        location:       'Texas Oncology',
+        covering:       'tbd',
+        specialty,
+        clinicalNoteId: note.id,
+        prep:           '',
+        postNotes:      '',
+        updatedAt:      TS,
+      };
+      try {
+        await setDoc(doc(db, 'appointments', newApt.id), newApt);
+        log(`  ✓ created   ${noteDate}  →  ${newApt.title}`, 'done');
+        created++;
+      } catch(e) {
+        log(`  ✗ create failed ${noteDate}: ${e.message}`, 'err');
+        aptFailed++;
+      }
+    } else {
+      log(`  ⚠ already linked  ${noteDate}`, 'warn');
+    }
+  }
+
+  log('');
+  const summary = `✅ Done — ${notes.length} notes saved · ${linked} apts linked · ${corrected} dates corrected · ${created} apts created` +
+    (aptFailed + noteFailed > 0 ? ` · ${aptFailed + noteFailed} errors` : '');
+  log(summary, aptFailed + noteFailed > 0 ? 'warn' : 'done');
+  btn.textContent = 'Import complete';
+};
+</script>
+</body>
+</html>
