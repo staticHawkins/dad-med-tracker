@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useMeds } from '../hooks/useMeds'
@@ -8,20 +8,27 @@ import AppointmentsView from './apts/AppointmentsView'
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('meds')
-  const [medModalOpen, setMedModalOpen] = useState(false)
-  const [aptModalOpen, setAptModalOpen] = useState(false)
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const meds = useMeds()
   const apts = useApts()
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
-  })
-
-  function handleAddBtn() {
-    if (activeTab === 'meds') setMedModalOpen(true)
-    else setAptModalOpen(true)
-  }
 
   return (
     <>
@@ -31,12 +38,21 @@ export default function MainApp({ user }) {
           FamilyCareHub
         </div>
         <div className="topbar-right">
-          <span className="topbar-date">{today}</span>
-          <span className="topbar-user">{user.email}</span>
-          <button className="btn-ghost" onClick={() => signOut(auth)}>Sign out</button>
-          <button className="btn-add" onClick={handleAddBtn}>
-            + {activeTab === 'meds' ? 'Add medication' : 'Add appointment'}
+          <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            {theme === 'dark' ? '☀' : '☽'}
           </button>
+          <div className="topbar-menu-wrap" ref={userMenuRef}>
+            <button className="btn-ghost topbar-user-btn" onClick={() => setUserMenuOpen(o => !o)}>
+              {user.displayName || user.email} ▾
+            </button>
+            {userMenuOpen && (
+              <div className="topbar-menu">
+                <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -49,20 +65,8 @@ export default function MainApp({ user }) {
         </button>
       </div>
 
-      {activeTab === 'meds' && (
-        <MedicationsView
-          meds={meds}
-          addTrigger={medModalOpen}
-          onAddHandled={() => setMedModalOpen(false)}
-        />
-      )}
-      {activeTab === 'apts' && (
-        <AppointmentsView
-          apts={apts}
-          addTrigger={aptModalOpen}
-          onAddHandled={() => setAptModalOpen(false)}
-        />
-      )}
+      {activeTab === 'meds' && <MedicationsView meds={meds} />}
+      {activeTab === 'apts' && <AppointmentsView apts={apts} />}
     </>
   )
 }

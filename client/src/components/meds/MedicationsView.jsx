@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import KPIRow from './KPIRow'
 import MedsTable from './MedsTable'
 import MedModal from './MedModal'
@@ -12,15 +12,11 @@ const FILTER_LABELS = {
   ok: 'Stocked up'
 }
 
-export default function MedicationsView({ meds, addTrigger, onAddHandled }) {
+export default function MedicationsView({ meds }) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [editId, setEditId] = useState(undefined)  // undefined = closed, null = new, string = editing
   const fileRef = useRef()
-
-  useEffect(() => {
-    if (addTrigger) { setEditId(null); onAddHandled() }
-  }, [addTrigger])
 
   function openModal(id = null) { setEditId(id) }
   function closeModal() { setEditId(undefined) }
@@ -67,6 +63,7 @@ export default function MedicationsView({ meds, addTrigger, onAddHandled }) {
           <button className="btn-ghost" onClick={() => exportJSON(meds)}>💾 Backup</button>
           <button className="btn-ghost" onClick={() => fileRef.current.click()}>⬆ Import</button>
           <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+          <button className="btn-add" onClick={() => openModal()}>+ Add medication</button>
         </div>
       </div>
 

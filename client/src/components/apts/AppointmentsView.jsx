@@ -1,18 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { aptStatus } from '../../lib/aptUtils'
 import MiniCalendar from './MiniCalendar'
 import HeroCard from './HeroCard'
 import AgendaGroups from './AgendaGroups'
 import AptModal from './AptModal'
 
-export default function AppointmentsView({ apts, addTrigger, onAddHandled }) {
+export default function AppointmentsView({ apts }) {
   const [search, setSearch] = useState('')
   const [editId, setEditId] = useState(undefined)
   const [pastExpanded, setPastExpanded] = useState(false)
-
-  useEffect(() => {
-    if (addTrigger) { setEditId(null); onAddHandled() }
-  }, [addTrigger])
 
   function openModal(id = null) { setEditId(id) }
   function closeModal() { setEditId(undefined) }
@@ -43,6 +39,7 @@ export default function AppointmentsView({ apts, addTrigger, onAddHandled }) {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
+            <button className="btn-add" onClick={() => openModal()}>+ Add appointment</button>
           </div>
           <div id="apt-agenda">
             <AgendaGroups

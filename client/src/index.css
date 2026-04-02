@@ -11,6 +11,21 @@
   --teal:#2DD4BF;   --teal-dim:rgba(45,212,191,.12);   --teal-border:rgba(45,212,191,.25);
   --ff:'Inter',sans-serif; --ffm:'JetBrains Mono',monospace;
 }
+/* ── LIGHT THEME ── */
+[data-theme="light"]{
+  --bg:#F4F5F7; --panel:#FFFFFF; --panel2:#ECEEF2;
+  --border:rgba(0,0,0,.08); --border2:rgba(0,0,0,.14);
+  --text:#1A1C26; --text2:#5A5F7A; --text3:#9299B5;
+}
+[data-theme="light"] tbody tr:hover{background:rgba(0,0,0,.025)}
+[data-theme="light"] .bar-bg{background:rgba(0,0,0,.08)}
+[data-theme="light"] .ftab.active{border-color:rgba(0,0,0,.18)}
+[data-theme="light"] .search-input:focus{border-color:rgba(0,0,0,.22)}
+[data-theme="light"] .fr input:focus,
+[data-theme="light"] .fr textarea:focus,
+[data-theme="light"] .fr select:focus{border-color:rgba(0,0,0,.26)}
+[data-theme="light"] .apt-card.past::before{background:rgba(0,0,0,.08)}
+[data-theme="light"] .btn-google:hover{background:#E8E9ED;border-color:rgba(0,0,0,.18)}
 html,body{height:100%}
 body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
 
@@ -68,6 +83,20 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
   white-space:nowrap;flex-shrink:0;
 }
 .btn-ghost:hover{background:var(--panel2);color:var(--text)}
+.topbar-user-btn{font-family:var(--ffm);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.topbar-menu-wrap{position:relative}
+.topbar-menu{
+  position:absolute;top:calc(100% + 8px);right:0;min-width:160px;
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:9px;padding:5px;z-index:50;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);animation:mIn .15s ease;
+}
+.menu-item{
+  width:100%;text-align:left;font-family:var(--ff);font-size:13px;font-weight:500;
+  padding:8px 12px;border:none;border-radius:6px;
+  background:transparent;color:var(--text2);cursor:pointer;transition:all .12s;
+}
+.menu-item:hover{background:var(--panel2);color:var(--text)}
 
 /* ── PAGE ── */
 .page{max-width:100%;padding:20px 24px 48px}
@@ -275,7 +304,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .hero-body{flex:1;min-width:0}
 
 /* ── AGENDA SEARCH ── */
-.agenda-controls{margin-bottom:20px}
+.agenda-controls{margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .agenda-controls .search-wrap{max-width:240px}
 .agenda-controls .search-input{
   width:100%;padding:8px 12px 8px 32px;
