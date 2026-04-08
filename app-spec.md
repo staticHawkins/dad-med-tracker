@@ -1,6 +1,6 @@
 # FamilyCareHub — Technical Specification
 
-_Last updated: 2026-03-31_
+_Last updated: 2026-04-08_
 
 ---
 
@@ -20,9 +20,9 @@ FamilyCareHub is a family caregiver tool for tracking a family member's medicati
 
 | Layer       | Technology                                        |
 |-------------|---------------------------------------------------|
-| Frontend    | React 18 (Vite build tool)                        |
+| Frontend    | React 19 (Vite build tool)                        |
 | Backend     | Firebase (Firestore + Google Auth)                |
-| SDK         | Firebase JS SDK v10.14.1 via npm                  |
+| SDK         | Firebase JS SDK v12.11.0 via npm                  |
 | Hosting     | GitHub Pages (via GitHub Actions CI/CD)           |
 | Testing     | Vitest + React Testing Library + jsdom            |
 
@@ -41,6 +41,7 @@ client/                        ← Vite project root
       medUtils.js              ← Pure fns: pillsNow, st, getRefillDate, fmtDate, …
       aptUtils.js              ← Pure fns: aptStatus, fmtAptDateBlock, fmtAptTime, …
       firestore.js             ← saveMed, delMed, markRefilled, saveApt, delApt, exportCSV, exportJSON, importMeds
+      noteUtils.js             ← Pure fns: parseSection, deriveSpecialty, SPECIALTIES
     components/
       LoginScreen.jsx
       MainApp.jsx              ← Tab bar; owns medModalOpen / aptModalOpen state
@@ -171,6 +172,12 @@ Returns `{ rem, tot, runOutDate, daysToZero }`.
 | Within next 7 days     | `soon`      |
 | Beyond 7 days          | `upcoming`  |
 
+### `parseSection(text, sectionName)` — clinical note parser
+Extracts a named section (e.g. `Impression`, `Plan`, `Problem List`) from Epic/Dragon-formatted clinical notes. Strips leading whitespace and tabs per line, stops at the next section header or e-signature block.
+
+### `deriveSpecialty(noteName)` — specialty detection
+Maps a note template name to a specialty slug (`oncology`, `palliative`, `liver`, `kidney`, `other`) using keyword regex matching.
+
 ---
 
 ## 6. UI Features
@@ -207,7 +214,7 @@ Returns `{ rem, tot, runOutDate, daysToZero }`.
 cd client
 npm_config_cache=/tmp/npm-cache npm install
 npm run dev        # Vite dev server at http://localhost:5173
-npm test           # Vitest (44 tests)
+npm test           # Vitest (60 tests)
 npm run build      # Output to client/dist/
 ```
 
@@ -231,8 +238,9 @@ npm run build      # Output to client/dist/
 
 | File | Tests | What it covers |
 |------|-------|----------------|
-| `medUtils.test.js` | 15 | `pillsNow`, `st`, `stLabel`, `getRefillDate`, `fmtDate` |
+| `medUtils.test.js` | 19 | `pillsNow`, `st`, `stLabel`, `getRefillDate`, `fmtDate` |
 | `aptUtils.test.js` | 13 | `aptStatus`, `fmtAptDateBlock`, `fmtAptTime`, `coveringLabel`, `typeLabel` |
+| `noteUtils.test.js` | 16 | `parseSection`, `deriveSpecialty`, `SPECIALTIES` |
 | `KPIRow.test.jsx` | 5 | KPI card rendering, urgent counts, empty state |
 | `MedsTable.test.jsx` | 7 | Table render, filtering, sorting, status pills |
 
@@ -270,4 +278,3 @@ _Update this section as limitations are discovered or resolved._
 - [ ] Single-user only — no multi-user data isolation (one Firestore project per user)
 - [ ] No push notifications or reminders
 - [ ] Appointment search does not filter by doctor, location, or type — only by title
-- [ ] CLAUDE.md still describes the old vanilla JS app — needs updating after React migration merges
