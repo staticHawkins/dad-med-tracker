@@ -1,4 +1,4 @@
-import { pillsNow, st, stLabel, pillStatusClass, fmtDate, getRefillDate } from '../../lib/medUtils'
+import { pillsNow, st, stLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel } from '../../lib/medUtils'
 import { markRefilled, delMed } from '../../lib/firestore'
 
 export default function MedsTable({ meds, filter, search, onEdit }) {
@@ -71,7 +71,8 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
             const pc = pillStatusClass(p.rem, p.tot)
             const bc = pc === 'zero' || pc === 'low' ? 'var(--red)' : s === 'soon' ? 'var(--amber)' : 'var(--green)'
             const pillSt = p.rem <= 0 ? 'empty' : s
-            const sub = [m.dose, m.rxNum ? 'Rx ' + m.rxNum : ''].filter(Boolean).join(' · ')
+            const fl = freqLabel(m)
+            const sub = [m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
             const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) + ' *' : '—')
 
             return (
