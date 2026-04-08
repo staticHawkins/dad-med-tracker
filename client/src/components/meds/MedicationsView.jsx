@@ -12,7 +12,7 @@ const FILTER_LABELS = {
   ok: 'Stocked up'
 }
 
-export default function MedicationsView({ meds }) {
+export default function MedicationsView({ meds, careTeam }) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [editId, setEditId] = useState(undefined)  // undefined = closed, null = new, string = editing
@@ -70,7 +70,7 @@ export default function MedicationsView({ meds }) {
       <MedsTable meds={meds} filter={filter} search={search} onEdit={openModal} />
 
       {editId !== undefined && (
-        <MedModal meds={meds} editId={editId} onClose={closeModal} />
+        <MedModal meds={meds} careTeam={careTeam} editId={editId} onClose={closeModal} />
       )}
     </div>
   )

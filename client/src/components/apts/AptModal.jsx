@@ -7,7 +7,7 @@ const EMPTY = {
   specialty: '', prep: '', postNotes: ''
 }
 
-export default function AptModal({ apts, editId, onClose }) {
+export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
 
@@ -77,7 +77,12 @@ export default function AptModal({ apts, editId, onClose }) {
 
         <div className="modal-section">Provider &amp; location</div>
         <div className="fr"><label>Doctor / provider</label>
-          <input value={form.doctor} onChange={set('doctor')} placeholder="Name" /></div>
+          <select value={form.doctor} onChange={set('doctor')}>
+            <option value="">No doctor</option>
+            {careTeam.map(dr => (
+              <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
+            ))}
+          </select></div>
         <div className="f2">
           <div className="fr"><label>Location</label>
             <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" /></div>

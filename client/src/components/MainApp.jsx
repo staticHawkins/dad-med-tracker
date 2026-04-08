@@ -3,13 +3,20 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useMeds } from '../hooks/useMeds'
 import { useApts } from '../hooks/useApts'
+import { useCareTeam } from '../hooks/useCareTeam'
+import { useTasks } from '../hooks/useTasks'
+import { useUsers } from '../hooks/useUsers'
+import { upsertUser } from '../lib/firestore'
 import MedicationsView from './meds/MedicationsView'
 import AppointmentsView from './apts/AppointmentsView'
+import TasksView from './tasks/TasksView'
+import CareTeamPanel from './CareTeamPanel'
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('meds')
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [careTeamOpen, setCareTeamOpen] = useState(false)
   const userMenuRef = useRef(null)
 
   useEffect(() => {
@@ -27,8 +34,15 @@ export default function MainApp({ user }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    upsertUser(user).catch(() => {})
+  }, [user])
+
   const meds = useMeds()
   const apts = useApts()
+  const careTeam = useCareTeam()
+  const tasks = useTasks()
+  const users = useUsers()
 
   return (
     <>
@@ -38,6 +52,7 @@ export default function MainApp({ user }) {
           FamilyCareHub
         </div>
         <div className="topbar-right">
+          <button className="btn-ghost" onClick={() => setCareTeamOpen(true)} title="Manage Care Team">⚙</button>
           <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme === 'dark' ? '☀' : '☽'}
           </button>
@@ -63,10 +78,16 @@ export default function MainApp({ user }) {
         <button className={`ptab${activeTab === 'apts' ? ' active' : ''}`} onClick={() => setActiveTab('apts')}>
           Appointments
         </button>
+        <button className={`ptab${activeTab === 'tasks' ? ' active' : ''}`} onClick={() => setActiveTab('tasks')}>
+          Tasks
+        </button>
       </div>
 
-      {activeTab === 'meds' && <MedicationsView meds={meds} />}
-      {activeTab === 'apts' && <AppointmentsView apts={apts} />}
+      {activeTab === 'meds' && <MedicationsView meds={meds} careTeam={careTeam} />}
+      {activeTab === 'apts' && <AppointmentsView apts={apts} careTeam={careTeam} />}
+      {activeTab === 'tasks' && <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} />}
+
+      <CareTeamPanel careTeam={careTeam} open={careTeamOpen} onClose={() => setCareTeamOpen(false)} />
     </>
   )
 }

@@ -2,7 +2,7 @@ import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today } from './medUtils'
 
-function newId() {
+export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
 }
 
@@ -71,6 +71,55 @@ export async function saveClinicalNote(note) {
 
 export async function delApt(id) {
   await deleteDoc(doc(db, 'appointments', id))
+}
+
+export async function saveDoctor(fields, editId) {
+  const dr = {
+    id: editId || newId(),
+    name: fields.name,
+    specialty: fields.specialty || '',
+    affiliation: fields.affiliation || '',
+    notes: fields.notes || '',
+    imageUrl: fields.imageUrl || '',
+    updatedAt: new Date().toISOString()
+  }
+  await setDoc(doc(db, 'careTeam', dr.id), dr)
+  return dr.id
+}
+
+export async function delDoctor(id) {
+  await deleteDoc(doc(db, 'careTeam', id))
+}
+
+export async function saveTask(fields, editId) {
+  const task = {
+    id: editId || newId(),
+    title: fields.title,
+    description: fields.description || '',
+    doctorId: fields.doctorId || '',
+    assigneeUids: fields.assigneeUids || [],
+    dueDate: fields.dueDate || '',
+    done: fields.done ?? false,
+    updatedAt: new Date().toISOString()
+  }
+  await setDoc(doc(db, 'tasks', task.id), task)
+}
+
+export async function delTask(id) {
+  await deleteDoc(doc(db, 'tasks', id))
+}
+
+export async function toggleTask(task) {
+  await setDoc(doc(db, 'tasks', task.id), { ...task, done: !task.done, updatedAt: new Date().toISOString() })
+}
+
+export async function upsertUser(firebaseUser) {
+  await setDoc(doc(db, 'users', firebaseUser.uid), {
+    uid: firebaseUser.uid,
+    displayName: firebaseUser.displayName || firebaseUser.email,
+    email: firebaseUser.email,
+    lastSignIn: new Date().toISOString()
+  }, { merge: true })
 }
 
 export function exportCSV(meds) {

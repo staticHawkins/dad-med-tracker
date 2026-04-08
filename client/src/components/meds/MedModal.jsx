@@ -6,7 +6,7 @@ const EMPTY = {
   refillDate: '', pharmacy: '', rxNum: '', doctor: '', instructions: '', notes: ''
 }
 
-export default function MedModal({ meds, editId, onClose }) {
+export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
 
@@ -78,7 +78,12 @@ export default function MedModal({ meds, editId, onClose }) {
           <div className="fr"><label>Rx number</label>
             <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" /></div>
           <div className="fr"><label>Doctor</label>
-            <input value={form.doctor} onChange={set('doctor')} placeholder="Prescribing doctor" /></div>
+            <select value={form.doctor} onChange={set('doctor')}>
+              <option value="">No doctor</option>
+              {careTeam.map(dr => (
+                <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
+              ))}
+            </select></div>
         </div>
 
         <div className="modal-section">Notes</div>
