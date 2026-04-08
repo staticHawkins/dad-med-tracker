@@ -15,18 +15,9 @@ export function parseSection(text, sectionName) {
     .trim()
 }
 
-export function deriveSpecialty(noteName) {
-  if (/hemonc|oncol/i.test(noteName)) return 'oncology'
-  if (/palliativ/i.test(noteName)) return 'palliative'
-  if (/liver|hepat/i.test(noteName)) return 'liver'
-  if (/kidney|nephro/i.test(noteName)) return 'kidney'
+export function deriveSpecialty(noteName, specialties) {
+  for (const s of specialties) {
+    if ((s.patterns || []).some(p => new RegExp(p, 'i').test(noteName))) return s.id
+  }
   return 'other'
-}
-
-export const SPECIALTIES = {
-  oncology:   'Oncology',
-  palliative: 'Palliative',
-  liver:      'Liver',
-  kidney:     'Kidney',
-  other:      'Other',
 }

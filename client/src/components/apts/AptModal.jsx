@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { saveApt } from '../../lib/firestore'
-import { SPECIALTIES } from '../../lib/noteUtils'
+import { useSpecialties } from '../../hooks/useSpecialties'
 
 const EMPTY = {
   title: '', dateTime: '', type: '', doctor: '', location: '', covering: '',
@@ -8,6 +8,7 @@ const EMPTY = {
 }
 
 export default function AptModal({ apts, careTeam = [], editId, onClose }) {
+  const specialties = useSpecialties()
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -70,8 +71,8 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
           <div className="fr"><label>Specialty</label>
             <select value={form.specialty} onChange={set('specialty')}>
               <option value="">Select specialty…</option>
-              {Object.entries(SPECIALTIES).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
+              {specialties.map(s => (
+                <option key={s.id} value={s.id}>{s.label}</option>
               ))}
             </select>
           </div>

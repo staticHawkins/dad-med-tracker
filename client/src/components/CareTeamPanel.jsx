@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveDoctor, delDoctor, newId } from '../lib/firestore'
 import { uploadDoctorPhoto } from '../lib/storageUtils'
-import { SPECIALTIES } from '../lib/noteUtils'
+import { useSpecialties, specialtyLabel } from '../hooks/useSpecialties'
 
 const EMPTY_FORM = { name: '', specialty: '', affiliation: '', notes: '', imageUrl: '' }
 
@@ -10,6 +10,7 @@ function initials(name) {
 }
 
 export default function CareTeamPanel({ careTeam, open, onClose }) {
+  const specialties = useSpecialties()
   const [view, setView] = useState('list')
   const [editDr, setEditDr] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -112,7 +113,7 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
                     <div className="dr-info">
                       <div className="dr-name">{dr.name}</div>
                       {dr.specialty && (
-                        <span className={`specialty-chip ${dr.specialty}`}>{SPECIALTIES[dr.specialty] || dr.specialty}</span>
+                        <span className={`specialty-chip ${dr.specialty}`}>{specialtyLabel(specialties, dr.specialty)}</span>
                       )}
                       {dr.affiliation && <div className="dr-affil">{dr.affiliation}</div>}
                       {dr.notes && <div className="dr-notes">{dr.notes}</div>}
@@ -156,8 +157,8 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
                 <label>Specialty</label>
                 <select value={form.specialty} onChange={set('specialty')}>
                   <option value="">Select specialty…</option>
-                  {Object.entries(SPECIALTIES).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
+                  {specialties.map(s => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
                   ))}
                 </select>
               </div>

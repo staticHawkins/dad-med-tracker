@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseSection, deriveSpecialty, SPECIALTIES } from '../lib/noteUtils'
+import { parseSection, deriveSpecialty } from '../lib/noteUtils'
 
 // ── Sample note text matching real Epic/Dragon format ─────────────────────────
 
@@ -83,54 +83,45 @@ describe('parseSection', () => {
 
 // ── deriveSpecialty ───────────────────────────────────────────────────────────
 
+const SPECIALTIES = [
+  { id: 'oncology',   patterns: ['hemonc', 'oncol'] },
+  { id: 'palliative', patterns: ['palliativ'] },
+  { id: 'liver',      patterns: ['liver', 'hepat'] },
+  { id: 'kidney',     patterns: ['kidney', 'nephro'] },
+  { id: 'other',      patterns: [] },
+]
+
 describe('deriveSpecialty', () => {
   it('detects oncology from HemOnc note names', () => {
-    expect(deriveSpecialty('HemOnc Follow Up {Dragon} - Abushahin')).toBe('oncology')
-    expect(deriveSpecialty('HemOnc Consult {Dragon} - Abushahin')).toBe('oncology')
-    expect(deriveSpecialty('*Abushahin - DS Follow Up Note - HemOnc')).toBe('oncology')
-    expect(deriveSpecialty('APP HemOnc Follow Up - Carone')).toBe('oncology')
+    expect(deriveSpecialty('HemOnc Follow Up {Dragon} - Abushahin', SPECIALTIES)).toBe('oncology')
+    expect(deriveSpecialty('HemOnc Consult {Dragon} - Abushahin', SPECIALTIES)).toBe('oncology')
+    expect(deriveSpecialty('*Abushahin - DS Follow Up Note - HemOnc', SPECIALTIES)).toBe('oncology')
+    expect(deriveSpecialty('APP HemOnc Follow Up - Carone', SPECIALTIES)).toBe('oncology')
   })
 
   it('detects palliative from palliative care note names', () => {
-    expect(deriveSpecialty('Telehealth Palliative Care Consult - Terauchi')).toBe('palliative')
-    expect(deriveSpecialty('Telehealth Palliative Care Follow Up - Terauchi')).toBe('palliative')
+    expect(deriveSpecialty('Telehealth Palliative Care Consult - Terauchi', SPECIALTIES)).toBe('palliative')
+    expect(deriveSpecialty('Telehealth Palliative Care Follow Up - Terauchi', SPECIALTIES)).toBe('palliative')
   })
 
   it('detects liver from hepatology note names', () => {
-    expect(deriveSpecialty('Hepatology Follow Up')).toBe('liver')
-    expect(deriveSpecialty('Liver Consult Note')).toBe('liver')
+    expect(deriveSpecialty('Hepatology Follow Up', SPECIALTIES)).toBe('liver')
+    expect(deriveSpecialty('Liver Consult Note', SPECIALTIES)).toBe('liver')
   })
 
   it('detects kidney from nephrology note names', () => {
-    expect(deriveSpecialty('Nephrology Follow Up')).toBe('kidney')
-    expect(deriveSpecialty('Kidney Check')).toBe('kidney')
+    expect(deriveSpecialty('Nephrology Follow Up', SPECIALTIES)).toBe('kidney')
+    expect(deriveSpecialty('Kidney Check', SPECIALTIES)).toBe('kidney')
   })
 
   it('falls back to other for unrecognized note names', () => {
-    expect(deriveSpecialty('General Checkup')).toBe('other')
-    expect(deriveSpecialty('')).toBe('other')
-    expect(deriveSpecialty('Unknown Specialist Note')).toBe('other')
+    expect(deriveSpecialty('General Checkup', SPECIALTIES)).toBe('other')
+    expect(deriveSpecialty('', SPECIALTIES)).toBe('other')
+    expect(deriveSpecialty('Unknown Specialist Note', SPECIALTIES)).toBe('other')
   })
 
   it('is case-insensitive', () => {
-    expect(deriveSpecialty('hemonc follow up')).toBe('oncology')
-    expect(deriveSpecialty('PALLIATIVE CARE')).toBe('palliative')
-  })
-})
-
-// ── SPECIALTIES map ───────────────────────────────────────────────────────────
-
-describe('SPECIALTIES', () => {
-  it('has a display label for every specialty slug', () => {
-    expect(SPECIALTIES.oncology).toBe('Oncology')
-    expect(SPECIALTIES.palliative).toBe('Palliative')
-    expect(SPECIALTIES.liver).toBe('Liver')
-    expect(SPECIALTIES.kidney).toBe('Kidney')
-    expect(SPECIALTIES.other).toBe('Other')
-  })
-
-  it('covers all slugs returned by deriveSpecialty', () => {
-    const slugs = ['oncology', 'palliative', 'liver', 'kidney', 'other']
-    slugs.forEach(s => expect(SPECIALTIES[s]).toBeTruthy())
+    expect(deriveSpecialty('hemonc follow up', SPECIALTIES)).toBe('oncology')
+    expect(deriveSpecialty('PALLIATIVE CARE', SPECIALTIES)).toBe('palliative')
   })
 })

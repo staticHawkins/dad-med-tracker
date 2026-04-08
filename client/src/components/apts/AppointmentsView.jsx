@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { aptStatus } from '../../lib/aptUtils'
-import { SPECIALTIES } from '../../lib/noteUtils'
+import { useSpecialties } from '../../hooks/useSpecialties'
 import { useNotes } from '../../hooks/useNotes'
 import MiniCalendar from './MiniCalendar'
 import HeroCard from './HeroCard'
@@ -8,14 +8,15 @@ import AgendaGroups from './AgendaGroups'
 import AptModal from './AptModal'
 
 export default function AppointmentsView({ apts, careTeam }) {
+  const specialties = useSpecialties()
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('')
   const [editId, setEditId] = useState(undefined)
   const [pastExpanded, setPastExpanded] = useState(false)
   const noteById = useNotes()
 
-  const availableSpecialties = Object.keys(SPECIALTIES).filter(s =>
-    apts.some(a => a.specialty === s)
+  const availableSpecialties = specialties.filter(s =>
+    apts.some(a => a.specialty === s.id)
   )
 
   function openModal(id = null) { setEditId(id) }
@@ -45,10 +46,10 @@ export default function AppointmentsView({ apts, careTeam }) {
               >All</button>
               {availableSpecialties.map(s => (
                 <button
-                  key={s}
-                  className={`sf-chip${specialty === s ? ' active' : ''}`}
-                  onClick={() => setSpecialty(o => o === s ? '' : s)}
-                >{SPECIALTIES[s]}</button>
+                  key={s.id}
+                  className={`sf-chip${specialty === s.id ? ' active' : ''}`}
+                  onClick={() => setSpecialty(o => o === s.id ? '' : s.id)}
+                >{s.label}</button>
               ))}
             </div>
           )}
@@ -69,6 +70,7 @@ export default function AppointmentsView({ apts, careTeam }) {
               apts={apts}
               search={search}
               specialty={specialty}
+              specialties={specialties}
               noteById={noteById}
               onEdit={openModal}
               pastExpanded={pastExpanded}
