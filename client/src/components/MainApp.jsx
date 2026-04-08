@@ -16,7 +16,6 @@ export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('meds')
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [careTeamOpen, setCareTeamOpen] = useState(false)
   const userMenuRef = useRef(null)
 
   useEffect(() => {
@@ -52,7 +51,6 @@ export default function MainApp({ user }) {
           FamilyCareHub
         </div>
         <div className="topbar-right">
-          <button className="btn-ghost" onClick={() => setCareTeamOpen(true)} title="Manage Care Team">⚙</button>
           <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme === 'dark' ? '☀' : '☽'}
           </button>
@@ -81,13 +79,16 @@ export default function MainApp({ user }) {
         <button className={`ptab${activeTab === 'tasks' ? ' active' : ''}`} onClick={() => setActiveTab('tasks')}>
           Tasks
         </button>
+        <button className={`ptab${activeTab === 'care-team' ? ' active' : ''}`} onClick={() => setActiveTab('care-team')}>
+          Care Team
+        </button>
       </div>
 
       {activeTab === 'meds' && <MedicationsView meds={meds} careTeam={careTeam} />}
       {activeTab === 'apts' && <AppointmentsView apts={apts} careTeam={careTeam} />}
       {activeTab === 'tasks' && <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} />}
 
-      <CareTeamPanel careTeam={careTeam} open={careTeamOpen} onClose={() => setCareTeamOpen(false)} />
+      {activeTab === 'care-team' && <CareTeamPanel careTeam={careTeam} />}
     </>
   )
 }
