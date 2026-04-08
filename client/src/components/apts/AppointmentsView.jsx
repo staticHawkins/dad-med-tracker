@@ -7,7 +7,7 @@ import HeroCard from './HeroCard'
 import AgendaGroups from './AgendaGroups'
 import AptModal from './AptModal'
 
-export default function AppointmentsView({ apts }) {
+export default function AppointmentsView({ apts, careTeam }) {
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('')
   const [editId, setEditId] = useState(undefined)
@@ -79,7 +79,7 @@ export default function AppointmentsView({ apts }) {
       </div>
 
       {editId !== undefined && (
-        <AptModal apts={apts} editId={editId} onClose={closeModal} />
+        <AptModal apts={apts} careTeam={careTeam} editId={editId} onClose={closeModal} />
       )}
     </div>
   )
