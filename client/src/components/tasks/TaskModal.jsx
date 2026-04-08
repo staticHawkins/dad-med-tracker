@@ -8,6 +8,7 @@ const EMPTY = {
 export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!editId) { setForm(EMPTY); return }
@@ -46,7 +47,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
     setSaving(true)
     try {
       await saveTask(form, editId || null)
-      onClose()
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onClose() }, 1200)
     } catch { alert('Failed to save. Check your connection.') }
     setSaving(false)
   }
@@ -104,7 +106,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
         <div className="mf">
           <button className="btn-cx" onClick={onClose}>Cancel</button>
           <button className="btn-sv" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save task'}
+            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save task'}
           </button>
         </div>
       </div>

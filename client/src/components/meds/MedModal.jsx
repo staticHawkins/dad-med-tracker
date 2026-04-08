@@ -9,6 +9,7 @@ const EMPTY = {
 export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!editId) { setForm(EMPTY); return }
@@ -39,7 +40,8 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
     setSaving(true)
     try {
       await saveMed(form, editId || null)
-      onClose()
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onClose() }, 1200)
     } catch { alert('Failed to save. Check your connection.') }
     setSaving(false)
   }
@@ -95,7 +97,7 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         <div className="mf">
           <button className="btn-cx" onClick={onClose}>Cancel</button>
           <button className="btn-sv" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save medication'}
+            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save medication'}
           </button>
         </div>
       </div>

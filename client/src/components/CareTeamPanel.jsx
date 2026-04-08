@@ -14,6 +14,7 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
   const [editDr, setEditDr] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [newPhotoFile, setNewPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const fileInputRef = useRef(null)
@@ -72,7 +73,8 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
         imageUrl = await uploadDoctorPhoto(newPhotoFile, id)
       }
       await saveDoctor({ ...form, imageUrl }, id)
-      closeForm()
+      setSaved(true)
+      setTimeout(() => { setSaved(false); closeForm() }, 1200)
     } catch { alert('Failed to save. Check your connection.') }
     setSaving(false)
   }
@@ -172,7 +174,7 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
             <div className="mf">
               <button className="btn-cx" onClick={closeForm}>Back</button>
               <button className="btn-sv" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save doctor'}
+                {saved ? 'Saved!' : saving ? 'Saving…' : 'Save doctor'}
               </button>
             </div>
           </>

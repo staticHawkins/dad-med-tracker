@@ -10,6 +10,7 @@ const EMPTY = {
 export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!editId) { setForm(EMPTY); return }
@@ -37,7 +38,8 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     setSaving(true)
     try {
       await saveApt(form, editId || null)
-      onClose()
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onClose() }, 1200)
     } catch { alert('Failed to save. Check your connection.') }
     setSaving(false)
   }
@@ -110,7 +112,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
         <div className="mf">
           <button className="btn-cx" onClick={onClose}>Cancel</button>
           <button className="btn-sv" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save appointment'}
+            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save appointment'}
           </button>
         </div>
       </div>
