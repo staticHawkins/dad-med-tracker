@@ -573,6 +573,43 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .assignee-check-label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer}
 .assignee-check-label input{cursor:pointer;accent-color:var(--green)}
 
+/* Doctor multi-select dropdown */
+.doctor-dropdown-wrap{position:relative}
+.doctor-dropdown-trigger{
+  width:100%;font-family:var(--ff);font-size:14px;text-align:left;
+  padding:9px 11px;border:1px solid var(--border2);border-radius:7px;
+  background:var(--panel2);color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;transition:border-color .15s
+}
+.doctor-dropdown-trigger:focus{border-color:rgba(255,255,255,.26);outline:none}
+[data-theme="light"] .doctor-dropdown-trigger:focus{border-color:rgba(0,0,0,.26)}
+.doctor-dropdown-caret{font-size:10px;color:var(--text3);margin-left:6px;flex-shrink:0}
+.doctor-dropdown-menu{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;
+  background:var(--panel);border:1px solid var(--border2);border-radius:8px;
+  padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,.22);max-height:200px;overflow-y:auto
+}
+.doctor-dropdown-item{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  cursor:pointer;font-size:13px;color:var(--text);transition:background .1s
+}
+.doctor-dropdown-item:hover{background:var(--panel2)}
+.doctor-dropdown-item input{cursor:pointer;accent-color:var(--green);flex-shrink:0}
+.doctor-dropdown-specialty{color:var(--text3)}
+.doctor-dropdown-empty{padding:10px 12px;font-size:13px;color:var(--text3)}
+.doctor-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.doctor-chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:12px;
+  padding:3px 8px;border-radius:20px;
+  background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)
+}
+.doctor-chip-remove{
+  font-family:var(--ff);background:none;border:none;cursor:pointer;
+  color:var(--green);font-size:14px;line-height:1;padding:0;
+  display:flex;align-items:center;opacity:.7
+}
+.doctor-chip-remove:hover{opacity:1}
+
 @media(max-width:700px){
   /* ── layout ── */
   .kpi-row{grid-template-columns:repeat(2,1fr)}

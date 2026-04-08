@@ -76,7 +76,10 @@ export default function TasksView({ tasks, careTeam, users, user }) {
       ) : (
         <ul className="task-list">
           {filtered.map(task => {
-            const doctor = task.doctorId ? doctorMap[task.doctorId] : null
+            const taskDoctorIds = Array.isArray(task.doctorIds)
+              ? task.doctorIds
+              : (task.doctorId ? [task.doctorId] : [])
+            const doctors = taskDoctorIds.map(id => doctorMap[id]).filter(Boolean)
             const assignees = (task.assigneeUids || []).map(uid => userMap[uid]?.displayName || userMap[uid]?.email).filter(Boolean)
             const overdue = !task.done && isOverdue(task.dueDate)
 
@@ -96,7 +99,9 @@ export default function TasksView({ tasks, careTeam, users, user }) {
                     {assignees.length > 0 && assignees.map((name, i) => (
                       <span key={i} className={`covering-pill ${name.toLowerCase()}`}>{name}</span>
                     ))}
-                    {doctor && <span className="task-doctor">👨‍⚕️ {doctor.name}</span>}
+                    {doctors.map(dr => (
+                      <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
+                    ))}
                     {task.dueDate && (
                       <span className={`task-due${overdue ? ' overdue' : ''}`}>
                         {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}

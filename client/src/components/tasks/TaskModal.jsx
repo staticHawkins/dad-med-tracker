@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { saveTask } from '../../lib/firestore'
 
 const EMPTY = {
-  title: '', description: '', doctorId: '', assigneeUids: [], dueDate: '', done: false
+  title: '', description: '', doctorIds: [], assigneeUids: [], dueDate: '', done: false
 }
 
 export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const doctorDropRef = useRef(null)
 
   useEffect(() => {
     if (!editId) { setForm(EMPTY); return }
@@ -16,7 +18,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
     if (t) setForm({
       title: t.title || '',
       description: t.description || '',
-      doctorId: t.doctorId || '',
+      doctorIds: Array.isArray(t.doctorIds) ? t.doctorIds : (t.doctorId ? [t.doctorId] : []),
       assigneeUids: t.assigneeUids || [],
       dueDate: t.dueDate || '',
       done: t.done || false
@@ -29,8 +31,27 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    if (!dropdownOpen) return
+    function handleClick(e) {
+      if (doctorDropRef.current && !doctorDropRef.current.contains(e.target))
+        setDropdownOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [dropdownOpen])
+
   function set(field) {
     return e => setForm(f => ({ ...f, [field]: e.target.value }))
+  }
+
+  function toggleDoctor(id) {
+    setForm(f => ({
+      ...f,
+      doctorIds: f.doctorIds.includes(id)
+        ? f.doctorIds.filter(d => d !== id)
+        : [...f.doctorIds, id]
+    }))
   }
 
   function toggleAssignee(uid) {
@@ -72,15 +93,45 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
         <div className="modal-section">Assignment</div>
         <div className="fr">
           <label>Doctor</label>
-          <select value={form.doctorId} onChange={set('doctorId')}>
-            <option value="">No doctor</option>
-            {careTeam.map(dr => (
-              <option key={dr.id} value={dr.id}>
-                {dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}
-              </option>
-            ))}
-          </select>
+          <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
+            <button type="button" className="doctor-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
+              {form.doctorIds.length === 0 ? 'No doctor' : `${form.doctorIds.length} selected`}
+              <span className="doctor-dropdown-caret">{dropdownOpen ? '▴' : '▾'}</span>
+            </button>
+
+            {dropdownOpen && (
+              <div className="doctor-dropdown-menu">
+                {careTeam.map(dr => (
+                  <label key={dr.id} className="doctor-dropdown-item">
+                    <input
+                      type="checkbox"
+                      checked={form.doctorIds.includes(dr.id)}
+                      onChange={() => toggleDoctor(dr.id)}
+                    />
+                    <span>{dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}</span>
+                  </label>
+                ))}
+                {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
+              </div>
+            )}
+
+            {form.doctorIds.length > 0 && (
+              <div className="doctor-chips">
+                {form.doctorIds.map(id => {
+                  const dr = careTeam.find(d => d.id === id)
+                  if (!dr) return null
+                  return (
+                    <span key={id} className="doctor-chip">
+                      👨‍⚕️ {dr.name}
+                      <button type="button" className="doctor-chip-remove" onClick={() => toggleDoctor(id)}>×</button>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
+
         {users.length > 0 && (
           <div className="fr">
             <label>Assign to</label>
