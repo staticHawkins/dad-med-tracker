@@ -9,7 +9,7 @@ function initials(name) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-export default function CareTeamPanel({ careTeam, open, onClose }) {
+export default function CareTeamPanel({ careTeam }) {
   const [view, setView] = useState('list')
   const [editDr, setEditDr] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -20,14 +20,10 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
   const fileInputRef = useRef(null)
 
   useEffect(() => {
-    if (!open) { setView('list'); setEditDr(null) }
-  }, [open])
-
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') { if (view === 'form') closeForm(); else onClose() } }
+    function onKey(e) { if (e.key === 'Escape' && view === 'form') closeForm() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [view, onClose])
+  }, [view])
 
   function openAdd() {
     setEditDr(null)
@@ -86,11 +82,9 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
 
   const avatarSrc = photoPreview || form.imageUrl
 
-  if (!open) return null
-
   return (
-    <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) { if (view === 'form') closeForm(); else onClose() } }}>
-      <div className="modal care-team-modal">
+    <div className="view-wrap">
+      <div className="care-team-panel">
         {view === 'list' ? (
           <>
             <div className="ct-header">
@@ -126,9 +120,6 @@ export default function CareTeamPanel({ careTeam, open, onClose }) {
               </ul>
             )}
 
-            <div className="mf" style={{ borderTop: 'none', marginTop: '1rem', paddingTop: 0 }}>
-              <button className="btn-cx" onClick={onClose}>Close</button>
-            </div>
           </>
         ) : (
           <>
