@@ -323,10 +323,6 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   border-radius:4px;padding:2px 7px;white-space:nowrap;
   border:1px solid var(--border2);background:var(--panel2);color:var(--text2);
 }
-.specialty-chip.oncology{background:var(--blue-dim);border-color:var(--blue-border);color:var(--blue)}
-.specialty-chip.palliative{background:var(--violet-dim);border-color:var(--violet-border);color:var(--violet)}
-.specialty-chip.liver{background:var(--amber-dim);border-color:var(--amber-border);color:var(--amber)}
-.specialty-chip.kidney{background:var(--teal-dim);border-color:var(--teal-border);color:var(--teal)}
 
 /* ── CLINICAL NOTE BUTTON ── */
 .note-btn{

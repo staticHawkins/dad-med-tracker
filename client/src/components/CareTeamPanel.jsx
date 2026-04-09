@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveDoctor, delDoctor, newId, saveSpecialty } from '../lib/firestore'
 import { uploadDoctorPhoto } from '../lib/storageUtils'
-import { useSpecialties, specialtyLabel } from '../hooks/useSpecialties'
+import { useSpecialties, specialtyLabel, specialtyColor } from '../hooks/useSpecialties'
 
 const EMPTY_FORM = { name: '', specialty: '', affiliation: '', notes: '', imageUrl: '' }
 
@@ -109,7 +109,7 @@ export default function CareTeamPanel({ careTeam }) {
                     <div className="dr-info">
                       <div className="dr-name">{dr.name}</div>
                       {dr.specialty && (
-                        <span className={`specialty-chip ${dr.specialty}`}>{specialtyLabel(specialties, dr.specialty)}</span>
+                        <span className="specialty-chip" style={specialtyColor(specialties, dr.specialty)}>{specialtyLabel(specialties, dr.specialty)}</span>
                       )}
                       {dr.affiliation && <div className="dr-affil">{dr.affiliation}</div>}
                       {dr.notes && <div className="dr-notes">{dr.notes}</div>}

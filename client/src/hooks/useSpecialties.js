@@ -15,3 +15,16 @@ export function useSpecialties() {
 export function specialtyLabel(specialties, id) {
   return specialties.find(s => s.id === id)?.label || id
 }
+
+export function specialtyColor(specialties, id) {
+  if (!id) return {}
+  const idx = specialties.findIndex(s => s.id === id)
+  const i = idx === -1 ? 0 : idx
+  // Spread hues evenly using golden angle to avoid adjacent colors being similar
+  const hue = (i * 137.508) % 360
+  return {
+    background: `hsl(${hue} 60% 18%)`,
+    borderColor: `hsl(${hue} 55% 35%)`,
+    color:       `hsl(${hue} 85% 72%)`,
+  }
+}
