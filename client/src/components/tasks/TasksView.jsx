@@ -84,17 +84,16 @@ export default function TasksView({ tasks, careTeam, users, user }) {
             const overdue = !task.done && isOverdue(task.dueDate)
 
             return (
-              <li key={task.id} className={`task-row${task.done ? ' task-done' : ''}`}>
+              <li key={task.id} className={`task-row${task.done ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
                 <button
                   className="task-check"
-                  onClick={() => handleToggle(task)}
+                  onClick={e => { e.stopPropagation(); handleToggle(task) }}
                   title={task.done ? 'Mark open' : 'Mark done'}
                 >
                   {task.done ? '✓' : ''}
                 </button>
                 <div className="task-body">
                   <div className="task-title">{task.title}</div>
-                  {task.description && <div className="task-desc">{task.description}</div>}
                   <div className="task-meta">
                     {assignees.length > 0 && assignees.map((name, i) => (
                       <span key={i} className={`covering-pill ${name.toLowerCase()}`}>{name}</span>
@@ -110,8 +109,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
                   </div>
                 </div>
                 <div className="task-actions">
-                  <button className="btn-ghost" title="Edit" onClick={() => setEditId(task.id)}>✏</button>
-                  <button className="btn-ghost" title="Delete" onClick={() => handleDelete(task.id)}>✕</button>
+                  <button className="btn-ghost" title="Delete" onClick={e => { e.stopPropagation(); handleDelete(task.id) }}>✕</button>
                 </div>
               </li>
             )
