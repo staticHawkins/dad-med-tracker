@@ -70,7 +70,6 @@ export default function AppointmentsView({ apts, careTeam }) {
               apts={apts}
               search={search}
               specialty={specialty}
-              specialties={specialties}
               noteById={noteById}
               onEdit={openModal}
               pastExpanded={pastExpanded}

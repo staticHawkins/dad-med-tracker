@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { fmtAptDateBlock, fmtAptTime, coveringLabel, typeLabel } from '../../lib/aptUtils'
-import { specialtyLabel } from '../../hooks/useSpecialties'
 import { delApt } from '../../lib/firestore'
 import ClinicalNoteModal from './ClinicalNoteModal'
 
-export default function AptCard({ apt, status, specialties = [], onEdit, note }) {
+export default function AptCard({ apt, status, onEdit, note }) {
   const [open, setOpen] = useState(false)
   const [showNote, setShowNote] = useState(false)
   const db = fmtAptDateBlock(apt.dateTime)
@@ -32,11 +31,6 @@ export default function AptCard({ apt, status, specialties = [], onEdit, note })
             {apt.doctor && <span className="apt-doctor">{apt.doctor}</span>}
             {apt.location && <span className={`apt-location${apt.doctor ? ' has-doctor' : ''}`}>{apt.location}</span>}
             {tl && <span className="type-chip">{tl}</span>}
-            {apt.specialty && (
-              <span className={`specialty-chip ${apt.specialty}`}>
-                {specialtyLabel(specialties, apt.specialty)}
-              </span>
-            )}
           </div>
         </div>
         {apt.covering && (
