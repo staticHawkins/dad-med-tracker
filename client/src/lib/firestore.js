@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
+import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today } from './medUtils'
 
@@ -135,6 +135,7 @@ export async function seedSpecialties() {
 }
 
 export async function saveTask(fields, editId) {
+  const status = fields.status || (fields.done ? 'done' : 'todo')
   const task = {
     id: editId || newId(),
     title: fields.title,
@@ -142,7 +143,8 @@ export async function saveTask(fields, editId) {
     doctorIds: fields.doctorIds || [],
     assigneeUids: fields.assigneeUids || [],
     dueDate: fields.dueDate || '',
-    done: fields.done ?? false,
+    status,
+    done: status === 'done',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'tasks', task.id), task)
@@ -152,8 +154,33 @@ export async function delTask(id) {
   await deleteDoc(doc(db, 'tasks', id))
 }
 
-export async function toggleTask(task) {
-  await setDoc(doc(db, 'tasks', task.id), { ...task, done: !task.done, updatedAt: new Date().toISOString() })
+export async function updateTaskAssignees(task, assigneeUids) {
+  await setDoc(doc(db, 'tasks', task.id), {
+    ...task,
+    assigneeUids,
+    updatedAt: new Date().toISOString()
+  })
+}
+
+export async function updateTaskStatus(task, status) {
+  await setDoc(doc(db, 'tasks', task.id), {
+    ...task,
+    status,
+    done: status === 'done',
+    updatedAt: new Date().toISOString()
+  })
+}
+
+export async function addComment(taskId, comment) {
+  await updateDoc(doc(db, 'tasks', taskId), {
+    comments: arrayUnion(comment),
+    updatedAt: new Date().toISOString()
+  })
+}
+
+export async function deleteComment(task, commentId) {
+  const comments = (task.comments || []).filter(c => c.id !== commentId)
+  await setDoc(doc(db, 'tasks', task.id), { ...task, comments, updatedAt: new Date().toISOString() })
 }
 
 export async function upsertUser(firebaseUser) {

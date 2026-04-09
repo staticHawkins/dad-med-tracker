@@ -1,6 +1,14 @@
-import { useState } from 'react'
-import { toggleTask, delTask } from '../../lib/firestore'
+import { useState, useEffect, useRef } from 'react'
+import { updateTaskAssignees, delTask } from '../../lib/firestore'
 import TaskModal from './TaskModal'
+
+const STATUSES = ['todo', 'in-progress', 'done']
+const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
+const STATUS_CLASSES = { todo: 'status-todo', 'in-progress': 'status-inprog', done: 'status-done' }
+
+function getStatus(task) {
+  return task.status || (task.done ? 'done' : 'todo')
+}
 
 function formatDue(dueDate) {
   if (!dueDate) return null
@@ -19,28 +27,57 @@ function isOverdue(dueDate) {
 export default function TasksView({ tasks, careTeam, users, user }) {
   const [filter, setFilter] = useState('all')
   const [editId, setEditId] = useState(undefined)
+  const [assignPopupId, setAssignPopupId] = useState(null)
+  const assignPopupRef = useRef(null)
+
+  useEffect(() => {
+    if (!assignPopupId) return
+    function handleClick(e) {
+      if (assignPopupRef.current && !assignPopupRef.current.contains(e.target))
+        setAssignPopupId(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [assignPopupId])
 
   const doctorMap = Object.fromEntries(careTeam.map(dr => [dr.id, dr]))
   const userMap = Object.fromEntries(users.map(u => [u.uid, u]))
 
   const filtered = tasks.filter(t => {
+    const status = getStatus(t)
     if (filter === 'mine') return t.assigneeUids?.includes(user.uid)
-    if (filter === 'open') return !t.done
-    if (filter === 'done') return t.done
+    if (filter === 'todo') return status === 'todo'
+    if (filter === 'in-progress') return status === 'in-progress'
+    if (filter === 'done') return status === 'done'
     return true
   }).sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1
+    const sa = getStatus(a), sb = getStatus(b)
+    const order = { todo: 0, 'in-progress': 1, done: 2 }
+    if (order[sa] !== order[sb]) return order[sa] - order[sb]
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
     if (a.dueDate) return -1
     if (b.dueDate) return 1
     return b.updatedAt?.localeCompare(a.updatedAt || '') || 0
   })
 
-  async function handleToggle(task) {
-    try { await toggleTask(task) } catch { alert('Failed to update.') }
+  // Group by assignee
+  const groups = users.map(u => ({
+    uid: u.uid,
+    label: (u.displayName || u.email).split(' ')[0],
+    tasks: filtered.filter(t => t.assigneeUids?.includes(u.uid))
+  })).filter(g => g.tasks.length > 0)
+
+  const assignedUids = new Set(users.map(u => u.uid))
+  const unassigned = filtered.filter(t => !t.assigneeUids?.some(uid => assignedUids.has(uid)))
+
+  async function handleSetAssignee(e, task, uid) {
+    e.stopPropagation()
+    setAssignPopupId(null)
+    const next = uid ? [uid] : []
+    try { await updateTaskAssignees(task, next) } catch { alert('Failed to update.') }
   }
 
-  async function handleDelete(id) {
+async function handleDelete(id) {
     if (!confirm('Delete this task?')) return
     try { await delTask(id) } catch { alert('Failed to delete.') }
   }
@@ -48,14 +85,95 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   const filters = [
     { key: 'all', label: 'All' },
     { key: 'mine', label: 'Mine' },
-    { key: 'open', label: 'Open' },
+    { key: 'todo', label: 'To Do' },
+    { key: 'in-progress', label: 'In Progress' },
     { key: 'done', label: 'Done' },
   ]
+
+  function renderTask(task) {
+    const taskDoctorIds = Array.isArray(task.doctorIds)
+      ? task.doctorIds
+      : (task.doctorId ? [task.doctorId] : [])
+    const doctors = taskDoctorIds.map(id => doctorMap[id]).filter(Boolean)
+    const overdue = getStatus(task) !== 'done' && isOverdue(task.dueDate)
+    const status = getStatus(task)
+
+    return (
+      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
+<div className="task-body">
+          <div className="task-title">{task.title}</div>
+          <div className="task-meta">
+            <span className={`task-status-badge ${STATUS_CLASSES[status]}`}>{STATUS_LABELS[status]}</span>
+            {doctors.map(dr => (
+              <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
+            ))}
+            {task.dueDate && (
+              <span className={`task-due${overdue ? ' overdue' : ''}`}>
+                {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}
+              </span>
+            )}
+            {(task.comments?.length > 0) && (
+              <span className="task-comment-count">💬 {task.comments.length}</span>
+            )}
+          </div>
+        </div>
+        <div className="task-actions">
+          {users.length > 0 && (
+            <div
+              className="task-quick-assign"
+              ref={assignPopupId === task.id ? assignPopupRef : null}
+            >
+              {(() => {
+                const assigneeUid = task.assigneeUids?.[0]
+                const assignee = assigneeUid ? userMap[assigneeUid] : null
+                const initial = assignee ? (assignee.displayName || assignee.email)[0].toUpperCase() : null
+                return (
+                  <>
+                    <button
+                      className={`quick-assign-btn${assignee ? ' assigned' : ''}`}
+                      onClick={e => { e.stopPropagation(); setAssignPopupId(assignPopupId === task.id ? null : task.id) }}
+                    >
+                      <span className="quick-assign-avatar">{initial ?? '+'}</span>
+                      {assignee ? (assignee.displayName || assignee.email).split(' ')[0] : 'Assign'}
+                    </button>
+                    {assignPopupId === task.id && (
+                      <div className="assign-popup">
+                        {users.map(u => (
+                          <div
+                            key={u.uid}
+                            className={`assign-popup-item${assigneeUid === u.uid ? ' active' : ''}`}
+                            onClick={e => handleSetAssignee(e, task, u.uid)}
+                          >
+                            <span className="assign-popup-avatar">{(u.displayName || u.email)[0].toUpperCase()}</span>
+                            {(u.displayName || u.email).split(' ')[0]}
+                            {assigneeUid === u.uid && <span className="assign-popup-check">✓</span>}
+                          </div>
+                        ))}
+                        <div
+                          className={`assign-popup-item assign-popup-none${!assigneeUid ? ' active' : ''}`}
+                          onClick={e => handleSetAssignee(e, task, null)}
+                        >
+                          No one
+                          {!assigneeUid && <span className="assign-popup-check">✓</span>}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      </li>
+    )
+  }
+
+  const hasAny = groups.length > 0 || unassigned.length > 0
 
   return (
     <div className="view-wrap">
       <div className="tbl-tools" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {filters.map(f => (
             <button
               key={f.key}
@@ -69,52 +187,42 @@ export default function TasksView({ tasks, careTeam, users, user }) {
         <button className="btn-add" onClick={() => setEditId(null)}>+ Add Task</button>
       </div>
 
-      {filtered.length === 0 ? (
+      {!hasAny ? (
         <div className="task-empty">
-          {filter === 'mine' ? 'No tasks assigned to you.' : filter === 'done' ? 'No completed tasks.' : filter === 'open' ? 'No open tasks. All done!' : 'No tasks yet. Click "+ Add Task" to get started.'}
+          {filter === 'mine' ? 'No tasks assigned to you.'
+            : filter === 'done' ? 'No completed tasks.'
+            : filter === 'todo' ? 'No to-do tasks.'
+            : filter === 'in-progress' ? 'No tasks in progress.'
+            : 'No tasks yet. Click "+ Add Task" to get started.'}
         </div>
       ) : (
-        <ul className="task-list">
-          {filtered.map(task => {
-            const taskDoctorIds = Array.isArray(task.doctorIds)
-              ? task.doctorIds
-              : (task.doctorId ? [task.doctorId] : [])
-            const doctors = taskDoctorIds.map(id => doctorMap[id]).filter(Boolean)
-            const assignees = (task.assigneeUids || []).map(uid => (userMap[uid]?.displayName || userMap[uid]?.email || '').split(' ')[0]).filter(Boolean)
-            const overdue = !task.done && isOverdue(task.dueDate)
+        <div className="task-groups">
+          {groups.map(g => (
+            <div key={g.uid} className="task-group">
+              <div className="task-group-header">
+                <span className="task-group-avatar">{g.label[0].toUpperCase()}</span>
+                {g.label}
+                <span className="task-group-count">{g.tasks.length}</span>
+              </div>
+              <ul className="task-list">
+                {g.tasks.map(renderTask)}
+              </ul>
+            </div>
+          ))}
 
-            return (
-              <li key={task.id} className={`task-row${task.done ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
-                <button
-                  className="task-check"
-                  onClick={e => { e.stopPropagation(); handleToggle(task) }}
-                  title={task.done ? 'Mark open' : 'Mark done'}
-                >
-                  {task.done ? '✓' : ''}
-                </button>
-                <div className="task-body">
-                  <div className="task-title">{task.title}</div>
-                  <div className="task-meta">
-                    {assignees.length > 0 && assignees.map((name, i) => (
-                      <span key={i} className={`covering-pill ${name.toLowerCase()}`}>{name}</span>
-                    ))}
-                    {doctors.map(dr => (
-                      <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
-                    ))}
-                    {task.dueDate && (
-                      <span className={`task-due${overdue ? ' overdue' : ''}`}>
-                        {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="task-actions">
-                  <button className="btn-ghost" title="Delete" onClick={e => { e.stopPropagation(); handleDelete(task.id) }}>✕</button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+          {unassigned.length > 0 && (
+            <div className="task-group">
+              <div className="task-group-header">
+                <span className="task-group-avatar task-group-avatar-unassigned">?</span>
+                Unassigned
+                <span className="task-group-count">{unassigned.length}</span>
+              </div>
+              <ul className="task-list">
+                {unassigned.map(renderTask)}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
 
       {editId !== undefined && (
@@ -122,6 +230,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
           tasks={tasks}
           careTeam={careTeam}
           users={users}
+          user={user}
           editId={editId}
           onClose={() => setEditId(undefined)}
         />

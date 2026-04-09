@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { saveApt } from '../../lib/firestore'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
 
@@ -10,10 +10,15 @@ const EMPTY = {
 export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   const specialties = useSpecialties()
   const [form, setForm] = useState(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
+  const [creating, setCreating] = useState(false)
+  const saveTimer = useRef(null)
+  const isDirty = useRef(false)
+
+  const isEditing = !!editId
 
   useEffect(() => {
+    isDirty.current = false
     if (!editId) { setForm(EMPTY); return }
     const a = apts.find(x => x.id === editId)
     if (a) setForm({
@@ -21,7 +26,24 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
       doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
       prep: a.prep || '', postNotes: a.postNotes || ''
     })
-  }, [editId, apts])
+  }, [editId])
+
+  useEffect(() => {
+    if (!isEditing || !isDirty.current) return
+    if (!form.title.trim() || !form.dateTime) return
+    setSaveStatus('saving')
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await saveApt(form, editId)
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 2000)
+      } catch {
+        setSaveStatus('idle')
+      }
+    }, 700)
+    return () => clearTimeout(saveTimer.current)
+  }, [form])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -30,19 +52,21 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   }, [onClose])
 
   function set(field) {
-    return e => setForm(f => ({ ...f, [field]: e.target.value }))
+    return e => {
+      isDirty.current = true
+      setForm(f => ({ ...f, [field]: e.target.value }))
+    }
   }
 
-  async function handleSave() {
+  async function handleCreate() {
     if (!form.title.trim()) { alert('Please enter the appointment title.'); return }
     if (!form.dateTime)     { alert('Please enter the date and time.'); return }
-    setSaving(true)
+    setCreating(true)
     try {
-      await saveApt(form, editId || null)
-      setSaved(true)
-      setTimeout(() => { setSaved(false); onClose() }, 1200)
+      await saveApt(form, null)
+      onClose()
     } catch { alert('Failed to save. Check your connection.') }
-    setSaving(false)
+    setCreating(false)
   }
 
   const isOpen = editId !== undefined
@@ -50,7 +74,18 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   return (
     <div className="modal-bg" style={{ display: isOpen ? 'flex' : 'none' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="modal">
-        <h2>{editId ? 'Edit appointment' : 'Add appointment'}</h2>
+        <div className="modal-task-header">
+          <h2>{isEditing ? 'Edit appointment' : 'Add appointment'}</h2>
+          <div className="modal-header-right">
+            {isEditing && (
+              <span className="autosave-status">
+                {saveStatus === 'saving' && <span className="autosave-saving">Saving…</span>}
+                {saveStatus === 'saved' && <span className="autosave-saved">Saved ✓</span>}
+              </span>
+            )}
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+        </div>
 
         <div className="modal-section">Appointment details</div>
         <div className="fr"><label>Title <span className="req">*</span></label>
@@ -88,7 +123,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
                 return (
                   <button key={v} type="button"
                     className={`assignee-pill${selected ? ' selected' : ''}`}
-                    onClick={() => setForm(f => ({ ...f, covering: f.covering === v ? '' : v }))}
+                    onClick={() => { isDirty.current = true; setForm(f => ({ ...f, covering: f.covering === v ? '' : v })) }}
                   >
                     {selected && <span className="assignee-pill-dot" />}
                     {l}
@@ -109,12 +144,14 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
           <textarea value={form.postNotes} onChange={set('postNotes')} placeholder="Follow-up notes from the visit…" style={{ minHeight: 80 }} />
         </div>
 
-        <div className="mf">
-          <button className="btn-cx" onClick={onClose}>Cancel</button>
-          <button className="btn-sv" onClick={handleSave} disabled={saving}>
-            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save appointment'}
-          </button>
-        </div>
+        {!isEditing && (
+          <div className="mf">
+            <button className="btn-cx" onClick={onClose}>Cancel</button>
+            <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+              {creating ? 'Adding…' : 'Add appointment'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

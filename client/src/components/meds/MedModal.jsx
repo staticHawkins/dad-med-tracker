@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { saveMed } from '../../lib/firestore'
 
 const EMPTY = {
@@ -18,14 +18,18 @@ const PRESETS = [
 
 export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
+  const [creating, setCreating] = useState(false)
+  const saveTimer = useRef(null)
+  const isDirty = useRef(false)
+
+  const isEditing = !!editId
 
   useEffect(() => {
+    isDirty.current = false
     if (!editId) { setForm(EMPTY); return }
     const m = meds.find(x => x.id === editId)
     if (m) {
-      // derive preset for legacy records that only have a numeric frequency
       let preset = m.frequencyPreset
       if (!preset) {
         const f = parseFloat(m.frequency)
@@ -45,7 +49,24 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         instructions: m.instructions || '', notes: m.notes || ''
       })
     }
-  }, [editId, meds])
+  }, [editId])
+
+  useEffect(() => {
+    if (!isEditing || !isDirty.current) return
+    if (!form.name.trim() || !form.filledDate || !form.supply) return
+    setSaveStatus('saving')
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await saveMed(form, editId)
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 2000)
+      } catch {
+        setSaveStatus('idle')
+      }
+    }, 700)
+    return () => clearTimeout(saveTimer.current)
+  }, [form])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -54,28 +75,41 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   }, [onClose])
 
   function set(field) {
-    return e => setForm(f => ({ ...f, [field]: e.target.value }))
+    return e => {
+      isDirty.current = true
+      setForm(f => ({ ...f, [field]: e.target.value }))
+    }
   }
 
-  async function handleSave() {
+  async function handleCreate() {
     if (!form.name.trim()) { alert('Please enter the medication name.'); return }
     if (!form.filledDate)  { alert('Please enter the date the bottle was last filled.'); return }
     if (!form.supply)      { alert('Please enter how many pills were in the bottle.'); return }
-    setSaving(true)
+    setCreating(true)
     try {
-      await saveMed(form, editId || null)
-      setSaved(true)
-      setTimeout(() => { setSaved(false); onClose() }, 1200)
+      await saveMed(form, null)
+      onClose()
     } catch { alert('Failed to save. Check your connection.') }
-    setSaving(false)
+    setCreating(false)
   }
 
-  const isOpen = editId !== undefined  // editId is null (new) or a string (edit)
+  const isOpen = editId !== undefined
 
   return (
     <div className="modal-bg" style={{ display: isOpen ? 'flex' : 'none' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="modal">
-        <h2>{editId ? 'Edit medication' : 'Add medication'}</h2>
+        <div className="modal-task-header">
+          <h2>{isEditing ? 'Edit medication' : 'Add medication'}</h2>
+          <div className="modal-header-right">
+            {isEditing && (
+              <span className="autosave-status">
+                {saveStatus === 'saving' && <span className="autosave-saving">Saving…</span>}
+                {saveStatus === 'saved' && <span className="autosave-saved">Saved ✓</span>}
+              </span>
+            )}
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+        </div>
 
         <div className="modal-section">Medication info</div>
         <div className="fr"><label>Name <span className="req">*</span></label>
@@ -136,12 +170,14 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         <div className="fr"><label>Notes</label>
           <textarea value={form.notes} onChange={set('notes')} placeholder="Side effects, reminders, etc." /></div>
 
-        <div className="mf">
-          <button className="btn-cx" onClick={onClose}>Cancel</button>
-          <button className="btn-sv" onClick={handleSave} disabled={saving}>
-            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save medication'}
-          </button>
-        </div>
+        {!isEditing && (
+          <div className="mf">
+            <button className="btn-cx" onClick={onClose}>Cancel</button>
+            <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+              {creating ? 'Adding…' : 'Add medication'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
