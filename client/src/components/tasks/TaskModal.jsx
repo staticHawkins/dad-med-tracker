@@ -54,12 +54,10 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
     }))
   }
 
-  function toggleAssignee(uid) {
+  function setAssignee(uid) {
     setForm(f => ({
       ...f,
-      assigneeUids: f.assigneeUids.includes(uid)
-        ? f.assigneeUids.filter(u => u !== uid)
-        : [...f.assigneeUids, uid]
+      assigneeUids: f.assigneeUids[0] === uid ? [] : [uid]
     }))
   }
 
@@ -134,17 +132,21 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
         {users.length > 0 && (
           <div className="fr">
             <label>Assign to</label>
-            <div className="assignee-checks">
-              {users.map(u => (
-                <label key={u.uid} className="assignee-check-label">
-                  <input
-                    type="checkbox"
-                    checked={form.assigneeUids.includes(u.uid)}
-                    onChange={() => toggleAssignee(u.uid)}
-                  />
-                  {u.displayName || u.email}
-                </label>
-              ))}
+            <div className="assignee-pills">
+              {users.map(u => {
+                const selected = form.assigneeUids[0] === u.uid
+                return (
+                  <button
+                    key={u.uid}
+                    type="button"
+                    className={`assignee-pill${selected ? ' selected' : ''}`}
+                    onClick={() => setAssignee(u.uid)}
+                  >
+                    {selected && <span className="assignee-pill-dot" />}
+                    {(u.displayName || u.email).split(' ')[0]}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

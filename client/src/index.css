@@ -573,10 +573,11 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .task-due.overdue{color:var(--red);font-weight:600}
 .task-actions{display:flex;gap:4px;flex-shrink:0}
 .task-empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:14px}
-.assignee-checks{display:flex;gap:16px;flex-wrap:wrap;padding:6px 0}
-.assignee-check-label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer}
-.assignee-check-label input{cursor:pointer;accent-color:var(--green)}
-
+.assignee-pills{display:flex;gap:8px;padding:4px 0}
+.assignee-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.assignee-pill:hover{border-color:var(--green);background:color-mix(in srgb,var(--green) 8%,transparent)}
+.assignee-pill.selected{border-color:var(--green);background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.assignee-pill-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 /* Doctor multi-select dropdown */
 .doctor-dropdown-wrap{position:relative}
 .doctor-dropdown-trigger{

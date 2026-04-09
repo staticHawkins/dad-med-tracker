@@ -82,13 +82,20 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
           <div className="fr"><label>Location</label>
             <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" /></div>
           <div className="fr"><label>Covering</label>
-            <select value={form.covering} onChange={set('covering')}>
-              <option value="">Select…</option>
-              <option value="fanuel">Fanuel</option>
-              <option value="saron">Saron</option>
-              <option value="both">Both</option>
-              <option value="tbd">TBD</option>
-            </select>
+            <div className="assignee-pills covering-pills">
+              {[{v:'fanuel',l:'Fanuel'},{v:'saron',l:'Saron'}].map(({v,l}) => {
+                const selected = form.covering === v
+                return (
+                  <button key={v} type="button"
+                    className={`assignee-pill${selected ? ' selected' : ''}`}
+                    onClick={() => setForm(f => ({ ...f, covering: f.covering === v ? '' : v }))}
+                  >
+                    {selected && <span className="assignee-pill-dot" />}
+                    {l}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 

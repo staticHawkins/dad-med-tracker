@@ -80,7 +80,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
               ? task.doctorIds
               : (task.doctorId ? [task.doctorId] : [])
             const doctors = taskDoctorIds.map(id => doctorMap[id]).filter(Boolean)
-            const assignees = (task.assigneeUids || []).map(uid => userMap[uid]?.displayName || userMap[uid]?.email).filter(Boolean)
+            const assignees = (task.assigneeUids || []).map(uid => (userMap[uid]?.displayName || userMap[uid]?.email || '').split(' ')[0]).filter(Boolean)
             const overdue = !task.done && isOverdue(task.dueDate)
 
             return (
