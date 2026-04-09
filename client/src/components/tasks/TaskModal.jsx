@@ -102,14 +102,13 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose }) {
             {dropdownOpen && (
               <div className="doctor-dropdown-menu">
                 {careTeam.map(dr => (
-                  <label key={dr.id} className="doctor-dropdown-item">
-                    <input
-                      type="checkbox"
-                      checked={form.doctorIds.includes(dr.id)}
-                      onChange={() => toggleDoctor(dr.id)}
-                    />
-                    <span>{dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}</span>
-                  </label>
+                  <div
+                    key={dr.id}
+                    className={`doctor-dropdown-item${form.doctorIds.includes(dr.id) ? ' selected' : ''}`}
+                    onClick={() => toggleDoctor(dr.id)}
+                  >
+                    {dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}
+                  </div>
                 ))}
                 {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
               </div>
