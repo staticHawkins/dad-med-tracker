@@ -2,9 +2,19 @@ import { useState, useEffect } from 'react'
 import { saveMed } from '../../lib/firestore'
 
 const EMPTY = {
-  name: '', dose: '', frequency: '', filledDate: '', supply: '',
-  refillDate: '', pharmacy: '', rxNum: '', doctor: '', instructions: '', notes: ''
+  name: '', dose: '', frequencyPreset: 'once-daily',
+  frequencyCustomCount: '1', frequencyCustomEvery: '1', frequencyCustomUnit: 'days',
+  filledDate: '', supply: '', refillDate: '', pharmacy: '', rxNum: '',
+  doctor: '', instructions: '', notes: ''
 }
+
+const PRESETS = [
+  { value: 'once-daily',      label: 'Once daily' },
+  { value: 'twice-daily',     label: 'Twice daily' },
+  { value: 'every-other-day', label: 'Every other day' },
+  { value: 'as-needed',       label: 'As needed' },
+  { value: 'custom',          label: 'Custom…' },
+]
 
 export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
@@ -14,12 +24,27 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   useEffect(() => {
     if (!editId) { setForm(EMPTY); return }
     const m = meds.find(x => x.id === editId)
-    if (m) setForm({
-      name: m.name || '', dose: m.dose || '', frequency: m.frequency || '',
-      filledDate: m.filledDate || '', supply: m.supply || '', refillDate: m.refillDate || '',
-      pharmacy: m.pharmacy || '', rxNum: m.rxNum || '', doctor: m.doctor || '',
-      instructions: m.instructions || '', notes: m.notes || ''
-    })
+    if (m) {
+      // derive preset for legacy records that only have a numeric frequency
+      let preset = m.frequencyPreset
+      if (!preset) {
+        const f = parseFloat(m.frequency)
+        if (f === 2)        preset = 'twice-daily'
+        else if (f === 0.5) preset = 'every-other-day'
+        else                preset = 'once-daily'
+      }
+      setForm({
+        name: m.name || '', dose: m.dose || '',
+        frequencyPreset: preset,
+        frequencyCustomCount: m.frequencyCustomCount || '1',
+        frequencyCustomEvery: m.frequencyCustomEvery || '1',
+        frequencyCustomUnit:  m.frequencyCustomUnit  || 'days',
+        filledDate: m.filledDate || '', supply: m.supply || '',
+        refillDate: m.refillDate || '', pharmacy: m.pharmacy || '',
+        rxNum: m.rxNum || '', doctor: m.doctor || '',
+        instructions: m.instructions || '', notes: m.notes || ''
+      })
+    }
   }, [editId, meds])
 
   useEffect(() => {
@@ -34,7 +59,6 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
 
   async function handleSave() {
     if (!form.name.trim()) { alert('Please enter the medication name.'); return }
-    if (!form.frequency)   { alert('Please enter pills per day.'); return }
     if (!form.filledDate)  { alert('Please enter the date the bottle was last filled.'); return }
     if (!form.supply)      { alert('Please enter how many pills were in the bottle.'); return }
     setSaving(true)
@@ -59,9 +83,27 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         <div className="f2">
           <div className="fr"><label>Dose / strength</label>
             <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" /></div>
-          <div className="fr"><label>Pills per day <span className="req">*</span></label>
-            <input type="number" min="0.5" step="0.5" value={form.frequency} onChange={set('frequency')} placeholder="e.g. 1" /></div>
+          <div className="fr"><label>Frequency <span className="req">*</span></label>
+            <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
+              {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
         </div>
+        {form.frequencyPreset === 'custom' && (
+          <div className="f2">
+            <div className="fr"><label>Pills per dose</label>
+              <input type="number" min="0.5" step="0.5" value={form.frequencyCustomCount} onChange={set('frequencyCustomCount')} placeholder="1" /></div>
+            <div className="fr"><label>Every</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input type="number" min="1" step="1" value={form.frequencyCustomEvery} onChange={set('frequencyCustomEvery')} placeholder="1" style={{ flex: 1 }} />
+                <select value={form.frequencyCustomUnit} onChange={set('frequencyCustomUnit')} style={{ flex: 1 }}>
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="modal-section">Supply tracking</div>
         <div className="f2">

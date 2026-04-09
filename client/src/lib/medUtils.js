@@ -8,11 +8,53 @@ export function daysBetween(a, b) {
   return Math.round((b - a) / 86400000)
 }
 
+export function freqPerDay(m) {
+  const preset = m.frequencyPreset
+  if (preset === 'as-needed') return null
+  if (preset === 'once-daily')      return 1
+  if (preset === 'twice-daily')     return 2
+  if (preset === 'every-other-day') return 0.5
+  if (preset === 'custom') {
+    const count = parseFloat(m.frequencyCustomCount) || 1
+    const every = parseFloat(m.frequencyCustomEvery) || 1
+    const unit  = m.frequencyCustomUnit === 'weeks' ? 7 : 1
+    return count / (every * unit)
+  }
+  // legacy: plain frequency number
+  return parseFloat(m.frequency) || 1
+}
+
+export function freqLabel(m) {
+  const preset = m.frequencyPreset
+  if (preset === 'once-daily')      return '1× daily'
+  if (preset === 'twice-daily')     return '2× daily'
+  if (preset === 'every-other-day') return 'Every other day'
+  if (preset === 'as-needed')       return 'As needed'
+  if (preset === 'custom') {
+    const count = m.frequencyCustomCount || 1
+    const every = m.frequencyCustomEvery || 1
+    const unit  = m.frequencyCustomUnit || 'days'
+    const u = every === 1 || every === '1' ? unit.replace(/s$/, '') : unit
+    return `${count}× every ${every} ${u}`
+  }
+  // legacy
+  const f = parseFloat(m.frequency)
+  if (!f) return ''
+  if (f === 1)   return '1× daily'
+  if (f === 2)   return '2× daily'
+  if (f === 0.5) return 'Every other day'
+  return `${f}× daily`
+}
+
 export function pillsNow(m) {
-  const freq = parseFloat(m.frequency) || 1
+  const freq = freqPerDay(m)
   const supply = parseInt(m.supply) || 30
   const filledDate = m.filledDate ? new Date(m.filledDate + 'T00:00:00') : null
   if (!filledDate) return { rem: supply, tot: supply, runOutDate: null, daysToZero: 999 }
+  if (freq === null) {
+    // as-needed: track pills only, no runout math
+    return { rem: supply, tot: supply, runOutDate: null, daysToZero: 999 }
+  }
   const elapsed = Math.max(0, daysBetween(filledDate, today()))
   const consumed = Math.min(Math.round(elapsed * freq), supply)
   const rem = supply - consumed

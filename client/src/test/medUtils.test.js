@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { pillsNow, st, stLabel, pillStatusClass, fmtDate, today } from '../lib/medUtils'
+import { pillsNow, st, stLabel, pillStatusClass, fmtDate, today, freqPerDay, freqLabel } from '../lib/medUtils'
 
 // Pin "today" to a fixed date for deterministic tests
 const FIXED_TODAY = new Date('2026-03-31T00:00:00')
@@ -16,6 +16,49 @@ afterEach(() => {
 function toDateStr(d) {
   return d.toISOString().slice(0, 10)
 }
+
+// ── freqPerDay ────────────────────────────────────────────────────────────────
+
+describe('freqPerDay', () => {
+  it('returns 1 for once-daily', () => {
+    expect(freqPerDay({ frequencyPreset: 'once-daily' })).toBe(1)
+  })
+  it('returns 2 for twice-daily', () => {
+    expect(freqPerDay({ frequencyPreset: 'twice-daily' })).toBe(2)
+  })
+  it('returns 0.5 for every-other-day', () => {
+    expect(freqPerDay({ frequencyPreset: 'every-other-day' })).toBe(0.5)
+  })
+  it('returns null for as-needed', () => {
+    expect(freqPerDay({ frequencyPreset: 'as-needed' })).toBeNull()
+  })
+  it('computes custom daily rate', () => {
+    expect(freqPerDay({ frequencyPreset: 'custom', frequencyCustomCount: '1', frequencyCustomEvery: '3', frequencyCustomUnit: 'days' }))
+      .toBeCloseTo(1/3)
+  })
+  it('computes custom weekly rate', () => {
+    expect(freqPerDay({ frequencyPreset: 'custom', frequencyCustomCount: '1', frequencyCustomEvery: '2', frequencyCustomUnit: 'weeks' }))
+      .toBeCloseTo(1/14)
+  })
+  it('falls back to legacy frequency number', () => {
+    expect(freqPerDay({ frequency: 1.5 })).toBe(1.5)
+  })
+})
+
+// ── freqLabel ─────────────────────────────────────────────────────────────────
+
+describe('freqLabel', () => {
+  it('labels once-daily', () => expect(freqLabel({ frequencyPreset: 'once-daily' })).toBe('1× daily'))
+  it('labels twice-daily', () => expect(freqLabel({ frequencyPreset: 'twice-daily' })).toBe('2× daily'))
+  it('labels every-other-day', () => expect(freqLabel({ frequencyPreset: 'every-other-day' })).toBe('Every other day'))
+  it('labels as-needed', () => expect(freqLabel({ frequencyPreset: 'as-needed' })).toBe('As needed'))
+  it('labels custom', () => {
+    expect(freqLabel({ frequencyPreset: 'custom', frequencyCustomCount: '2', frequencyCustomEvery: '3', frequencyCustomUnit: 'days' }))
+      .toBe('2× every 3 days')
+  })
+  it('labels legacy frequency=1', () => expect(freqLabel({ frequency: 1 })).toBe('1× daily'))
+  it('labels legacy frequency=0.5', () => expect(freqLabel({ frequency: 0.5 })).toBe('Every other day'))
+})
 
 // ── pillsNow ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +95,15 @@ describe('pillsNow', () => {
     const { rem, tot } = pillsNow(med)
     expect(rem).toBe(30)
     expect(tot).toBe(30)
+  })
+
+  it('as-needed: returns supply unchanged regardless of elapsed days', () => {
+    const med = { frequencyPreset: 'as-needed', filledDate: '2026-03-01', supply: 30 }
+    const { rem, tot, runOutDate, daysToZero } = pillsNow(med)
+    expect(rem).toBe(30)
+    expect(tot).toBe(30)
+    expect(runOutDate).toBeNull()
+    expect(daysToZero).toBe(999)
   })
 })
 

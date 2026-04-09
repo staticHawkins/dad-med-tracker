@@ -14,12 +14,30 @@ function dl(name, content, type) {
   URL.revokeObjectURL(a.href)
 }
 
+function computeFrequency(fields) {
+  const p = fields.frequencyPreset
+  if (p === 'twice-daily')     return 2
+  if (p === 'every-other-day') return 0.5
+  if (p === 'as-needed')       return 0
+  if (p === 'custom') {
+    const count = parseFloat(fields.frequencyCustomCount) || 1
+    const every = parseFloat(fields.frequencyCustomEvery) || 1
+    const unit  = fields.frequencyCustomUnit === 'weeks' ? every * 7 : every
+    return count / unit
+  }
+  return 1 // once-daily default
+}
+
 export async function saveMed(fields, editId) {
   const med = {
     id: editId || newId(),
     name: fields.name,
     dose: fields.dose,
-    frequency: fields.frequency,
+    frequency: computeFrequency(fields),
+    frequencyPreset: fields.frequencyPreset || 'once-daily',
+    frequencyCustomCount: fields.frequencyCustomCount || '1',
+    frequencyCustomEvery: fields.frequencyCustomEvery || '1',
+    frequencyCustomUnit:  fields.frequencyCustomUnit  || 'days',
     filledDate: fields.filledDate,
     supply: fields.supply,
     refillDate: fields.refillDate || '',
