@@ -76,7 +76,7 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
             const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) + ' *' : '—')
 
             return (
-              <tr key={m.id}>
+              <tr key={m.id} onClick={() => onEdit(m.id)} style={{ cursor: 'pointer' }}>
                 <td>
                   <div className="td-name">{m.name}</div>
                   {sub && <div className="td-sub">{sub}</div>}
@@ -99,9 +99,8 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
                 <td className="td-dt">{rd}</td>
                 <td className="td-ph">{m.pharmacy || '—'}</td>
                 <td className="td-act">
-                  <button className="act" title="Edit" onClick={() => onEdit(m.id)}>✏️</button>
-                  <button className="act green" title="Mark refilled" onClick={() => handleRefill(m)}>✓</button>
-                  <button className="act red" title="Remove" onClick={() => handleDelete(m)}>✕</button>
+                  <button className="act green" title="Mark refilled" onClick={e => { e.stopPropagation(); handleRefill(m) }}>✓</button>
+                  <button className="act red" title="Remove" onClick={e => { e.stopPropagation(); handleDelete(m) }}>✕</button>
                 </td>
               </tr>
             )

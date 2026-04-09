@@ -100,7 +100,7 @@ export default function CareTeamPanel({ careTeam }) {
             ) : (
               <ul className="dr-list">
                 {careTeam.map(dr => (
-                  <li key={dr.id} className="dr-card">
+                  <li key={dr.id} className="dr-card" onClick={() => openEdit(dr)} style={{ cursor: 'pointer' }}>
                     <div className="dr-avatar">
                       {dr.imageUrl
                         ? <img src={dr.imageUrl} alt={dr.name} />
@@ -115,8 +115,7 @@ export default function CareTeamPanel({ careTeam }) {
                       {dr.notes && <div className="dr-notes">{dr.notes}</div>}
                     </div>
                     <div className="dr-actions">
-                      <button className="btn-ghost" title="Edit" onClick={() => openEdit(dr)}>✏</button>
-                      <button className="btn-ghost" title="Remove" onClick={() => handleDelete(dr.id)}>✕</button>
+                      <button className="btn-ghost" title="Remove" onClick={e => { e.stopPropagation(); handleDelete(dr.id) }}>✕</button>
                     </div>
                   </li>
                 ))}
