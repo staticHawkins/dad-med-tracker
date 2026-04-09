@@ -1,4 +1,5 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{touch-action:pan-x pan-y;}
 :root{
   --bg:#0F1117; --panel:#181B23; --panel2:#1E2230;
   --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
@@ -67,6 +68,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
 }
 .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--text);white-space:nowrap}
 .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);flex-shrink:0}
+.topbar-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .topbar-date{font-size:12px;color:var(--text2);font-family:var(--ffm)}
 .topbar-user{font-size:12px;color:var(--text3);font-family:var(--ffm)}
@@ -742,9 +744,13 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   /* ── modal ── */
   .f2{grid-template-columns:1fr}
   .modal{padding:1.25rem}
-  /* ── search ── */
-  .search-input{width:120px}
-  .search-input:focus{width:150px}
+  /* ── tools row ── */
+  .tbl-tools{flex-wrap:wrap;flex-shrink:1;width:100%}
+  .tbl-tools .btn-ghost{display:none}
+  .search-wrap{flex:1}
+  .search-input{width:100%}
+  .search-input:focus{width:100%}
+  .btn-add{margin-left:auto}
 
   /* ── appointments ── */
   .ptab{font-size:12px;padding:8px 14px}

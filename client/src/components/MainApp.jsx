@@ -56,7 +56,9 @@ export default function MainApp({ user }) {
           </button>
           <div className="topbar-menu-wrap" ref={userMenuRef}>
             <button className="btn-ghost topbar-user-btn" onClick={() => setUserMenuOpen(o => !o)}>
-              {user.displayName || user.email} ▾
+              {user.photoURL
+                ? <img className="topbar-avatar" src={user.photoURL} alt={user.displayName || 'User'} referrerPolicy="no-referrer" />
+                : <>{user.displayName || user.email} ▾</>}
             </button>
             {userMenuOpen && (
               <div className="topbar-menu">
