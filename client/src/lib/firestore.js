@@ -96,7 +96,7 @@ export async function saveTask(fields, editId) {
     id: editId || newId(),
     title: fields.title,
     description: fields.description || '',
-    doctorId: fields.doctorId || '',
+    doctorIds: fields.doctorIds || [],
     assigneeUids: fields.assigneeUids || [],
     dueDate: fields.dueDate || '',
     done: fields.done ?? false,
