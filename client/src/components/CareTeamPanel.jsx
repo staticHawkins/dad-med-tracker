@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { saveDoctor, delDoctor, newId } from '../lib/firestore'
+import { saveDoctor, delDoctor, newId, saveSpecialty } from '../lib/firestore'
 import { uploadDoctorPhoto } from '../lib/storageUtils'
-import { SPECIALTIES } from '../lib/noteUtils'
+import { useSpecialties, specialtyLabel } from '../hooks/useSpecialties'
 
 const EMPTY_FORM = { name: '', specialty: '', affiliation: '', notes: '', imageUrl: '' }
 
@@ -10,6 +10,9 @@ function initials(name) {
 }
 
 export default function CareTeamPanel({ careTeam }) {
+  const specialties = useSpecialties()
+  const [addingSpecialty, setAddingSpecialty] = useState(false)
+  const [newSpecialtyLabel, setNewSpecialtyLabel] = useState('')
   const [view, setView] = useState('list')
   const [editDr, setEditDr] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -106,7 +109,7 @@ export default function CareTeamPanel({ careTeam }) {
                     <div className="dr-info">
                       <div className="dr-name">{dr.name}</div>
                       {dr.specialty && (
-                        <span className={`specialty-chip ${dr.specialty}`}>{SPECIALTIES[dr.specialty] || dr.specialty}</span>
+                        <span className={`specialty-chip ${dr.specialty}`}>{specialtyLabel(specialties, dr.specialty)}</span>
                       )}
                       {dr.affiliation && <div className="dr-affil">{dr.affiliation}</div>}
                       {dr.notes && <div className="dr-notes">{dr.notes}</div>}
@@ -145,12 +148,48 @@ export default function CareTeamPanel({ careTeam }) {
             <div className="f2">
               <div className="fr">
                 <label>Specialty</label>
-                <select value={form.specialty} onChange={set('specialty')}>
-                  <option value="">Select specialty…</option>
-                  {Object.entries(SPECIALTIES).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
+                {addingSpecialty ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      autoFocus
+                      value={newSpecialtyLabel}
+                      onChange={e => setNewSpecialtyLabel(e.target.value)}
+                      placeholder="e.g. Cardiology"
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter' && newSpecialtyLabel.trim()) {
+                          const id = newSpecialtyLabel.trim().toLowerCase().replace(/\s+/g, '-')
+                          await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
+                          setForm(f => ({ ...f, specialty: id }))
+                          setNewSpecialtyLabel('')
+                          setAddingSpecialty(false)
+                        } else if (e.key === 'Escape') {
+                          setNewSpecialtyLabel('')
+                          setAddingSpecialty(false)
+                        }
+                      }}
+                    />
+                    <button className="btn-ghost" onClick={async () => {
+                      if (newSpecialtyLabel.trim()) {
+                        const id = newSpecialtyLabel.trim().toLowerCase().replace(/\s+/g, '-')
+                        await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
+                        setForm(f => ({ ...f, specialty: id }))
+                      }
+                      setNewSpecialtyLabel('')
+                      setAddingSpecialty(false)
+                    }}>Add</button>
+                    <button className="btn-ghost" onClick={() => { setNewSpecialtyLabel(''); setAddingSpecialty(false) }}>✕</button>
+                  </div>
+                ) : (
+                  <select value={form.specialty} onChange={e => {
+                    if (e.target.value === '__add__') { setAddingSpecialty(true) } else { set('specialty')(e) }
+                  }}>
+                    <option value="">Select specialty…</option>
+                    {specialties.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                    <option value="__add__">+ Add specialty…</option>
+                  </select>
+                )}
               </div>
               <div className="fr">
                 <label>Affiliation</label>

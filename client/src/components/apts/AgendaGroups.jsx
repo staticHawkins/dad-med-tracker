@@ -3,7 +3,7 @@ import { aptStatus } from '../../lib/aptUtils'
 import { today } from '../../lib/medUtils'
 import AptCard from './AptCard'
 
-export default function AgendaGroups({ apts, search, specialty, noteById, onEdit, pastExpanded, onPastExpand }) {
+export default function AgendaGroups({ apts, search, noteById, onEdit, pastExpanded, onPastExpand }) {
   const q = search.toLowerCase()
 
   const rows = [...apts]
@@ -13,7 +13,6 @@ export default function AgendaGroups({ apts, search, specialty, noteById, onEdit
       (a.doctor || '').toLowerCase().includes(q) ||
       (a.location || '').toLowerCase().includes(q)
     )
-    .filter(a => !specialty || a.specialty === specialty)
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
 
   const grouped = { today: [], soon: [], upcoming: [], past: [] }

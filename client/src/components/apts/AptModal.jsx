@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { saveApt } from '../../lib/firestore'
-import { SPECIALTIES } from '../../lib/noteUtils'
+import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
 
 const EMPTY = {
   title: '', dateTime: '', type: '', doctor: '', location: '', covering: '',
-  specialty: '', prep: '', postNotes: ''
+  prep: '', postNotes: ''
 }
 
 export default function AptModal({ apts, careTeam = [], editId, onClose }) {
+  const specialties = useSpecialties()
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -18,7 +19,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     if (a) setForm({
       title: a.title || '', dateTime: a.dateTime || '', type: a.type || '',
       doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
-      specialty: a.specialty || '', prep: a.prep || '', postNotes: a.postNotes || ''
+      prep: a.prep || '', postNotes: a.postNotes || ''
     })
   }, [editId, apts])
 
@@ -67,14 +68,6 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
               <option value="other">Other</option>
             </select>
           </div>
-          <div className="fr"><label>Specialty</label>
-            <select value={form.specialty} onChange={set('specialty')}>
-              <option value="">Select specialty…</option>
-              {Object.entries(SPECIALTIES).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <div className="modal-section">Provider &amp; location</div>
@@ -82,7 +75,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
           <select value={form.doctor} onChange={set('doctor')}>
             <option value="">No doctor</option>
             {careTeam.map(dr => (
-              <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
+              <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${specialtyLabel(specialties, dr.specialty)}` : ''}</option>
             ))}
           </select></div>
         <div className="f2">

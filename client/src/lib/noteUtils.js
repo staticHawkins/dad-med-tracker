@@ -14,19 +14,3 @@ export function parseSection(text, sectionName) {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
-
-export function deriveSpecialty(noteName) {
-  if (/hemonc|oncol/i.test(noteName)) return 'oncology'
-  if (/palliativ/i.test(noteName)) return 'palliative'
-  if (/liver|hepat/i.test(noteName)) return 'liver'
-  if (/kidney|nephro/i.test(noteName)) return 'kidney'
-  return 'other'
-}
-
-export const SPECIALTIES = {
-  oncology:   'Oncology',
-  palliative: 'Palliative',
-  liver:      'Liver',
-  kidney:     'Kidney',
-  other:      'Other',
-}

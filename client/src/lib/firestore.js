@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore'
+import { collection, doc, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today } from './medUtils'
 
@@ -89,6 +89,31 @@ export async function saveDoctor(fields, editId) {
 
 export async function delDoctor(id) {
   await deleteDoc(doc(db, 'careTeam', id))
+}
+
+export async function saveSpecialty(fields, editId) {
+  const s = { id: editId || fields.id, label: fields.label }
+  await setDoc(doc(db, 'specialties', s.id), s)
+}
+
+export async function delSpecialty(id) {
+  await deleteDoc(doc(db, 'specialties', id))
+}
+
+export async function seedSpecialties() {
+  const existing = await getDocs(collection(db, 'specialties'))
+  if (!existing.empty) {
+    console.warn('seedSpecialties: specialties collection already has data, skipping.')
+    return
+  }
+  const data = [
+    { id: 'oncology',   label: 'Oncology' },
+    { id: 'palliative', label: 'Palliative' },
+    { id: 'liver',      label: 'Liver' },
+    { id: 'kidney',     label: 'Kidney' },
+  ]
+  await Promise.all(data.map(s => setDoc(doc(db, 'specialties', s.id), s)))
+  console.log('seedSpecialties: done')
 }
 
 export async function saveTask(fields, editId) {
