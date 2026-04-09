@@ -92,7 +92,7 @@ export async function delDoctor(id) {
 }
 
 export async function saveSpecialty(fields, editId) {
-  const s = { id: editId || fields.id, label: fields.label, patterns: fields.patterns || [] }
+  const s = { id: editId || fields.id, label: fields.label }
   await setDoc(doc(db, 'specialties', s.id), s)
 }
 
@@ -107,11 +107,10 @@ export async function seedSpecialties() {
     return
   }
   const data = [
-    { id: 'oncology',   label: 'Oncology',   patterns: ['hemonc', 'oncol'] },
-    { id: 'palliative', label: 'Palliative',  patterns: ['palliativ'] },
-    { id: 'liver',      label: 'Liver',       patterns: ['liver', 'hepat'] },
-    { id: 'kidney',     label: 'Kidney',      patterns: ['kidney', 'nephro'] },
-    { id: 'other',      label: 'Other',       patterns: [] },
+    { id: 'oncology',   label: 'Oncology' },
+    { id: 'palliative', label: 'Palliative' },
+    { id: 'liver',      label: 'Liver' },
+    { id: 'kidney',     label: 'Kidney' },
   ]
   await Promise.all(data.map(s => setDoc(doc(db, 'specialties', s.id), s)))
   console.log('seedSpecialties: done')

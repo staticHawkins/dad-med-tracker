@@ -14,10 +14,3 @@ export function parseSection(text, sectionName) {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
-
-export function deriveSpecialty(noteName, specialties) {
-  for (const s of specialties) {
-    if ((s.patterns || []).some(p => new RegExp(p, 'i').test(noteName))) return s.id
-  }
-  return 'other'
-}

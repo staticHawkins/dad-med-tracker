@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseSection, deriveSpecialty } from '../lib/noteUtils'
+import { parseSection } from '../lib/noteUtils'
 
 // ── Sample note text matching real Epic/Dragon format ─────────────────────────
 
@@ -54,7 +54,6 @@ describe('parseSection', () => {
 
   it('does not bleed into the next section', () => {
     const impression = parseSection(SAMPLE_NOTE, 'Impression')
-    // Impression content should not contain Plan content
     expect(impression).not.toContain('systemic therapy')
   })
 
@@ -68,7 +67,6 @@ describe('parseSection', () => {
 
   it('strips leading whitespace and tabs from each line', () => {
     const result = parseSection(SAMPLE_NOTE, 'Problem List')
-    // Lines should not start with tabs
     result.split('\n').forEach(line => {
       expect(line).not.toMatch(/^\t/)
     })
@@ -78,50 +76,5 @@ describe('parseSection', () => {
     const result = parseSection(SAMPLE_NOTE, 'Plan')
     expect(result).not.toContain('_ESign')
     expect(result).not.toContain('Electronically signed')
-  })
-})
-
-// ── deriveSpecialty ───────────────────────────────────────────────────────────
-
-const SPECIALTIES = [
-  { id: 'oncology',   patterns: ['hemonc', 'oncol'] },
-  { id: 'palliative', patterns: ['palliativ'] },
-  { id: 'liver',      patterns: ['liver', 'hepat'] },
-  { id: 'kidney',     patterns: ['kidney', 'nephro'] },
-  { id: 'other',      patterns: [] },
-]
-
-describe('deriveSpecialty', () => {
-  it('detects oncology from HemOnc note names', () => {
-    expect(deriveSpecialty('HemOnc Follow Up {Dragon} - Abushahin', SPECIALTIES)).toBe('oncology')
-    expect(deriveSpecialty('HemOnc Consult {Dragon} - Abushahin', SPECIALTIES)).toBe('oncology')
-    expect(deriveSpecialty('*Abushahin - DS Follow Up Note - HemOnc', SPECIALTIES)).toBe('oncology')
-    expect(deriveSpecialty('APP HemOnc Follow Up - Carone', SPECIALTIES)).toBe('oncology')
-  })
-
-  it('detects palliative from palliative care note names', () => {
-    expect(deriveSpecialty('Telehealth Palliative Care Consult - Terauchi', SPECIALTIES)).toBe('palliative')
-    expect(deriveSpecialty('Telehealth Palliative Care Follow Up - Terauchi', SPECIALTIES)).toBe('palliative')
-  })
-
-  it('detects liver from hepatology note names', () => {
-    expect(deriveSpecialty('Hepatology Follow Up', SPECIALTIES)).toBe('liver')
-    expect(deriveSpecialty('Liver Consult Note', SPECIALTIES)).toBe('liver')
-  })
-
-  it('detects kidney from nephrology note names', () => {
-    expect(deriveSpecialty('Nephrology Follow Up', SPECIALTIES)).toBe('kidney')
-    expect(deriveSpecialty('Kidney Check', SPECIALTIES)).toBe('kidney')
-  })
-
-  it('falls back to other for unrecognized note names', () => {
-    expect(deriveSpecialty('General Checkup', SPECIALTIES)).toBe('other')
-    expect(deriveSpecialty('', SPECIALTIES)).toBe('other')
-    expect(deriveSpecialty('Unknown Specialist Note', SPECIALTIES)).toBe('other')
-  })
-
-  it('is case-insensitive', () => {
-    expect(deriveSpecialty('hemonc follow up', SPECIALTIES)).toBe('oncology')
-    expect(deriveSpecialty('PALLIATIVE CARE', SPECIALTIES)).toBe('palliative')
   })
 })
