@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react'
 import { saveApt } from '../../lib/firestore'
-import { useSpecialties } from '../../hooks/useSpecialties'
 
 const EMPTY = {
   title: '', dateTime: '', type: '', doctor: '', location: '', covering: '',
-  specialty: '', prep: '', postNotes: ''
+  prep: '', postNotes: ''
 }
 
 export default function AptModal({ apts, careTeam = [], editId, onClose }) {
-  const specialties = useSpecialties()
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -19,7 +17,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     if (a) setForm({
       title: a.title || '', dateTime: a.dateTime || '', type: a.type || '',
       doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
-      specialty: a.specialty || '', prep: a.prep || '', postNotes: a.postNotes || ''
+      prep: a.prep || '', postNotes: a.postNotes || ''
     })
   }, [editId, apts])
 
@@ -66,14 +64,6 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
               <option value="lab">Lab / blood work</option>
               <option value="imaging">Imaging</option>
               <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="fr"><label>Specialty</label>
-            <select value={form.specialty} onChange={set('specialty')}>
-              <option value="">Select specialty…</option>
-              {specialties.map(s => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
             </select>
           </div>
         </div>
