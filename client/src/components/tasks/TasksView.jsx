@@ -44,31 +44,25 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   const userMap = Object.fromEntries(users.map(u => [u.uid, u]))
 
   const filtered = tasks.filter(t => {
-    const status = getStatus(t)
     if (filter === 'mine') return t.assigneeUids?.includes(user.uid)
-    if (filter === 'todo') return status === 'todo'
-    if (filter === 'in-progress') return status === 'in-progress'
-    if (filter === 'done') return status === 'done'
     return true
   }).sort((a, b) => {
-    const sa = getStatus(a), sb = getStatus(b)
-    const order = { todo: 0, 'in-progress': 1, done: 2 }
-    if (order[sa] !== order[sb]) return order[sa] - order[sb]
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
     if (a.dueDate) return -1
     if (b.dueDate) return 1
     return b.updatedAt?.localeCompare(a.updatedAt || '') || 0
   })
 
-  // Group by assignee
-  const groups = users.map(u => ({
-    uid: u.uid,
-    label: (u.displayName || u.email).split(' ')[0],
-    tasks: filtered.filter(t => t.assigneeUids?.includes(u.uid))
-  })).filter(g => g.tasks.length > 0)
+  // Group by status
+  const visibleStatuses = filter === 'all' || filter === 'mine'
+    ? STATUSES
+    : [filter]
 
-  const assignedUids = new Set(users.map(u => u.uid))
-  const unassigned = filtered.filter(t => !t.assigneeUids?.some(uid => assignedUids.has(uid)))
+  const groups = visibleStatuses.map(status => ({
+    status,
+    label: STATUS_LABELS[status],
+    tasks: filtered.filter(t => getStatus(t) === status)
+  }))
 
   async function handleSetAssignee(e, task, uid) {
     e.stopPropagation()
@@ -90,6 +84,7 @@ async function handleDelete(id) {
     { key: 'done', label: 'Done' },
   ]
 
+
   function renderTask(task) {
     const taskDoctorIds = Array.isArray(task.doctorIds)
       ? task.doctorIds
@@ -103,7 +98,6 @@ async function handleDelete(id) {
 <div className="task-body">
           <div className="task-title">{task.title}</div>
           <div className="task-meta">
-            <span className={`task-status-badge ${STATUS_CLASSES[status]}`}>{STATUS_LABELS[status]}</span>
             {doctors.map(dr => (
               <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
             ))}
@@ -168,10 +162,10 @@ async function handleDelete(id) {
     )
   }
 
-  const hasAny = groups.length > 0 || unassigned.length > 0
+  const hasAny = filtered.length > 0
 
   return (
-    <div className="view-wrap">
+    <div className="page">
       <div className="tbl-tools" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {filters.map(f => (
@@ -198,30 +192,18 @@ async function handleDelete(id) {
       ) : (
         <div className="task-groups">
           {groups.map(g => (
-            <div key={g.uid} className="task-group">
+            <div key={g.status} className="task-group">
               <div className="task-group-header">
-                <span className="task-group-avatar">{g.label[0].toUpperCase()}</span>
-                {g.label}
+                <span className={`task-status-badge ${STATUS_CLASSES[g.status]}`}>{g.label}</span>
                 <span className="task-group-count">{g.tasks.length}</span>
               </div>
-              <ul className="task-list">
-                {g.tasks.map(renderTask)}
-              </ul>
+              {g.tasks.length > 0 && (
+                <ul className="task-list">
+                  {g.tasks.map(renderTask)}
+                </ul>
+              )}
             </div>
           ))}
-
-          {unassigned.length > 0 && (
-            <div className="task-group">
-              <div className="task-group-header">
-                <span className="task-group-avatar task-group-avatar-unassigned">?</span>
-                Unassigned
-                <span className="task-group-count">{unassigned.length}</span>
-              </div>
-              <ul className="task-list">
-                {unassigned.map(renderTask)}
-              </ul>
-            </div>
-          )}
         </div>
       )}
 
