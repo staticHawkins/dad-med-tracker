@@ -47,15 +47,25 @@ client/src/
 ├── components/
 │   ├── LoginScreen.jsx
 │   ├── MainApp.jsx
+│   ├── CareTeamPanel.jsx
 │   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow
-│   └── apts/            # AppointmentsView, AptCard, AptModal, HeroCard, MiniCalendar, AgendaGroups
+│   ├── apts/            # AppointmentsView, AptCard, AptModal, HeroCard, MiniCalendar, AgendaGroups, ClinicalNoteModal
+│   └── tasks/           # TasksView, TaskModal
 ├── hooks/
 │   ├── useAuth.js       # onAuthStateChanged
 │   ├── useMeds.js       # Firestore medications listener
-│   └── useApts.js       # Firestore appointments listener
+│   ├── useApts.js       # Firestore appointments listener
+│   ├── useNotes.js      # Firestore clinical notes listener
+│   ├── useCareTeam.js   # Firestore care team listener
+│   ├── useTasks.js      # Firestore tasks listener
+│   ├── useUsers.js      # Firestore users listener
+│   └── useSpecialties.js
 ├── lib/
 │   ├── medUtils.js      # pillsNow(), getStatus(), getRefillDate()
-│   └── aptUtils.js      # appointment helpers
+│   ├── aptUtils.js      # appointment helpers
+│   ├── noteUtils.js     # clinical note helpers
+│   ├── firestore.js     # Firestore write operations, newId(), export/import
+│   └── storageUtils.js  # Firebase Storage helpers
 └── test/                # Vitest test files
 ```
 
