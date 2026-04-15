@@ -1077,3 +1077,151 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .dash-avatar-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-avatar-spec{font-size:11px;color:var(--text3)}
 .dash-care-more{font-size:12px;color:var(--teal);font-weight:500;margin-top:10px}
+
+/* ── Ask AI button ──────────────────────────────────────────────────────────── */
+.btn-ask-ai{
+  display:flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:20px;
+  background:var(--violet);color:#fff;
+  font-size:13px;font-weight:600;letter-spacing:.01em;
+  border:none;cursor:pointer;transition:opacity .15s;
+}
+.btn-ask-ai:hover{opacity:.85}
+.ask-ai-icon-sm{font-size:14px;line-height:1}
+
+/* ── Bottom sheet ───────────────────────────────────────────────────────────── */
+.ask-ai-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199}
+.ask-ai-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  height:72vh;max-height:700px;
+  border-radius:20px 20px 0 0;
+  background:var(--panel);
+  box-shadow:0 -8px 40px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;
+  animation:askAiUp 240ms cubic-bezier(.22,.68,0,1.2) both;
+}
+@keyframes askAiUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ask-ai-handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 4px;flex-shrink:0}
+.ask-ai-header{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 20px 6px;flex-shrink:0;
+}
+.ask-ai-title{font-size:17px;font-weight:700;color:var(--text)}
+.ask-ai-badge{
+  font-size:11px;padding:2px 8px;border-radius:10px;
+  background:var(--green-dim);color:var(--green);font-weight:600;border:1px solid var(--green-border);
+}
+.ask-ai-close{
+  margin-left:auto;background:none;border:none;
+  font-size:20px;line-height:1;cursor:pointer;color:var(--text2);padding:2px 4px;
+}
+.ask-ai-close:hover{color:var(--text)}
+.ask-ai-ctx{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:0 20px 10px;flex-shrink:0;
+}
+.ai-ctx-chip{font-size:12px;color:var(--text2)}
+
+/* ── Suggestions ────────────────────────────────────────────────────────────── */
+.ask-ai-suggestions{
+  padding:0 16px 10px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;
+}
+.ask-ai-section-label{
+  font-size:10px;letter-spacing:.08em;color:var(--text3);
+  text-transform:uppercase;padding:0 2px 4px;
+}
+.ask-ai-suggestion{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border:1px solid var(--border2);border-radius:10px;
+  background:var(--panel2);text-align:left;cursor:pointer;
+  font-size:13.5px;color:var(--text);transition:background .12s;
+}
+.ask-ai-suggestion:hover{background:var(--panel2);border-color:var(--violet-border)}
+.ask-ai-sugg-icon{font-size:13px;color:var(--text2);flex-shrink:0;width:16px;text-align:center}
+
+/* ── Messages ───────────────────────────────────────────────────────────────── */
+.ask-ai-messages{
+  flex:1;overflow-y:auto;
+  padding:8px 16px 4px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.chat-row-user{display:flex;justify-content:flex-end}
+.chat-row-ai{display:flex;align-items:flex-start;gap:8px}
+.chat-bubble-user{
+  background:#3b3277;color:#fff;
+  padding:10px 15px;border-radius:18px 18px 4px 18px;
+  max-width:75%;font-size:14px;line-height:1.55;
+  word-break:break-word;
+}
+.chat-bubble-ai{
+  background:var(--panel2);
+  padding:12px 15px;border-radius:4px 18px 18px 18px;
+  max-width:80%;font-size:14px;line-height:1.6;
+  word-break:break-word;color:var(--text);
+}
+.chat-ai-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:#3b3277;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:2px;font-size:12px;
+}
+/* Typing indicator */
+.chat-typing{display:flex;align-items:center;gap:4px;padding:14px 18px}
+.chat-typing span{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--text3);
+  animation:chatBounce .9s infinite;
+}
+.chat-typing span:nth-child(2){animation-delay:.15s}
+.chat-typing span:nth-child(3){animation-delay:.3s}
+@keyframes chatBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+/* Highlight blocks */
+.chat-highlight-red{
+  background:rgba(255,92,92,.12);border-left:3px solid var(--red);
+  padding:8px 12px;border-radius:6px;margin:6px 0;color:var(--red);
+  font-size:13.5px;line-height:1.5;
+}
+.chat-highlight-blue{
+  background:var(--blue-dim);border-left:3px solid var(--blue);
+  padding:8px 12px;border-radius:6px;margin:6px 0;
+  font-size:13.5px;line-height:1.5;
+}
+/* Action chips */
+.chat-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chat-action-btn{
+  padding:5px 13px;border-radius:16px;
+  border:1px solid var(--border2);background:var(--panel);
+  font-size:12px;color:var(--text2);cursor:pointer;transition:all .12s;
+}
+.chat-action-btn:hover{background:var(--panel2);color:var(--text)}
+.chat-action-btn:first-child{background:#3b3277;color:#fff;border-color:transparent}
+.chat-action-btn:first-child:hover{opacity:.85}
+
+/* ── Input bar ──────────────────────────────────────────────────────────────── */
+.ask-ai-input-bar{
+  display:flex;align-items:flex-end;gap:8px;
+  padding:10px 16px 20px;border-top:1px solid var(--border);flex-shrink:0;
+}
+.ask-ai-input{
+  flex:1;padding:10px 15px;
+  border-radius:22px;border:1px solid var(--border2);
+  background:var(--panel2);color:var(--text);
+  font-size:14px;font-family:inherit;
+  resize:none;line-height:1.5;
+  max-height:120px;overflow-y:auto;
+}
+.ask-ai-input:focus{outline:none;border-color:var(--violet-border)}
+.ask-ai-input::placeholder{color:var(--text3)}
+.ask-ai-send{
+  width:40px;height:40px;border-radius:50%;
+  background:#3b3277;border:none;color:#fff;
+  font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:opacity .15s;
+}
+.ask-ai-send:hover:not(:disabled){opacity:.85}
+.ask-ai-send:disabled{opacity:.3;cursor:default}
+.ask-ai-error{
+  font-size:13px;color:var(--red);
+  padding:6px 4px;text-align:center;
+}

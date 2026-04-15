@@ -12,11 +12,13 @@ import AppointmentsView from './apts/AppointmentsView'
 import TasksView from './tasks/TasksView'
 import CareTeamPanel from './CareTeamPanel'
 import DashboardView, { BackBar } from './DashboardView'
+import AskAiSheet from './chat/AskAiSheet'
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [askAiOpen, setAskAiOpen] = useState(false)
   const userMenuRef = useRef(null)
 
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function MainApp({ user }) {
           FamilyCareHub
         </div>
         <div className="topbar-right">
+          <button className="btn-ask-ai" onClick={() => setAskAiOpen(true)}>
+            <span className="ask-ai-icon-sm">⊙</span> Ask AI
+          </button>
           <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme === 'dark' ? '☀' : '☽'}
           </button>
@@ -106,6 +111,15 @@ export default function MainApp({ user }) {
           <CareTeamPanel careTeam={careTeam} />
         </>
       )}
+
+      <AskAiSheet
+        open={askAiOpen}
+        onClose={() => setAskAiOpen(false)}
+        meds={meds}
+        apts={apts}
+        tasks={tasks}
+        careTeam={careTeam}
+      />
     </>
   )
 }
