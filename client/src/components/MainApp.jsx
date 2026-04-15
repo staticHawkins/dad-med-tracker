@@ -55,7 +55,7 @@ export default function MainApp({ user }) {
         </div>
         <div className="topbar-right">
           <button className="btn-ask-ai" onClick={() => setAskAiOpen(true)}>
-            <span className="ask-ai-icon-sm">⊙</span> Ask AI
+            <span className="ask-ai-icon-sm">?</span> Ask AI
           </button>
           <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme === 'dark' ? '☀' : '☽'}
