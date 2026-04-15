@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { saveMed } from '../../lib/firestore'
+import { saveMed, delMed } from '../../lib/firestore'
 
 const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
   frequencyCustomCount: '1', frequencyCustomEvery: '1', frequencyCustomUnit: 'days',
   filledDate: '', supply: '', refillDate: '', pharmacy: '', rxNum: '',
-  doctor: '', instructions: '', notes: ''
+  doctor: '', instructions: ''
 }
 
 const PRESETS = [
@@ -18,15 +18,22 @@ const PRESETS = [
 
 export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   const [form, setForm] = useState(EMPTY)
-  const [saveStatus, setSaveStatus] = useState('idle')
+  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
   const [creating, setCreating] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const saveTimer = useRef(null)
+  const savedTimer = useRef(null)
   const isDirty = useRef(false)
+  const lastForm = useRef(null)
+  const sheetRef = useRef(null)
+  const dragStartY = useRef(null)
 
   const isEditing = !!editId
+  const isOpen = editId !== undefined
 
   useEffect(() => {
     isDirty.current = false
+    setConfirmRemove(false)
     if (!editId) { setForm(EMPTY); return }
     const m = meds.find(x => x.id === editId)
     if (m) {
@@ -46,7 +53,7 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         filledDate: m.filledDate || '', supply: m.supply || '',
         refillDate: m.refillDate || '', pharmacy: m.pharmacy || '',
         rxNum: m.rxNum || '', doctor: m.doctor || '',
-        instructions: m.instructions || '', notes: m.notes || ''
+        instructions: m.instructions || ''
       })
     }
   }, [editId])
@@ -54,17 +61,19 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
   useEffect(() => {
     if (!isEditing || !isDirty.current) return
     if (!form.name.trim() || !form.filledDate || !form.supply) return
+    lastForm.current = form
     setSaveStatus('saving')
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
       try {
         await saveMed(form, editId)
         setSaveStatus('saved')
-        setTimeout(() => setSaveStatus('idle'), 2000)
+        clearTimeout(savedTimer.current)
+        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
       } catch {
-        setSaveStatus('idle')
+        setSaveStatus('error')
       }
-    }, 700)
+    }, 600)
     return () => clearTimeout(saveTimer.current)
   }, [form])
 
@@ -81,6 +90,19 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
     }
   }
 
+  async function retryWrite() {
+    if (!lastForm.current) return
+    setSaveStatus('saving')
+    try {
+      await saveMed(lastForm.current, editId)
+      setSaveStatus('saved')
+      clearTimeout(savedTimer.current)
+      savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
+    } catch {
+      setSaveStatus('error')
+    }
+  }
+
   async function handleCreate() {
     if (!form.name.trim()) { alert('Please enter the medication name.'); return }
     if (!form.filledDate)  { alert('Please enter the date the bottle was last filled.'); return }
@@ -93,92 +115,175 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
     setCreating(false)
   }
 
-  const isOpen = editId !== undefined
+  async function handleRemove() {
+    try {
+      await delMed(editId)
+      onClose()
+    } catch { alert('Failed to remove. Check your connection.') }
+  }
+
+  // Swipe-to-dismiss touch handlers
+  function onTouchStart(e) {
+    dragStartY.current = e.touches[0].clientY
+  }
+  function onTouchMove(e) {
+    if (dragStartY.current === null || !sheetRef.current) return
+    const delta = e.touches[0].clientY - dragStartY.current
+    if (delta > 0) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+  function onTouchEnd(e) {
+    if (dragStartY.current === null) return
+    const delta = e.changedTouches[0].clientY - dragStartY.current
+    dragStartY.current = null
+    if (sheetRef.current) sheetRef.current.style.transform = ''
+    if (delta > 80) onClose()
+  }
 
   return (
-    <div className="modal-bg" style={{ display: isOpen ? 'flex' : 'none' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal">
-        <div className="modal-task-header">
-          <h2>{isEditing ? 'Edit medication' : 'Add medication'}</h2>
-          <div className="modal-header-right">
-            {isEditing && (
-              <span className="autosave-status">
-                {saveStatus === 'saving' && <span className="autosave-saving">Saving…</span>}
-                {saveStatus === 'saved' && <span className="autosave-saved">Saved ✓</span>}
+    <>
+      {isOpen && (
+        <div className="sheet-backdrop" onClick={onClose} />
+      )}
+      <div
+        ref={sheetRef}
+        className={`edit-sheet${isOpen ? ' open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="sheet-handle"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        />
+        <div
+          className="sheet-header"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <span className="sheet-title">{isEditing ? 'Edit medication' : 'Add medication'}</span>
+          <div className="sheet-header-right">
+            {saveStatus !== 'idle' && (
+              <span
+                className={`autosave-pill ${saveStatus}`}
+                onClick={saveStatus === 'error' ? retryWrite : undefined}
+              >
+                <span className="autosave-pill-dot" />
+                {saveStatus === 'saving' && 'Saving…'}
+                {saveStatus === 'saved'  && 'Saved'}
+                {saveStatus === 'error'  && 'Not saved · Retry'}
               </span>
             )}
             <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
           </div>
         </div>
 
-        <div className="modal-section">Medication info</div>
-        <div className="fr"><label>Name <span className="req">*</span></label>
-          <input autoFocus value={form.name} onChange={set('name')} placeholder="e.g. Metformin" /></div>
-        <div className="f2">
-          <div className="fr"><label>Dose / strength</label>
-            <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" /></div>
-          <div className="fr"><label>Frequency <span className="req">*</span></label>
-            <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
-              {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
+        <div className="sheet-body">
+          <div className="sheet-section">Medication info</div>
+          <div className="fr">
+            <label>Name <span className="req">*</span></label>
+            <input autoFocus={isOpen} value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
           </div>
-        </div>
-        {form.frequencyPreset === 'custom' && (
           <div className="f2">
-            <div className="fr"><label>Pills per dose</label>
-              <input type="number" min="0.5" step="0.5" value={form.frequencyCustomCount} onChange={set('frequencyCustomCount')} placeholder="1" /></div>
-            <div className="fr"><label>Every</label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input type="number" min="1" step="1" value={form.frequencyCustomEvery} onChange={set('frequencyCustomEvery')} placeholder="1" style={{ flex: 1 }} />
-                <select value={form.frequencyCustomUnit} onChange={set('frequencyCustomUnit')} style={{ flex: 1 }}>
-                  <option value="days">days</option>
-                  <option value="weeks">weeks</option>
-                </select>
-              </div>
+            <div className="fr">
+              <label>Dose / strength</label>
+              <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
+            </div>
+            <div className="fr">
+              <label>Frequency <span className="req">*</span></label>
+              <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
+                {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
             </div>
           </div>
-        )}
+          {form.frequencyPreset === 'custom' && (
+            <div className="f2">
+              <div className="fr">
+                <label>Pills per dose</label>
+                <input type="number" min="0.5" step="0.5" value={form.frequencyCustomCount} onChange={set('frequencyCustomCount')} placeholder="1" />
+              </div>
+              <div className="fr">
+                <label>Every</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input type="number" min="1" step="1" value={form.frequencyCustomEvery} onChange={set('frequencyCustomEvery')} placeholder="1" style={{ flex: 1 }} />
+                  <select value={form.frequencyCustomUnit} onChange={set('frequencyCustomUnit')} style={{ flex: 1 }}>
+                    <option value="days">days</option>
+                    <option value="weeks">weeks</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
-        <div className="modal-section">Supply tracking</div>
-        <div className="f2">
-          <div className="fr"><label>Date last filled <span className="req">*</span></label>
-            <input type="date" value={form.filledDate} onChange={set('filledDate')} /></div>
-          <div className="fr"><label>Pills in bottle <span className="req">*</span></label>
-            <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" /></div>
-        </div>
-        <div className="fr"><label>Next refill date <span className="fr-hint" style={{textTransform:'none',letterSpacing:0}}>optional — overrides calculated date</span></label>
-          <input type="date" value={form.refillDate} onChange={set('refillDate')} /></div>
+          <div className="sheet-section">Supply tracking</div>
+          <div className="f2">
+            <div className="fr">
+              <label>Last filled <span className="req">*</span></label>
+              <input type="date" value={form.filledDate} onChange={set('filledDate')} />
+            </div>
+            <div className="fr">
+              <label>Pills in bottle <span className="req">*</span></label>
+              <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" />
+            </div>
+          </div>
+          <div className="fr">
+            <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>optional · overrides calculated date</span></label>
+            <input type="date" value={form.refillDate} onChange={set('refillDate')} />
+          </div>
 
-        <div className="modal-section">Pharmacy</div>
-        <div className="fr"><label>Pharmacy</label>
-          <input value={form.pharmacy} onChange={set('pharmacy')} placeholder="e.g. CVS, Walgreens" /></div>
-        <div className="f2">
-          <div className="fr"><label>Rx number</label>
-            <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" /></div>
-          <div className="fr"><label>Doctor</label>
+          <div className="sheet-section">Pharmacy</div>
+          <div className="f2-pharmacy">
+            <div className="fr">
+              <label>Pharmacy</label>
+              <input value={form.pharmacy} onChange={set('pharmacy')} placeholder="e.g. Walgreens" />
+            </div>
+            <div className="fr">
+              <label>Rx #</label>
+              <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" />
+            </div>
+          </div>
+
+          <div className="sheet-section">Doctor &amp; notes</div>
+          <div className="fr">
+            <label>Doctor</label>
             <select value={form.doctor} onChange={set('doctor')}>
               <option value="">No doctor</option>
               {careTeam.map(dr => (
                 <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
               ))}
-            </select></div>
-        </div>
-
-        <div className="modal-section">Notes</div>
-        <div className="fr"><label>Instructions</label>
-          <textarea value={form.instructions} onChange={set('instructions')} placeholder="e.g. Take with food" /></div>
-        <div className="fr"><label>Notes</label>
-          <textarea value={form.notes} onChange={set('notes')} placeholder="Side effects, reminders, etc." /></div>
-
-        {!isEditing && (
-          <div className="mf">
-            <button className="btn-cx" onClick={onClose}>Cancel</button>
-            <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-              {creating ? 'Adding…' : 'Add medication'}
-            </button>
+            </select>
           </div>
-        )}
+          <div className="fr">
+            <label>Instructions</label>
+            <textarea value={form.instructions} onChange={set('instructions')} placeholder="e.g. Take with food" />
+          </div>
+
+          {isEditing && (
+            <>
+              <button className="btn-remove-med" onClick={() => setConfirmRemove(true)}>
+                Remove medication
+              </button>
+              {confirmRemove && (
+                <div className="remove-confirm-row">
+                  <span>Are you sure?</span>
+                  <button className="btn-confirm-cancel" onClick={() => setConfirmRemove(false)}>Cancel</button>
+                  <button className="btn-confirm-remove" onClick={handleRemove}>Remove</button>
+                </div>
+              )}
+            </>
+          )}
+
+          {!isEditing && (
+            <div className="mf">
+              <button className="btn-cx" onClick={onClose}>Cancel</button>
+              <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+                {creating ? 'Adding…' : 'Add medication'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

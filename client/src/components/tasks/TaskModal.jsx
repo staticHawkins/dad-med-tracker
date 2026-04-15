@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { saveTask, addComment, deleteComment, newId } from '../../lib/firestore'
 
 const STATUSES = ['todo', 'in-progress', 'done']
-const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
+const STATUS_LABELS = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' }
 
 const EMPTY = {
-  title: '', description: '', doctorIds: [], assigneeUids: [], dueDate: '', status: 'todo'
+  title: '', description: '', doctorIds: [], assigneeUids: [],
+  dueDate: '', status: 'todo', priority: 'medium'
 }
 
 export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
   const [form, setForm] = useState(EMPTY)
-  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved
+  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
   const [creating, setCreating] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [newComment, setNewComment] = useState('')
@@ -18,11 +19,15 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   const doctorDropRef = useRef(null)
   const commentsEndRef = useRef(null)
   const saveTimer = useRef(null)
+  const savedTimer = useRef(null)
   const isDirty = useRef(false)
+  const lastForm = useRef(null)
+  const dragStartY = useRef(null)
 
   const task = tasks.find(x => x.id === editId)
   const comments = task?.comments || []
   const isEditing = !!editId
+  const isOpen = editId !== undefined
 
   useEffect(() => {
     isDirty.current = false
@@ -33,24 +38,27 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       doctorIds: Array.isArray(task.doctorIds) ? task.doctorIds : (task.doctorId ? [task.doctorId] : []),
       assigneeUids: task.assigneeUids || [],
       dueDate: task.dueDate || '',
-      status: task.status || (task.done ? 'done' : 'todo')
+      status: task.status || (task.done ? 'done' : 'todo'),
+      priority: task.priority || 'medium'
     })
   }, [editId])
 
-  // Auto-save when editing
+  // Debounced autosave for text fields
   useEffect(() => {
     if (!isEditing || !isDirty.current || !form.title.trim()) return
+    lastForm.current = form
     setSaveStatus('saving')
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
       try {
         await saveTask(form, editId)
         setSaveStatus('saved')
-        setTimeout(() => setSaveStatus('idle'), 2000)
+        clearTimeout(savedTimer.current)
+        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
       } catch {
-        setSaveStatus('idle')
+        setSaveStatus('error')
       }
-    }, 700)
+    }, 600)
     return () => clearTimeout(saveTimer.current)
   }, [form])
 
@@ -81,6 +89,35 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     }
   }
 
+  // Immediate save helper for toggle fields
+  async function saveImmediate(nextForm) {
+    if (!isEditing || !nextForm.title.trim()) return
+    lastForm.current = nextForm
+    clearTimeout(saveTimer.current)
+    setSaveStatus('saving')
+    try {
+      await saveTask(nextForm, editId)
+      setSaveStatus('saved')
+      clearTimeout(savedTimer.current)
+      savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
+    } catch {
+      setSaveStatus('error')
+    }
+  }
+
+  async function retryWrite() {
+    if (!lastForm.current) return
+    setSaveStatus('saving')
+    try {
+      await saveTask(lastForm.current, editId)
+      setSaveStatus('saved')
+      clearTimeout(savedTimer.current)
+      savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
+    } catch {
+      setSaveStatus('error')
+    }
+  }
+
   function toggleDoctor(id) {
     isDirty.current = true
     setForm(f => ({
@@ -91,12 +128,21 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     }))
   }
 
+  function setStatus(s) {
+    isDirty.current = true
+    const next = { ...form, status: s }
+    setForm(next)
+    saveImmediate(next)
+  }
+
   function setAssignee(uid) {
     isDirty.current = true
-    setForm(f => ({
-      ...f,
-      assigneeUids: f.assigneeUids[0] === uid ? [] : [uid]
-    }))
+    const next = {
+      ...form,
+      assigneeUids: form.assigneeUids[0] === uid ? [] : [uid]
+    }
+    setForm(next)
+    saveImmediate(next)
   }
 
   async function handleCreate() {
@@ -132,171 +178,226 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
-  const isOpen = editId !== undefined
+  const sheetRef = useRef(null)
+
+  function onTouchStart(e) {
+    dragStartY.current = e.touches[0].clientY
+  }
+  function onTouchMove(e) {
+    if (dragStartY.current === null || !sheetRef.current) return
+    const delta = e.touches[0].clientY - dragStartY.current
+    if (delta > 0) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+  function onTouchEnd(e) {
+    if (dragStartY.current === null) return
+    const delta = e.changedTouches[0].clientY - dragStartY.current
+    dragStartY.current = null
+    if (sheetRef.current) sheetRef.current.style.transform = ''
+    if (delta > 80) onClose()
+  }
+
+  const priorityColor = { low: 'var(--text2)', medium: '#BA7517', high: '#D85A30' }
 
   return (
-    <div className="modal-bg" style={{ display: isOpen ? 'flex' : 'none' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal modal-task">
-        <div className="modal-task-header">
-          <h2>{isEditing ? 'Edit task' : 'Add task'}</h2>
-          <div className="modal-header-right">
-            {isEditing && (
-              <span className="autosave-status">
-                {saveStatus === 'saving' && <span className="autosave-saving">Saving…</span>}
-                {saveStatus === 'saved' && <span className="autosave-saved">Saved ✓</span>}
+    <>
+      {isOpen && (
+        <div className="sheet-backdrop" onClick={onClose} />
+      )}
+      <div
+        ref={sheetRef}
+        className={`edit-sheet${isOpen ? ' open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="sheet-handle"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        />
+        <div
+          className="sheet-header"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <span className="sheet-title">{isEditing ? 'Edit task' : 'Add task'}</span>
+          <div className="sheet-header-right">
+            {saveStatus !== 'idle' && (
+              <span
+                className={`autosave-pill ${saveStatus}`}
+                onClick={saveStatus === 'error' ? retryWrite : undefined}
+              >
+                <span className="autosave-pill-dot" />
+                {saveStatus === 'saving' && 'Saving…'}
+                {saveStatus === 'saved'  && 'Saved'}
+                {saveStatus === 'error'  && 'Not saved · Retry'}
               </span>
             )}
             <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
           </div>
         </div>
 
-        <div className="fr">
-          <label>Title <span className="req">*</span></label>
-          <input autoFocus value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
-        </div>
-        <div className="fr">
-          <label>Description</label>
-          <textarea value={form.description} onChange={set('description')} placeholder="Additional details…" />
-        </div>
+        <div className="sheet-body">
+          <div className="fr">
+            <label>Title <span className="req">*</span></label>
+            <input autoFocus={isOpen} value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
+          </div>
+          <div className="fr">
+            <label>Description</label>
+            <textarea value={form.description} onChange={set('description')} placeholder="Additional details…" />
+          </div>
 
-        <div className="fr">
-          <label>Status</label>
+          <div className="sheet-section">Status</div>
           <div className="status-selector">
             {STATUSES.map(s => (
               <button
                 key={s}
                 type="button"
                 className={`status-sel-btn status-sel-${s.replace('-', '')}${form.status === s ? ' active' : ''}`}
-                onClick={() => { isDirty.current = true; setForm(f => ({ ...f, status: s })) }}
+                onClick={() => setStatus(s)}
               >
                 {STATUS_LABELS[s]}
               </button>
             ))}
           </div>
-        </div>
 
-        <div className="modal-section">Assignment</div>
-        <div className="fr">
-          <label>Doctor</label>
-          <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
-            <button type="button" className="doctor-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
-              {form.doctorIds.length === 0 ? 'No doctor' : `${form.doctorIds.length} selected`}
-              <span className="doctor-dropdown-caret">{dropdownOpen ? '▴' : '▾'}</span>
-            </button>
+          <div className="sheet-section">Assignment</div>
+          <div className="fr">
+            <label>Doctors</label>
+            <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
+              {form.doctorIds.length > 0 && (
+                <div className="doctor-chips">
+                  {form.doctorIds.map(id => {
+                    const dr = careTeam.find(d => d.id === id)
+                    if (!dr) return null
+                    return (
+                      <span key={id} className="doctor-chip">
+                        👨‍⚕️ {dr.name}
+                        <button type="button" className="doctor-chip-remove" onClick={() => toggleDoctor(id)}>×</button>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+              <button type="button" className="doctor-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
+                {form.doctorIds.length === 0 ? 'Add doctor' : 'Add another'}
+                <span className="doctor-dropdown-caret">{dropdownOpen ? '▴' : '▾'}</span>
+              </button>
+              {dropdownOpen && (
+                <div className="doctor-dropdown-menu">
+                  {careTeam.map(dr => (
+                    <div
+                      key={dr.id}
+                      className={`doctor-dropdown-item${form.doctorIds.includes(dr.id) ? ' selected' : ''}`}
+                      onClick={() => toggleDoctor(dr.id)}
+                    >
+                      {dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}
+                    </div>
+                  ))}
+                  {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
+                </div>
+              )}
+            </div>
+          </div>
 
-            {dropdownOpen && (
-              <div className="doctor-dropdown-menu">
-                {careTeam.map(dr => (
-                  <div
-                    key={dr.id}
-                    className={`doctor-dropdown-item${form.doctorIds.includes(dr.id) ? ' selected' : ''}`}
-                    onClick={() => toggleDoctor(dr.id)}
-                  >
-                    {dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}
-                  </div>
-                ))}
-                {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
-              </div>
-            )}
-
-            {form.doctorIds.length > 0 && (
-              <div className="doctor-chips">
-                {form.doctorIds.map(id => {
-                  const dr = careTeam.find(d => d.id === id)
-                  if (!dr) return null
+          {users.length > 0 && (
+            <div className="fr">
+              <label>Assign to</label>
+              <div className="assignee-pills">
+                {users.map(u => {
+                  const selected = form.assigneeUids[0] === u.uid
                   return (
-                    <span key={id} className="doctor-chip">
-                      👨‍⚕️ {dr.name}
-                      <button type="button" className="doctor-chip-remove" onClick={() => toggleDoctor(id)}>×</button>
-                    </span>
+                    <button
+                      key={u.uid}
+                      type="button"
+                      className={`assignee-pill${selected ? ' selected' : ''}`}
+                      onClick={() => setAssignee(u.uid)}
+                    >
+                      {selected && <span className="assignee-pill-dot" />}
+                      {(u.displayName || u.email).split(' ')[0]}
+                    </button>
                   )
                 })}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {users.length > 0 && (
-          <div className="fr">
-            <label>Assign to</label>
-            <div className="assignee-pills">
-              {users.map(u => {
-                const selected = form.assigneeUids[0] === u.uid
-                return (
-                  <button
-                    key={u.uid}
-                    type="button"
-                    className={`assignee-pill${selected ? ' selected' : ''}`}
-                    onClick={() => setAssignee(u.uid)}
-                  >
-                    {selected && <span className="assignee-pill-dot" />}
-                    {(u.displayName || u.email).split(' ')[0]}
-                  </button>
-                )
-              })}
+          <div className="f2">
+            <div className="fr">
+              <label>Due date <span className="req">*</span></label>
+              <input type="date" value={form.dueDate} onChange={set('dueDate')} />
+            </div>
+            <div className="fr">
+              <label>Priority</label>
+              <select
+                value={form.priority}
+                onChange={set('priority')}
+                style={{ color: priorityColor[form.priority] || 'inherit' }}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
             </div>
           </div>
-        )}
-        <div className="fr">
-          <label>Due date</label>
-          <input type="date" value={form.dueDate} onChange={set('dueDate')} />
-        </div>
 
-        {isEditing && (
-          <div className="task-comments">
-            <div className="modal-section" style={{ marginTop: 20 }}>Comments</div>
-            {comments.length === 0 ? (
-              <div className="comments-empty">No comments yet.</div>
-            ) : (
-              <ul className="comments-list">
-                {[...comments].sort((a, b) => a.at?.localeCompare(b.at || '') || 0).map(c => (
-                  <li key={c.id} className="comment-item">
-                    <div className="comment-header">
-                      <span className="comment-author">{c.name}</span>
-                      <span className="comment-time">{formatCommentTime(c.at)}</span>
-                      {c.uid === user?.uid && (
-                        <button
-                          className="comment-delete"
-                          title="Delete comment"
-                          onClick={() => deleteComment(task, c.id)}
-                        >✕</button>
-                      )}
-                    </div>
-                    <div className="comment-text">{c.text}</div>
-                  </li>
-                ))}
-                <div ref={commentsEndRef} />
-              </ul>
-            )}
-            <div className="comment-input-row">
-              <textarea
-                className="comment-input"
-                placeholder="Add a comment…"
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
-                rows={2}
-              />
-              <button
-                className="btn-post-comment"
-                onClick={handlePostComment}
-                disabled={postingComment || !newComment.trim()}
-              >
-                {postingComment ? '…' : 'Post'}
+          {isEditing && (
+            <div className="task-comments">
+              <div className="sheet-section" style={{ marginTop: 20 }}>Comments</div>
+              {comments.length === 0 ? (
+                <div className="comments-empty">No comments yet.</div>
+              ) : (
+                <ul className="comments-list">
+                  {[...comments].sort((a, b) => a.at?.localeCompare(b.at || '') || 0).map(c => (
+                    <li key={c.id} className="comment-item">
+                      <div className="comment-header">
+                        <span className="comment-author">{c.name}</span>
+                        <span className="comment-time">{formatCommentTime(c.at)}</span>
+                        {c.uid === user?.uid && (
+                          <button
+                            className="comment-delete"
+                            title="Delete comment"
+                            onClick={() => deleteComment(task, c.id)}
+                          >✕</button>
+                        )}
+                      </div>
+                      <div className="comment-text">{c.text}</div>
+                    </li>
+                  ))}
+                  <div ref={commentsEndRef} />
+                </ul>
+              )}
+              <div className="comment-input-row">
+                <textarea
+                  className="comment-input"
+                  placeholder="Add a comment…"
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
+                  rows={2}
+                />
+                <button
+                  className="btn-post-comment"
+                  onClick={handlePostComment}
+                  disabled={postingComment || !newComment.trim()}
+                >
+                  {postingComment ? '…' : 'Post'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isEditing && (
+            <div className="mf" style={{ marginTop: 20 }}>
+              <button className="btn-cx" onClick={onClose}>Cancel</button>
+              <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+                {creating ? 'Creating…' : 'Create task'}
               </button>
             </div>
-          </div>
-        )}
-
-        {!isEditing && (
-          <div className="mf" style={{ marginTop: 20 }}>
-            <button className="btn-cx" onClick={onClose}>Cancel</button>
-            <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-              {creating ? 'Creating…' : 'Create task'}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
