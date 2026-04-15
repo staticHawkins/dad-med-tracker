@@ -150,7 +150,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
           <div className="sheet-section">Appointment details</div>
           <div className="fr">
             <label>Title <span className="req">*</span></label>
-            <input autoFocus={isOpen} value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />
+            <input value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />
           </div>
           <div className="f2">
             <div className="fr">

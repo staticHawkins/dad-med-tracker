@@ -241,7 +241,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
         <div className="sheet-body">
           <div className="fr">
             <label>Title <span className="req">*</span></label>
-            <input autoFocus={isOpen} value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
+            <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
           </div>
           <div className="fr">
             <label>Description</label>

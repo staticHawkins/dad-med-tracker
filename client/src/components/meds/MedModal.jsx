@@ -183,7 +183,7 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
           <div className="sheet-section">Medication info</div>
           <div className="fr">
             <label>Name <span className="req">*</span></label>
-            <input autoFocus={isOpen} value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
+            <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
           </div>
           <div className="f2">
             <div className="fr">
