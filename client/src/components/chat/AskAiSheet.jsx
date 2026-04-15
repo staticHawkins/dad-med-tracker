@@ -8,7 +8,7 @@ function getTaskStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
 }
 
-function buildSuggestions(meds, apts, tasks) {
+function buildSuggestions(meds, apts) {
   const suggestions = []
 
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
@@ -82,7 +82,7 @@ ${tasksSection}
 CARE TEAM (${careTeam.length}):
 ${careSection}
 
-When referencing urgent items, use [urgent] and [/urgent] tags to wrap the key sentence. For informational highlights, use [info] and [/info] tags. Keep responses focused and practical.`
+Keep responses focused and practical. Do NOT use markdown — no **, __, ##, *, or bullet dashes. Write in plain sentences and short paragraphs only. For urgent items wrap the key sentence with [urgent]...[/urgent]. For informational highlights use [info]...[/info].`
 }
 
 function buildActionChips(apts, tasks) {
@@ -210,7 +210,7 @@ export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam 
 
   if (!open) return null
 
-  const suggestions = buildSuggestions(meds, apts, tasks)
+  const suggestions = buildSuggestions(meds, apts)
   const actionChips = buildActionChips(apts, tasks)
   const isFirstMessage = messages.length === 0
 
