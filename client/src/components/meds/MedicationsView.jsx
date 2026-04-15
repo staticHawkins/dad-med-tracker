@@ -1,22 +1,18 @@
-import { useState, useRef } from 'react'
-import KPIRow from './KPIRow'
-import MedsTable from './MedsTable'
+import { useState, useRef, useMemo } from 'react'
+import MedGroupSection from './MedGroupSection'
 import MedModal from './MedModal'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
-import { st } from '../../lib/medUtils'
-
-const FILTER_LABELS = {
-  all: 'All medications',
-  urgent: 'Urgent — refill within 3 days',
-  soon: 'Refill this week (4–7 days)',
-  ok: 'Stocked up'
-}
+import { st, pillsNow } from '../../lib/medUtils'
 
 export default function MedicationsView({ meds, careTeam }) {
-  const [filter, setFilter] = useState('all')
+  const [activeFilter, setActiveFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [editId, setEditId] = useState(undefined)  // undefined = closed, null = new, string = editing
+  const [editId, setEditId] = useState(undefined)  // undefined=closed, null=new, string=editing
   const fileRef = useRef()
+
+  const urgentRef = useRef()
+  const soonRef   = useRef()
+  const okRef     = useRef()
 
   function openModal(id = null) { setEditId(id) }
   function closeModal() { setEditId(undefined) }
@@ -30,21 +26,54 @@ export default function MedicationsView({ meds, careTeam }) {
     e.target.value = ''
   }
 
+  function handleFilter(f) {
+    setActiveFilter(f)
+    if (f === 'all') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    const ref = f === 'urgent' ? urgentRef : f === 'soon' ? soonRef : okRef
+    if (!ref.current) return
+    ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    ref.current.classList.add('highlighted')
+    setTimeout(() => ref.current?.classList.remove('highlighted'), 1400)
+  }
+
+  const q = search.toLowerCase()
+
+  const filtered = useMemo(() => {
+    let rows = [...meds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+    if (q) rows = rows.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      (m.pharmacy || '').toLowerCase().includes(q) ||
+      (m.doctor || '').toLowerCase().includes(q)
+    )
+    return rows
+  }, [meds, q])
+
+  const grouped = useMemo(() => ({
+    urgent: filtered.filter(m => st(m) === 'urgent'),
+    soon:   filtered.filter(m => st(m) === 'soon'),
+    ok:     filtered.filter(m => st(m) === 'ok'),
+  }), [filtered])
+
   return (
     <div className="page">
-      <KPIRow meds={meds} />
-
       <div className="tbl-hdr">
         <div className="tbl-left">
-          <span className="tbl-title">{FILTER_LABELS[filter]}</span>
           <div className="filter-tabs">
-            {['all', 'urgent', 'soon', 'ok'].map(f => (
+            {[
+              ['all',    'All'],
+              ['urgent', '≤ 3d'],
+              ['soon',   '4–7d'],
+              ['ok',     'Stocked'],
+            ].map(([f, label]) => (
               <button
                 key={f}
-                className={`ftab${filter === f ? ' active' : ''}`}
-                onClick={() => setFilter(f)}
+                className={`ftab${activeFilter === f ? ' active' : ''}`}
+                onClick={() => handleFilter(f)}
               >
-                {f === 'all' ? 'All' : f === 'urgent' ? '≤ 3 days' : f === 'soon' ? '4–7 days' : 'Stocked up'}
+                {label}
               </button>
             ))}
           </div>
@@ -67,7 +96,19 @@ export default function MedicationsView({ meds, careTeam }) {
         </div>
       </div>
 
-      <MedsTable meds={meds} filter={filter} search={search} onEdit={openModal} />
+      {filtered.length === 0 ? (
+        <div className="med-empty">
+          {meds.length === 0
+            ? 'No medications yet. Click "+ Add medication" to get started.'
+            : 'No medications match your search.'}
+        </div>
+      ) : (
+        <div className="med-groups">
+          <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onEdit={openModal} />
+          <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onEdit={openModal} />
+          <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onEdit={openModal} />
+        </div>
+      )}
 
       {editId !== undefined && (
         <MedModal meds={meds} careTeam={careTeam} editId={editId} onClose={closeModal} />
