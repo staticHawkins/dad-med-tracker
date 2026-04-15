@@ -11,9 +11,10 @@ import MedicationsView from './meds/MedicationsView'
 import AppointmentsView from './apts/AppointmentsView'
 import TasksView from './tasks/TasksView'
 import CareTeamPanel from './CareTeamPanel'
+import DashboardView, { BackBar } from './DashboardView'
 
 export default function MainApp({ user }) {
-  const [activeTab, setActiveTab] = useState('meds')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef(null)
@@ -71,26 +72,40 @@ export default function MainApp({ user }) {
         </div>
       </div>
 
-      <div className="page-tabs">
-        <button className={`ptab${activeTab === 'meds' ? ' active' : ''}`} onClick={() => setActiveTab('meds')}>
-          Medications
-        </button>
-        <button className={`ptab${activeTab === 'apts' ? ' active' : ''}`} onClick={() => setActiveTab('apts')}>
-          Appointments
-        </button>
-        <button className={`ptab${activeTab === 'tasks' ? ' active' : ''}`} onClick={() => setActiveTab('tasks')}>
-          Tasks
-        </button>
-        <button className={`ptab${activeTab === 'care-team' ? ' active' : ''}`} onClick={() => setActiveTab('care-team')}>
-          Care Team
-        </button>
-      </div>
+      {activeTab === 'dashboard' && (
+        <DashboardView
+          meds={meds}
+          apts={apts}
+          tasks={tasks}
+          careTeam={careTeam}
+          onNavigate={setActiveTab}
+        />
+      )}
 
-      {activeTab === 'meds' && <MedicationsView meds={meds} careTeam={careTeam} />}
-      {activeTab === 'apts' && <AppointmentsView apts={apts} careTeam={careTeam} />}
-      {activeTab === 'tasks' && <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} />}
-
-      {activeTab === 'care-team' && <CareTeamPanel careTeam={careTeam} />}
+      {activeTab === 'meds' && (
+        <>
+          <BackBar label="Medications" onBack={() => setActiveTab('dashboard')} />
+          <MedicationsView meds={meds} careTeam={careTeam} />
+        </>
+      )}
+      {activeTab === 'apts' && (
+        <>
+          <BackBar label="Appointments" onBack={() => setActiveTab('dashboard')} />
+          <AppointmentsView apts={apts} careTeam={careTeam} />
+        </>
+      )}
+      {activeTab === 'tasks' && (
+        <>
+          <BackBar label="Tasks" onBack={() => setActiveTab('dashboard')} />
+          <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} />
+        </>
+      )}
+      {activeTab === 'care-team' && (
+        <>
+          <BackBar label="Care Team" onBack={() => setActiveTab('dashboard')} />
+          <CareTeamPanel careTeam={careTeam} />
+        </>
+      )}
     </>
   )
 }

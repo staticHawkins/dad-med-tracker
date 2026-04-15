@@ -820,3 +820,260 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   thead th{background:#f5f5f5;color:#333}
   tbody td{color:#111}
 }
+
+/* ── BACK BAR ── */
+.back-bar{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 24px;border-bottom:1px solid var(--border);
+  background:var(--panel);
+}
+.back-btn{
+  font-family:var(--ff);font-size:13px;font-weight:600;
+  padding:6px 12px;border:1px solid var(--border2);border-radius:7px;
+  background:transparent;color:var(--text2);cursor:pointer;transition:all .12s;
+}
+.back-btn:hover{background:var(--panel2);color:var(--text)}
+.back-bar-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+
+/* ── DASHBOARD PAGE ── */
+.dashboard-page{max-width:960px;margin:0 auto;padding:28px 24px 24px}
+.dashboard-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:16px;
+}
+@media(max-width:640px){
+  .dashboard-grid{grid-template-columns:1fr}
+}
+@media(min-width:768px){
+  .dashboard-page{
+    display:flex;flex-direction:column;
+    min-height:calc(100vh - 54px);
+    padding-bottom:24px;
+  }
+  .dashboard-grid{
+    flex:1;min-height:0;
+    grid-template-rows:1fr 1fr;
+    align-items:stretch;
+  }
+}
+
+/* ── DASHBOARD CARD ── */
+.dash-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:13px;
+  padding:20px 22px;text-align:left;cursor:pointer;
+  font-family:var(--ff);color:var(--text);
+  transition:background .12s,border-color .15s,transform .1s;
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:14px;
+  width:100%;
+}
+.dash-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.dash-card:hover{background:var(--panel2);border-color:var(--border2);transform:translateY(-1px)}
+.dash-card:active{transform:scale(.99)}
+.dash-card-meds::before{background:var(--blue)}
+.dash-card-apts::before{background:var(--amber)}
+.dash-card-tasks::before{background:var(--violet)}
+.dash-card-care::before{background:var(--teal)}
+
+.dash-card-header{display:flex;align-items:center;gap:8px}
+.dash-card-icon{font-size:16px;line-height:1;flex-shrink:0}
+.dash-card-title{
+  font-size:13px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--text2);flex:1;
+}
+.dash-card-arrow{font-size:18px;color:var(--text3);line-height:1}
+
+.dash-card-body{display:flex;flex-direction:column;gap:10px}
+
+/* stat row */
+.dash-stat-row{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
+.dash-stat{display:flex;flex-direction:column;gap:2px}
+.dash-stat-num{
+  font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1;
+  font-family:var(--ffm);color:var(--text);
+}
+.dash-stat-num.stat-red{color:var(--red)}
+.dash-stat-num.stat-amber{color:var(--amber)}
+.dash-stat-num.stat-green{color:var(--green)}
+.dash-stat-num.stat-blue{color:var(--blue)}
+.dash-stat-num.stat-teal{color:var(--teal)}
+.dash-stat-lbl{font-size:11px;color:var(--text3);font-weight:500;white-space:nowrap}
+
+/* urgent meds list */
+.dash-urgent-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.dash-urgent-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:500;color:var(--red);
+  background:var(--red-dim);border:1px solid var(--red-border);
+  border-radius:20px;padding:4px 12px;width:fit-content;
+}
+.dash-urgent-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;
+}
+.dash-more-label{font-size:11px;color:var(--text3);font-style:italic}
+
+/* next apt block */
+.dash-apt-block{display:flex;align-items:flex-start;gap:12px}
+.dash-apt-date{
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--amber-dim);border:1px solid var(--amber-border);
+  border-radius:8px;padding:8px 12px;min-width:52px;text-align:center;flex-shrink:0;
+}
+.dash-apt-month{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--amber);font-family:var(--ffm);
+}
+.dash-apt-day{
+  font-size:26px;font-weight:700;letter-spacing:-1.5px;line-height:1;
+  color:var(--amber);font-family:var(--ffm);
+}
+.dash-apt-info{flex:1;min-width:0}
+.dash-apt-title{
+  font-size:14px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.dash-apt-meta{
+  font-size:12px;color:var(--text2);margin-top:4px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.dash-apt-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* tasks mini grid */
+.dash-task-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+}
+/* meds 3-col grid, centered */
+.dash-med-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+.dash-task-stat{
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 8px;text-align:center;
+}
+.dash-task-num{
+  font-size:22px;font-weight:700;letter-spacing:-1px;
+  font-family:var(--ffm);color:var(--text);line-height:1;
+}
+.dash-task-num.overdue-num{color:var(--red)}
+.dash-task-num.soon-num{color:var(--amber)}
+.dash-task-lbl{font-size:10px;color:var(--text3);margin-top:4px;font-weight:500}
+
+/* care team list */
+.dash-dr-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px}
+.dash-dr-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);font-weight:500}
+.dash-dr-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0}
+
+/* empty state */
+.dash-empty{font-size:13px;color:var(--text3);font-style:italic}
+
+/* ── SUMMARY BAR (desktop only) ── */
+.dash-summary-bar{
+  display:none;
+  gap:10px;margin-bottom:20px;
+}
+@media(min-width:768px){
+  .dash-summary-bar{display:flex}
+}
+.dash-pill{
+  flex:1;display:flex;align-items:center;gap:10px;
+  border-radius:10px;padding:10px 14px;border:1px solid transparent;
+  min-width:0;
+}
+.dash-pill-red{background:var(--red-dim);border-color:var(--red-border)}
+.dash-pill-amber{background:var(--amber-dim);border-color:var(--amber-border)}
+.dash-pill-violet{background:var(--violet-dim);border-color:var(--violet-border)}
+.dash-pill-icon{
+  font-size:14px;line-height:1;flex-shrink:0;
+}
+.dash-pill-red .dash-pill-icon{color:var(--red);font-style:normal;font-weight:700;font-size:16px}
+.dash-pill-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.dash-pill-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;opacity:.7}
+.dash-pill-red .dash-pill-label{color:var(--red)}
+.dash-pill-amber .dash-pill-label{color:var(--amber)}
+.dash-pill-violet .dash-pill-label{color:var(--violet)}
+.dash-pill-value{
+  font-size:12px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* ── DESKTOP-ONLY / MOBILE-ONLY HELPERS ── */
+.dash-desktop{display:none}
+.dash-mobile-only{display:flex}
+@media(min-width:768px){
+  .dash-desktop{display:block}
+  .dash-mobile-only{display:none!important}
+  /* cards fill grid cell */
+  .dash-card{height:100%;min-height:0}
+  .dash-card-body{flex:1;min-height:0;overflow-y:auto}
+}
+
+/* ── SECTION LABEL ── */
+.dash-section-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;
+  color:var(--text3);margin-bottom:8px;padding-top:4px;
+  border-top:1px solid var(--border);
+}
+
+/* ── SHARED ITEM LIST ── */
+.dash-item-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0}
+
+/* medication rows */
+.dash-med-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid var(--border);gap:8px;
+}
+.dash-med-row:last-child{border-bottom:none}
+.dash-med-name{font-size:13px;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-list-more{font-size:11px;color:var(--text3);font-style:italic;padding-top:6px}
+
+/* appointment rows */
+.dash-apt-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid var(--border);gap:8px;
+}
+.dash-apt-row:last-child{border-bottom:none}
+.dash-apt-row-name{font-size:13px;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-apt-row-date{font-size:11px;font-family:var(--ffm);color:var(--text3);flex-shrink:0}
+
+/* task rows */
+.dash-task-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.dash-task-row:last-child{border-bottom:none}
+.dash-task-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dash-task-row-title{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-task-row-due{font-size:11px;color:var(--text3)}
+.dash-task-row-due.due-overdue{color:var(--red)}
+
+/* status chips */
+.dash-status-chip{
+  font-size:10px;font-weight:600;border-radius:4px;
+  padding:2px 7px;flex-shrink:0;white-space:nowrap;
+}
+.dash-chip-urgent{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border)}
+.dash-chip-soon{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-border)}
+.dash-chip-inprog{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border)}
+.dash-chip-todo{background:var(--panel2);color:var(--text3);border:1px solid var(--border)}
+
+/* ── CARE TEAM AVATAR GRID ── */
+.dash-avatar-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.dash-avatar-item{display:flex;align-items:center;gap:9px}
+.dash-avatar-circle{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;font-family:var(--ffm);border:1px solid transparent;
+}
+.dash-avatar-img{object-fit:cover}
+.dash-avatar-blue{background:var(--blue-dim);border-color:var(--blue-border);color:var(--blue)}
+.dash-avatar-violet{background:var(--violet-dim);border-color:var(--violet-border);color:var(--violet)}
+.dash-avatar-teal{background:var(--teal-dim);border-color:var(--teal-border);color:var(--teal)}
+.dash-avatar-amber{background:var(--amber-dim);border-color:var(--amber-border);color:var(--amber)}
+.dash-avatar-green{background:var(--green-dim);border-color:var(--green-border);color:var(--green)}
+.dash-avatar-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dash-avatar-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-avatar-spec{font-size:11px;color:var(--text3)}
+.dash-care-more{font-size:12px;color:var(--teal);font-weight:500;margin-top:10px}
