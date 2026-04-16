@@ -1,5 +1,6 @@
 import { st } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
+import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
 
 function getTaskStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
@@ -377,11 +378,18 @@ export function BackBar({ label, onBack }) {
   )
 }
 
-export default function DashboardView({ meds, apts, tasks, careTeam, onNavigate }) {
+export default function DashboardView({ meds, apts, tasks, careTeam, milestones, phases, onNavigate }) {
   return (
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
+        <div className="dash-card-timeline-wrap">
+          <DiseaseTimelineCard
+            milestones={milestones}
+            phases={phases}
+            onViewTimeline={() => onNavigate('timeline')}
+          />
+        </div>
         <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />

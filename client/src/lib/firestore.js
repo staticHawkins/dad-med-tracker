@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore'
+import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today } from './medUtils'
 
@@ -116,6 +116,20 @@ export async function saveSpecialty(fields, editId) {
 
 export async function delSpecialty(id) {
   await deleteDoc(doc(db, 'specialties', id))
+}
+
+export async function seedTimeline() {
+  const { GUANGUL_MILESTONES, GUANGUL_PHASES } = await import('../data/milestones/guangul-zekiros.js')
+  const existing = await getDocs(collection(db, 'milestones'))
+  if (!existing.empty) {
+    console.warn('seedTimeline: milestones collection already has data, skipping.')
+    return
+  }
+  const batch = writeBatch(db)
+  GUANGUL_MILESTONES.forEach(m => batch.set(doc(db, 'milestones', m.id), m))
+  GUANGUL_PHASES.forEach(p => batch.set(doc(db, 'phases', p.key), p))
+  await batch.commit()
+  console.log('seedTimeline: seeded', GUANGUL_MILESTONES.length, 'milestones and', GUANGUL_PHASES.length, 'phases')
 }
 
 export async function seedSpecialties() {

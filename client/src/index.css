@@ -1499,3 +1499,82 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .priority-low{color:var(--text2)}
 .priority-medium{color:#BA7517}
 .priority-high{color:#D85A30}
+
+/* ── DISEASE TIMELINE ── */
+
+/* Phase strip */
+.tl-phase-strip{display:flex;height:4px;border-radius:2px;overflow:hidden;margin:2px 0 4px}
+.tl-phase-seg{height:4px}
+
+/* Dashboard card — gradient top border */
+.dash-card-timeline::before{background:linear-gradient(to right,#6b7280,#4a7fd4 20%,#1a8a66 48%,#c08030 68%,#c04040 85%)}
+
+/* Full-width wrapper in dashboard grid */
+.dash-card-timeline-wrap{grid-column:1/-1}
+.dash-card-timeline-wrap .dash-card{width:100%}
+
+/* Timeline rows inside card */
+.tl-card-rows{display:flex;flex-direction:column}
+
+/* Milestone row — desktop (date left | dot center | content right) */
+.tl-row{display:flex;align-items:flex-start}
+.tl-left{width:90px;text-align:right;padding-right:14px;flex-shrink:0}
+.tl-date-main{font-size:11px;color:#5c6479;line-height:1.5}
+.tl-mid{width:16px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-connector{width:1px;flex:1;min-height:20px;background:rgba(255,255,255,.08);margin-top:3px}
+.tl-content{flex:1;padding:0 0 22px 14px}
+.tl-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
+.tl-title{font-size:13px;font-weight:600;color:#e8eaf0;line-height:1.4;margin-bottom:4px}
+.tl-body{font-size:12px;color:#9ba3b8;line-height:1.65}
+
+/* Milestone row — mobile (dot left | inline date + content) */
+.tl-row-mobile{display:flex;align-items:flex-start;gap:10px;padding-bottom:16px}
+.tl-date-inline{font-size:10px;color:#5c6479;margin-bottom:4px}
+
+/* Tag pills */
+.tl-tag{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:3px}
+.tl-tag-green{color:#3cbf7a;background:rgba(60,191,122,.15)}
+.tl-tag-red{color:#e55b4d;background:rgba(229,91,77,.15)}
+.tl-tag-blue{color:#5b8af0;background:rgba(91,138,240,.15)}
+.tl-tag-amber{color:#e09340;background:rgba(224,147,64,.15)}
+.tl-tag-purple{color:#9c6bde;background:rgba(156,107,222,.15)}
+.tl-tag-gray{color:#9ba3b8;background:rgba(255,255,255,.07)}
+
+/* Dashboard card footer */
+.tl-card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:2px;gap:8px}
+.tl-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tl-legend-item{display:flex;align-items:center;gap:5px}
+.tl-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tl-legend-label{font-size:10px;color:#5c6479}
+.tl-footer-link{font-size:11px;color:#5b8af0;white-space:nowrap;cursor:pointer;flex-shrink:0}
+.tl-footer-link:hover{color:#7ba3f5}
+.tl-footer-count{font-size:11px;color:#5c6479}
+
+/* Full timeline page */
+.tl-page{max-width:800px;margin:0 auto;padding:24px 20px}
+.tl-patient-header{margin-bottom:20px}
+.tl-patient-name{font-size:22px;font-weight:700;color:#e8eaf0;margin-bottom:6px}
+.tl-patient-meta{font-size:12px;color:#9ba3b8;line-height:1.6}
+.tl-header-divider{height:1px;background:rgba(255,255,255,.07);margin-top:14px}
+.tl-diag-block{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;background:#161b27;border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:16px 20px;margin:20px 0}
+.tl-diag-label{font-size:10px;color:#5c6479;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.tl-diag-value{font-size:13px;font-weight:500;color:#e8eaf0}
+.tl-phases-strip{display:flex;border:1px solid rgba(255,255,255,.07);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.tl-phase-card{flex:1;padding:12px 14px;border-right:1px solid rgba(255,255,255,.07);position:relative;padding-bottom:15px}
+.tl-phase-card:last-child{border-right:none}
+.tl-phase-bottom-border{position:absolute;bottom:0;left:0;right:0;height:3px}
+.tl-phase-tier{font-size:9px;color:#5c6479;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.tl-phase-name{font-size:11px;font-weight:600;color:#e8eaf0;margin-bottom:3px}
+.tl-phase-period{font-size:10px;color:#9ba3b8;margin-bottom:4px}
+.tl-phase-outcome{font-size:10px;font-weight:600}
+.tl-section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5c6479;margin-bottom:16px}
+.tl-milestones-list{display:flex;flex-direction:column}
+
+@media(max-width:640px){
+  .tl-diag-block{grid-template-columns:repeat(2,1fr)}
+  .tl-phases-strip{flex-direction:column}
+  .tl-phase-card{border-right:none;border-bottom:1px solid rgba(255,255,255,.07)}
+  .tl-phase-card:last-child{border-bottom:none}
+  .tl-phase-bottom-border{display:none}
+}

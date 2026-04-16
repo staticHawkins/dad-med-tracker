@@ -6,12 +6,15 @@ import { useApts } from '../hooks/useApts'
 import { useCareTeam } from '../hooks/useCareTeam'
 import { useTasks } from '../hooks/useTasks'
 import { useUsers } from '../hooks/useUsers'
+import { useMilestones } from '../hooks/useMilestones'
+import { usePhases } from '../hooks/usePhases'
 import { upsertUser } from '../lib/firestore'
 import MedicationsView from './meds/MedicationsView'
 import AppointmentsView from './apts/AppointmentsView'
 import TasksView from './tasks/TasksView'
 import CareTeamPanel from './CareTeamPanel'
 import DashboardView, { BackBar } from './DashboardView'
+import TimelineView from './timeline/TimelineView'
 import AskAiSheet from './chat/AskAiSheet'
 
 export default function MainApp({ user }) {
@@ -45,6 +48,8 @@ export default function MainApp({ user }) {
   const careTeam = useCareTeam()
   const tasks = useTasks()
   const users = useUsers()
+  const milestones = useMilestones()
+  const phases = usePhases()
 
   return (
     <>
@@ -83,6 +88,8 @@ export default function MainApp({ user }) {
           apts={apts}
           tasks={tasks}
           careTeam={careTeam}
+          milestones={milestones}
+          phases={phases}
           onNavigate={setActiveTab}
         />
       )}
@@ -109,6 +116,12 @@ export default function MainApp({ user }) {
         <>
           <BackBar label="Care Team" onBack={() => setActiveTab('dashboard')} />
           <CareTeamPanel careTeam={careTeam} />
+        </>
+      )}
+      {activeTab === 'timeline' && (
+        <>
+          <BackBar label="Disease Timeline" onBack={() => setActiveTab('dashboard')} />
+          <TimelineView milestones={milestones} phases={phases} />
         </>
       )}
 
