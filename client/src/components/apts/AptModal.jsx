@@ -3,7 +3,7 @@ import { saveApt } from '../../lib/firestore'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
 
 const EMPTY = {
-  title: '', dateTime: '', type: '', doctor: '', location: '', covering: '',
+  title: '', dateTime: '', doctor: '', location: '', covering: '',
   prep: '', postNotes: ''
 }
 
@@ -26,7 +26,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     if (!editId) { setForm(EMPTY); return }
     const a = apts.find(x => x.id === editId)
     if (a) setForm({
-      title: a.title || '', dateTime: a.dateTime || '', type: a.type || '',
+      title: a.title || '', dateTime: a.dateTime || '',
       doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
       prep: a.prep || '', postNotes: a.postNotes || ''
     })
@@ -169,18 +169,6 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
 
           <div className="sheet-section">Optional</div>
           <div className="f2">
-            <div className="fr">
-              <label>Type</label>
-              <select value={form.type} onChange={set('type')}>
-                <option value="">Select type…</option>
-                <option value="checkup">Checkup</option>
-                <option value="specialist">Specialist</option>
-                <option value="lab">Lab / blood work</option>
-                <option value="imaging">Imaging</option>
-                <option value="treatment">Treatment</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
             <div className="fr">
               <label>Location</label>
               <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" />

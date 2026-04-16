@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch } from 'firebase/firestore'
+import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today } from './medUtils'
 
@@ -79,7 +79,6 @@ export async function saveApt(fields, editId) {
     id: editId || newId(),
     title: fields.title,
     dateTime: fields.dateTime,
-    type: fields.type,
     doctor: fields.doctor,
     location: fields.location,
     covering: fields.covering,
@@ -175,7 +174,6 @@ export async function seedAppointmentsFromNotes({ force = false } = {}) {
       id: newId(),
       title,
       dateTime: `${dateKey}T09:00`,
-      type: 'specialist',
       doctor: `Dr. ${lastName}`,
       location: isTelemedicine ? 'Telehealth' : 'Texas Oncology',
       specialty: isPalliative ? 'palliative' : 'oncology',
@@ -203,6 +201,19 @@ export async function seedAppointmentsFromNotes({ force = false } = {}) {
   })
   await batch.commit()
   console.log('seedAppointmentsFromNotes: created', toSeed.length, 'appointments')
+}
+
+export async function cleanupAptType() {
+  const snap = await getDocs(collection(db, 'appointments'))
+  const toClean = snap.docs.filter(d => d.data().type !== undefined)
+  if (toClean.length === 0) {
+    console.log('cleanupAptType: nothing to clean')
+    return
+  }
+  const batch = writeBatch(db)
+  toClean.forEach(d => batch.update(d.ref, { type: deleteField() }))
+  await batch.commit()
+  console.log(`cleanupAptType: removed type field from ${toClean.length} appointments`)
 }
 
 export async function seedSpecialties() {

@@ -1,10 +1,8 @@
-import { fmtAptDateBlock, fmtAptTime, coveringLabel, typeLabel } from '../../lib/aptUtils'
+import { fmtAptDateBlock, fmtAptTime, coveringLabel } from '../../lib/aptUtils'
 
 export default function AptCard({ apt, status, onView, hasNote }) {
   const db = fmtAptDateBlock(apt.dateTime)
   const time = fmtAptTime(apt.dateTime)
-  const tl = typeLabel(apt.type)
-
   return (
     <div className={`apt-card ${status}`} data-apt-id={apt.id} onClick={() => onView(apt.id)} style={{ cursor: 'pointer' }}>
       <div className="apt-card-top">
@@ -19,7 +17,6 @@ export default function AptCard({ apt, status, onView, hasNote }) {
           <div className="apt-meta">
             {apt.doctor && <span className="apt-doctor">{apt.doctor}</span>}
             {apt.location && <span className={`apt-location${apt.doctor ? ' has-doctor' : ''}`}>{apt.location}</span>}
-            {tl && <span className="type-chip">{tl}</span>}
           </div>
         </div>
         {apt.covering && (

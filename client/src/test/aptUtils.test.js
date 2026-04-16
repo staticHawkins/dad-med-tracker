@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { aptStatus, fmtAptDateBlock, fmtAptTime, coveringLabel, typeLabel } from '../lib/aptUtils'
+import { aptStatus, fmtAptDateBlock, fmtAptTime, coveringLabel } from '../lib/aptUtils'
 
 const FIXED_TODAY = new Date('2026-03-31T12:00:00')
 
@@ -82,19 +82,3 @@ describe('coveringLabel', () => {
   })
 })
 
-// ── typeLabel ─────────────────────────────────────────────────────────────────
-
-describe('typeLabel', () => {
-  it('maps known types', () => {
-    expect(typeLabel('checkup')).toBe('Checkup')
-    expect(typeLabel('specialist')).toBe('Specialist')
-    expect(typeLabel('lab')).toBe('Lab')
-    expect(typeLabel('imaging')).toBe('Imaging')
-    expect(typeLabel('other')).toBe('Other')
-  })
-
-  it('returns empty string for unknown types', () => {
-    expect(typeLabel('')).toBe('')
-    expect(typeLabel(undefined)).toBe('')
-  })
-})

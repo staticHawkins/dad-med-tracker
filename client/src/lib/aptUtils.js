@@ -39,6 +39,3 @@ export function coveringLabel(c) {
   return { fanuel: 'Fanuel', saron: 'Saron', both: 'Both', tbd: 'TBD' }[c] || 'TBD'
 }
 
-export function typeLabel(t) {
-  return { checkup: 'Checkup', specialist: 'Specialist', lab: 'Lab', imaging: 'Imaging', treatment: 'Treatment', other: 'Other' }[t] || ''
-}

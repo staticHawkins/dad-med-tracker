@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fmtAptDateBlock, fmtAptTime, coveringLabel, typeLabel } from '../../lib/aptUtils'
+import { fmtAptDateBlock, fmtAptTime, coveringLabel } from '../../lib/aptUtils'
 import { delApt } from '../../lib/firestore'
 
 function Section({ label, value }) {
@@ -28,7 +28,6 @@ export default function AptDetailModal({ apt, note, onClose, onEdit, onDelete })
 
   const db = fmtAptDateBlock(apt.dateTime)
   const time = fmtAptTime(apt.dateTime)
-  const tl = typeLabel(apt.type)
   const covering = coveringLabel(apt.covering)
 
   const dateStr = apt.dateTime
@@ -69,7 +68,6 @@ export default function AptDetailModal({ apt, note, onClose, onEdit, onDelete })
         <div className="apt-detail-meta">
           {apt.doctor && <span className="apt-detail-chip">{apt.doctor}</span>}
           {apt.location && <span className="apt-detail-chip">{apt.location}</span>}
-          {tl && <span className="apt-detail-chip">{tl}</span>}
           {apt.covering && <span className={`covering-pill ${apt.covering}`}>{covering}</span>}
         </div>
 
