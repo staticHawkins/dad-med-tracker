@@ -177,6 +177,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
                 <option value="specialist">Specialist</option>
                 <option value="lab">Lab / blood work</option>
                 <option value="imaging">Imaging</option>
+                <option value="treatment">Treatment</option>
                 <option value="other">Other</option>
               </select>
             </div>

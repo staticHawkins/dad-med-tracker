@@ -40,5 +40,5 @@ export function coveringLabel(c) {
 }
 
 export function typeLabel(t) {
-  return { checkup: 'Checkup', specialist: 'Specialist', lab: 'Lab', imaging: 'Imaging', other: 'Other' }[t] || ''
+  return { checkup: 'Checkup', specialist: 'Specialist', lab: 'Lab', imaging: 'Imaging', treatment: 'Treatment', other: 'Other' }[t] || ''
 }
