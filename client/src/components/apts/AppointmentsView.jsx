@@ -5,10 +5,12 @@ import MiniCalendar from './MiniCalendar'
 import HeroCard from './HeroCard'
 import AgendaGroups from './AgendaGroups'
 import AptModal from './AptModal'
+import AptDetailModal from './AptDetailModal'
 
 export default function AppointmentsView({ apts, careTeam }) {
   const [search, setSearch] = useState('')
   const [editId, setEditId] = useState(undefined)
+  const [detailId, setDetailId] = useState(null)
   const [pastExpanded, setPastExpanded] = useState(false)
   const noteById = useNotes()
 
@@ -17,6 +19,9 @@ export default function AppointmentsView({ apts, careTeam }) {
 
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const nextApt = sorted.find(a => aptStatus(a) !== 'past') || null
+
+  const detailApt = detailId ? apts.find(a => a.id === detailId) : null
+  const detailNote = detailApt?.dateTime ? noteById[detailApt.dateTime.slice(0, 10)] || null : null
 
   return (
     <div className="page">
@@ -48,7 +53,7 @@ export default function AppointmentsView({ apts, careTeam }) {
               apts={apts}
               search={search}
               noteById={noteById}
-              onEdit={openModal}
+              onView={id => setDetailId(id)}
               pastExpanded={pastExpanded}
               onPastExpand={() => setPastExpanded(o => !o)}
             />
@@ -58,6 +63,15 @@ export default function AppointmentsView({ apts, careTeam }) {
 
       {editId !== undefined && (
         <AptModal apts={apts} careTeam={careTeam} editId={editId} onClose={closeModal} />
+      )}
+
+      {detailApt && (
+        <AptDetailModal
+          apt={detailApt}
+          note={detailNote}
+          onClose={() => setDetailId(null)}
+          onEdit={id => { setDetailId(null); openModal(id) }}
+        />
       )}
     </div>
   )

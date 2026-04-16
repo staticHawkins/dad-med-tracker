@@ -132,6 +132,70 @@ export async function seedTimeline() {
   console.log('seedTimeline: seeded', GUANGUL_MILESTONES.length, 'milestones and', GUANGUL_PHASES.length, 'phases')
 }
 
+export async function seedClinicalNotes({ force = false } = {}) {
+  const { default: notes } = await import('../data/clinical-notes/txonc_clinical_notes_enriched.json')
+  const existing = await getDocs(collection(db, 'clinicalNotes'))
+  if (!existing.empty && !force) {
+    console.warn('seedClinicalNotes: clinicalNotes collection already has data, skipping. Pass { force: true } to overwrite.')
+    return
+  }
+  const batch = writeBatch(db)
+  if (force) existing.docs.forEach(d => batch.delete(d.ref))
+  notes.forEach(n => batch.set(doc(db, 'clinicalNotes', n.id), n))
+  await batch.commit()
+  console.log('seedClinicalNotes: seeded', notes.length, 'notes')
+}
+
+export async function seedAppointmentsFromNotes({ force = false } = {}) {
+  const { default: notes } = await import('../data/clinical-notes/txonc_clinical_notes_enriched.json')
+
+  // Build set of dates already in appointments collection
+  const existing = await getDocs(collection(db, 'appointments'))
+  const existingDates = new Set(existing.docs.map(d => (d.data().dateTime || '').slice(0, 10)))
+
+  function aptFromNote(n) {
+    const dateKey = n.date.slice(0, 10)
+    const lastName = n.author.split(',')[0].trim()
+    const isTelemedicine = /telehealth|telemedicine/i.test(n.noteName)
+    const isPalliative = /palliative/i.test(n.noteName)
+    const isConsult = /consult/i.test(n.noteName)
+    const title = isPalliative
+      ? (isConsult ? 'Palliative Care Consult' : 'Palliative Care Follow Up')
+      : (isConsult ? 'Oncology Consult' : 'Oncology Follow Up')
+    return {
+      id: newId(),
+      title,
+      dateTime: `${dateKey}T09:00`,
+      type: 'specialist',
+      doctor: `Dr. ${lastName}`,
+      location: isTelemedicine ? 'Telehealth' : 'Texas Oncology',
+      specialty: isPalliative ? 'palliative' : 'oncology',
+      covering: '',
+      prep: '',
+      postNotes: '',
+      clinicalNoteId: n.id,
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  const toSeed = force
+    ? notes
+    : notes.filter(n => !existingDates.has(n.date.slice(0, 10)))
+
+  if (toSeed.length === 0) {
+    console.log('seedAppointmentsFromNotes: all note dates already have appointments, nothing to add.')
+    return
+  }
+
+  const batch = writeBatch(db)
+  toSeed.forEach(n => {
+    const apt = aptFromNote(n)
+    batch.set(doc(db, 'appointments', apt.id), apt)
+  })
+  await batch.commit()
+  console.log('seedAppointmentsFromNotes: created', toSeed.length, 'appointments')
+}
+
 export async function seedSpecialties() {
   const existing = await getDocs(collection(db, 'specialties'))
   if (!existing.empty) {

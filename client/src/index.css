@@ -361,6 +361,36 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   background:var(--panel2);border-radius:6px;padding:12px;
 }
 
+/* ── APT DETAIL MODAL ── */
+.apt-detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.apt-detail-header-left{display:flex;align-items:flex-start;gap:14px}
+.apt-detail-date-block{display:flex;flex-direction:column;align-items:center;background:var(--panel2);border-radius:8px;padding:6px 10px;min-width:44px;flex-shrink:0}
+.apt-detail-month{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.06em}
+.apt-detail-day{font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.apt-detail-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn-edit-detail{font-size:12px;font-weight:600;color:var(--blue);background:transparent;border:1px solid var(--blue-border,rgba(91,138,240,.3));border-radius:6px;padding:4px 10px;cursor:pointer}
+.btn-edit-detail:hover{background:rgba(91,138,240,.1)}
+.btn-delete-detail{font-size:14px;background:transparent;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.5}
+.btn-delete-detail:hover{opacity:1;background:rgba(216,90,48,.1)}
+.apt-note-indicator{font-size:13px;margin-left:auto;flex-shrink:0;width:24px;text-align:center;opacity:.45}
+.apt-note-indicator.has-note{opacity:1}
+.apt-note-indicator.no-note{font-size:11px;color:var(--text3)}
+.apt-detail-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.apt-detail-chip{font-size:11px;color:var(--text2);background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:3px 9px}
+.apt-detail-phase-strip{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.apt-detail-vitals-row{display:flex;gap:10px;margin-bottom:14px}
+.apt-detail-vital-box{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column}
+.apt-detail-vital-num{font-size:22px;font-weight:700;color:var(--text);line-height:1}
+.apt-detail-vital-denom{font-size:13px;color:var(--text3)}
+.apt-detail-vital-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.apt-detail-symptom-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.apt-detail-symptom-chip{font-size:11px;color:var(--amber);background:rgba(224,147,64,.12);border-radius:20px;padding:3px 9px}
+.apt-detail-labs-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:6px}
+.apt-detail-lab-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid var(--border)}
+.apt-detail-lab-key{font-size:11px;color:var(--text3);text-transform:capitalize}
+.apt-detail-lab-val{font-size:12px;font-weight:600;color:var(--text)}
+.apt-detail-med-list{margin:6px 0 0 16px;padding:0;font-size:12px;color:var(--text2);line-height:1.8}
+
 /* ── AGENDA SEARCH ── */
 .agenda-controls{margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .agenda-controls .search-wrap{max-width:240px}
