@@ -42,7 +42,7 @@ export default function HeroCard({ apt }) {
               : <div className="expand-empty">None added</div>}
           </div>
           <div>
-            <div className="expand-section-label">Post appointment notes</div>
+            <div className="expand-section-label">Appointment notes</div>
             {apt.postNotes
               ? <div className="expand-text">{apt.postNotes}</div>
               : <div className="expand-empty">None added</div>}

@@ -196,7 +196,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
             <textarea value={form.prep} onChange={set('prep')} placeholder="Pre-visit instructions, questions to ask…" style={{ minHeight: 80 }} />
           </div>
           <div className="fr">
-            <label>Post appointment notes</label>
+            <label>Appointment notes</label>
             <textarea value={form.postNotes} onChange={set('postNotes')} placeholder="Follow-up notes from the visit…" style={{ minHeight: 80 }} />
           </div>
 
