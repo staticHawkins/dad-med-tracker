@@ -60,6 +60,16 @@ export async function markRefilled(med) {
     ...med,
     filledDate: today().toISOString().slice(0, 10),
     refillDate: '',
+    refillStatus: null,
+    updatedAt: new Date().toISOString()
+  }
+  await setDoc(doc(db, 'medications', med.id), updated)
+}
+
+export async function updateRefillStatus(med, status) {
+  const updated = {
+    ...med,
+    refillStatus: status,
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'medications', med.id), updated)

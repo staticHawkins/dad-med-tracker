@@ -1,11 +1,11 @@
-import { pillsNow, st, stLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel } from '../../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel } from '../../lib/medUtils'
 import { markRefilled, delMed } from '../../lib/firestore'
 
 export default function MedsTable({ meds, filter, search, onEdit }) {
   const q = search.toLowerCase()
 
   let rows = [...meds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
-  if (filter !== 'all') rows = rows.filter(m => st(m) === filter)
+  if (filter !== 'all') rows = rows.filter(m => supplyStatus(m) === filter)
   if (q) rows = rows.filter(m =>
     m.name.toLowerCase().includes(q) ||
     (m.pharmacy || '').toLowerCase().includes(q) ||
@@ -64,8 +64,8 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
         </thead>
         <tbody>
           {rows.map(m => {
-            const s = st(m)
-            const lbl = stLabel(m)
+            const s = supplyStatus(m)
+            const lbl = supplyStatusLabel(m)
             const p = pillsNow(m)
             const pct = p.tot > 0 ? Math.round((p.rem / p.tot) * 100) : 0
             const pc = pillStatusClass(p.rem, p.tot)

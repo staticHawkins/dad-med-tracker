@@ -1,9 +1,9 @@
-import { st } from '../../lib/medUtils'
+import { supplyStatus } from '../../lib/medUtils'
 
 export default function KPIRow({ meds }) {
-  const urgent = meds.filter(m => st(m) === 'urgent')
-  const soon   = meds.filter(m => st(m) === 'soon')
-  const ok     = meds.filter(m => st(m) === 'ok')
+  const urgent = meds.filter(m => supplyStatus(m) === 'urgent')
+  const soon   = meds.filter(m => supplyStatus(m) === 'soon')
+  const ok     = meds.filter(m => supplyStatus(m) === 'ok')
 
   return (
     <div className="kpi-row">

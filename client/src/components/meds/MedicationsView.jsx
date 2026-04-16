@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react'
 import MedGroupSection from './MedGroupSection'
 import MedModal from './MedModal'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
-import { st, pillsNow } from '../../lib/medUtils'
+import { supplyStatus, pillsNow } from '../../lib/medUtils'
 
 export default function MedicationsView({ meds, careTeam }) {
   const [activeFilter, setActiveFilter] = useState('all')
@@ -52,9 +52,9 @@ export default function MedicationsView({ meds, careTeam }) {
   }, [meds, q])
 
   const grouped = useMemo(() => ({
-    urgent: filtered.filter(m => st(m) === 'urgent'),
-    soon:   filtered.filter(m => st(m) === 'soon'),
-    ok:     filtered.filter(m => st(m) === 'ok'),
+    urgent: filtered.filter(m => supplyStatus(m) === 'urgent'),
+    soon:   filtered.filter(m => supplyStatus(m) === 'soon'),
+    ok:     filtered.filter(m => supplyStatus(m) === 'ok'),
   }), [filtered])
 
   return (

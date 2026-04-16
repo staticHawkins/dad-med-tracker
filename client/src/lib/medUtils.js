@@ -71,7 +71,7 @@ export function getRefillDate(m) {
 
 const REFILL_LEAD = 7
 
-export function st(m) {
+export function supplyStatus(m) {
   const p = pillsNow(m)
   if (p.rem <= 0) return 'urgent'
   if (p.daysToZero <= 3) return 'urgent'
@@ -79,7 +79,7 @@ export function st(m) {
   return 'ok'
 }
 
-export function stLabel(m) {
+export function supplyStatusLabel(m) {
   const p = pillsNow(m)
   if (p.rem <= 0) return 'Out of pills'
   const d = p.daysToZero
@@ -87,6 +87,17 @@ export function stLabel(m) {
   if (d <= 3) return d === 1 ? 'Refill today' : 'Refill in ' + d + 'd'
   if (d <= REFILL_LEAD) return 'Refill in ' + d + 'd'
   return 'OK — ' + d + 'd left'
+}
+
+export function refillStatusLabel(m) {
+  const s = m.refillStatus
+  if (!s) return null
+  if (s === 'requested')     return 'Requested'
+  if (s === 'ready-pickup')  return 'Ready · Pickup'
+  if (s === 'ready-courier') return 'Ready · Courier'
+  if (s === 'picked-up')     return 'Picked up'
+  if (s === 'delivered')     return 'Delivered'
+  return null
 }
 
 export function pillStatusClass(rem, tot) {

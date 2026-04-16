@@ -189,6 +189,20 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .sp-ok::before{background:var(--green)}
 .sp-empty{background:rgba(255,92,92,.18);color:var(--red);border-color:var(--red-border)}
 .sp-empty::before{background:var(--red);box-shadow:0 0 5px var(--red)}
+.refill-status-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:600;padding:3px 8px;
+  border-radius:20px;border:1px solid rgba(77,158,255,.3);
+  background:rgba(77,158,255,.12);color:var(--blue);
+  font-family:var(--ffm);white-space:nowrap;margin-top:4px;
+}
+.refill-status-badge::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--blue)}
+.refill-status-panel{
+  background:var(--panel2);border-radius:10px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:10px;margin-bottom:4px;
+}
+.refill-status-panel-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.refill-status-panel-actions{display:flex;flex-wrap:wrap;gap:8px}
 
 /* pill count + bar combined cell */
 .pills-cell{}

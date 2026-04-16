@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { pillsNow, st, stLabel, pillStatusClass, fmtDate, today, freqPerDay, freqLabel } from '../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, today, freqPerDay, freqLabel } from '../lib/medUtils'
 
 // Pin "today" to a fixed date for deterministic tests
 const FIXED_TODAY = new Date('2026-03-31T00:00:00')
@@ -107,51 +107,51 @@ describe('pillsNow', () => {
   })
 })
 
-// ── st ────────────────────────────────────────────────────────────────────────
+// ── supplyStatus ──────────────────────────────────────────────────────────────
 
-describe('st', () => {
+describe('supplyStatus', () => {
   it('returns urgent when 0 pills remain', () => {
     const med = { filledDate: '2026-01-01', supply: 10, frequency: 1 }
-    expect(st(med)).toBe('urgent')
+    expect(supplyStatus(med)).toBe('urgent')
   })
 
   it('returns urgent when ≤3 days remain', () => {
     const med = { filledDate: '2026-03-29', supply: 30, frequency: 10 } // ~2 days left
-    expect(st(med)).toBe('urgent')
+    expect(supplyStatus(med)).toBe('urgent')
   })
 
   it('returns soon when 4–7 days remain', () => {
     const med = { filledDate: '2026-03-31', supply: 5, frequency: 1 } // 5 days
-    expect(st(med)).toBe('soon')
+    expect(supplyStatus(med)).toBe('soon')
   })
 
   it('returns ok when 8+ days remain', () => {
     const med = { filledDate: '2026-03-31', supply: 30, frequency: 1 } // 30 days
-    expect(st(med)).toBe('ok')
+    expect(supplyStatus(med)).toBe('ok')
   })
 })
 
-// ── stLabel ───────────────────────────────────────────────────────────────────
+// ── supplyStatusLabel ─────────────────────────────────────────────────────────
 
-describe('stLabel', () => {
+describe('supplyStatusLabel', () => {
   it('returns "Out of pills" when rem is 0', () => {
     const med = { filledDate: '2026-01-01', supply: 5, frequency: 1 }
-    expect(stLabel(med)).toBe('Out of pills')
+    expect(supplyStatusLabel(med)).toBe('Out of pills')
   })
 
   it('returns "Refill today" when 1 day remains', () => {
     const med = { filledDate: '2026-03-31', supply: 1, frequency: 1 }
-    expect(stLabel(med)).toBe('Refill today')
+    expect(supplyStatusLabel(med)).toBe('Refill today')
   })
 
   it('returns "Refill in Xd" for urgent multi-day', () => {
     const med = { filledDate: '2026-03-31', supply: 3, frequency: 1 }
-    expect(stLabel(med)).toBe('Refill in 3d')
+    expect(supplyStatusLabel(med)).toBe('Refill in 3d')
   })
 
   it('returns "OK — Xd left" when stocked', () => {
     const med = { filledDate: '2026-03-31', supply: 30, frequency: 1 }
-    expect(stLabel(med)).toBe('OK — 30d left')
+    expect(supplyStatusLabel(med)).toBe('OK — 30d left')
   })
 })
 

@@ -1,4 +1,4 @@
-import { st } from '../lib/medUtils'
+import { supplyStatus } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
 import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
 
@@ -30,7 +30,7 @@ const AVATAR_COLORS = ['blue', 'violet', 'teal', 'amber', 'green']
 // ── Summary alert bar (desktop only) ────────────────────────────────────────
 
 function SummaryBar({ meds, apts, tasks }) {
-  const urgentMed = meds.find(m => st(m) === 'urgent')
+  const urgentMed = meds.find(m => supplyStatus(m) === 'urgent')
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const nextApt = sorted.find(a => aptStatus(a) !== 'past')
   const overdueCt = tasks.filter(t => getTaskStatus(t) !== 'done' && isOverdue(t.dueDate)).length
@@ -80,13 +80,13 @@ function SummaryBar({ meds, apts, tasks }) {
 // ── Card components ──────────────────────────────────────────────────────────
 
 function MedsCard({ meds, onClick }) {
-  const urgent = meds.filter(m => st(m) === 'urgent')
-  const soon = meds.filter(m => st(m) === 'soon')
+  const urgent = meds.filter(m => supplyStatus(m) === 'urgent')
+  const soon = meds.filter(m => supplyStatus(m) === 'soon')
   const shownPills = urgent.slice(0, 2)
   const extraPills = urgent.length - shownPills.length
 
   const statusOrder = { urgent: 0, soon: 1, ok: 2 }
-  const sortedMeds = [...meds].sort((a, b) => statusOrder[st(a)] - statusOrder[st(b)])
+  const sortedMeds = [...meds].sort((a, b) => statusOrder[supplyStatus(a)] - statusOrder[supplyStatus(b)])
   const listMeds = sortedMeds.slice(0, 6)
   const listExtra = sortedMeds.length - listMeds.length
 
@@ -131,7 +131,7 @@ function MedsCard({ meds, onClick }) {
               <div className="dash-section-label">All Medications</div>
               <ul className="dash-item-list">
                 {listMeds.map(m => {
-                  const s = st(m)
+                  const s = supplyStatus(m)
                   return (
                     <li key={m.id} className="dash-med-row">
                       <span className="dash-med-name">{m.name}{m.dose ? ` ${m.dose}` : ''}</span>

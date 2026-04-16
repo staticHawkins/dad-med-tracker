@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../../firebase'
-import { st, pillsNow, freqLabel } from '../../lib/medUtils'
+import { supplyStatus, pillsNow, freqLabel } from '../../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../../lib/aptUtils'
 
 function getTaskStatus(task) {
@@ -21,7 +21,7 @@ function buildSuggestions(meds, apts) {
     })
   }
 
-  const atRisk = meds.filter(m => st(m) !== 'ok')
+  const atRisk = meds.filter(m => supplyStatus(m) !== 'ok')
   if (atRisk.length > 0) {
     suggestions.push({ icon: '+', text: 'Any interactions between current meds?' })
   }
@@ -38,7 +38,7 @@ function buildSystemContext(meds, apts, tasks, careTeam) {
 
   const medsSection = meds.length === 0 ? 'No medications on file.' : meds.map(m => {
     const { daysToZero, rem } = pillsNow(m)
-    const status = st(m)
+    const status = supplyStatus(m)
     const label = freqLabel(m)
     const days = daysToZero < 999 ? `${daysToZero} days left` : 'as-needed'
     return `- ${m.name}${m.dose ? ` ${m.dose}` : ''}${label ? `, ${label}` : ''}: ${rem} pills, ${days} [${status}]`

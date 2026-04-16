@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { pillsNow, st, stLabel, pillStatusClass, fmtDate, freqLabel } from '../../lib/medUtils'
-import { markRefilled, delMed } from '../../lib/firestore'
+import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel } from '../../lib/medUtils'
+import { markRefilled, updateRefillStatus, delMed } from '../../lib/firestore'
 
 export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const menuRef = useRef()
 
-  const s = st(m)
-  const lbl = stLabel(m)
+  const s = supplyStatus(m)
+  const lbl = supplyStatusLabel(m)
+  const rsl = refillStatusLabel(m)
   const p = pillsNow(m)
   const pct = p.tot > 0 ? Math.round((p.rem / p.tot) * 100) : 0
   const pc = pillStatusClass(p.rem, p.tot)
@@ -33,6 +34,12 @@ export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
     setMenuOpen(false)
   }
 
+  async function handleRefillStatus(e, status) {
+    e.stopPropagation()
+    try { await updateRefillStatus(m, status) } catch { alert('Failed to update. Check your connection.') }
+    setMenuOpen(false)
+  }
+
   async function handleDelete(e) {
     e.stopPropagation()
     if (!confirming) { setConfirming(true); return }
@@ -41,16 +48,11 @@ export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
   }
 
   function handleRowClick() {
-    if (window.innerWidth < 640) {
-      onToggleExpand()
-    } else {
-      onEdit(m.id)
-    }
+    onToggleExpand()
   }
 
-  const callHref = m.pharmacy
-    ? `https://www.google.com/maps/search/${encodeURIComponent(m.pharmacy + ' pharmacy')}`
-    : null
+  // Determine the next refill workflow action(s) based on current refillStatus
+  const rs = m.refillStatus || null
 
   return (
     <div className={`med-row${isExpanded ? ' row-open' : ''}`}>
@@ -80,9 +82,10 @@ export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
           </div>
         </div>
 
-        {/* Col 3: Status pill  (on mobile also contains mini pills) */}
+        {/* Col 3: Status pill + optional refill badge  (on mobile also contains mini pills) */}
         <div className="med-col-status">
           <span className={`spill sp-${pillSt}`}>{lbl}</span>
+          {rsl && <span className="refill-status-badge">{rsl}</span>}
           <div className="med-mobile-pills">
             <span className={`med-mobile-count ${pc}`}>
               {p.rem}<span className="med-mobile-of">/{p.tot}</span>
@@ -113,9 +116,35 @@ export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
               <button className="med-menu-item" onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit(m.id) }}>
                 Edit
               </button>
-              <button className="med-menu-item" onClick={handleRefill}>
-                Mark refilled
-              </button>
+              {/* Refill workflow steps */}
+              {!rs && (
+                <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'requested')}>
+                  Place request
+                </button>
+              )}
+              {rs === 'requested' && <>
+                <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'ready-pickup')}>
+                  Ready for pickup
+                </button>
+                <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'ready-courier')}>
+                  Ready for courier
+                </button>
+              </>}
+              {rs === 'ready-pickup' && (
+                <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'picked-up')}>
+                  Picked up
+                </button>
+              )}
+              {rs === 'ready-courier' && (
+                <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'delivered')}>
+                  Delivered
+                </button>
+              )}
+              {(rs === 'picked-up' || rs === 'delivered') && (
+                <button className="med-menu-item" onClick={handleRefill}>
+                  Mark refilled
+                </button>
+              )}
               <button
                 className={`med-menu-item${confirming ? ' danger confirm' : ' danger'}`}
                 onClick={handleDelete}
@@ -131,16 +160,34 @@ export default function MedRow({ m, onEdit, isExpanded, onToggleExpand }) {
       <div className={`med-drawer${isExpanded ? ' open' : ''}`}>
         <div className="med-drawer-inner">
           <div className="med-drawer-actions">
-            {m.pharmacy && (
-              <a
-                className="btn-call"
-                href={callHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
-              >
-                {callHref ? `Find ${m.pharmacy}` : m.pharmacy}
-              </a>
+            {/* Refill workflow — primary actions */}
+            {!rs && (
+              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'requested')}>
+                Place request
+              </button>
+            )}
+            {rs === 'requested' && <>
+              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-pickup')}>
+                Ready for pickup
+              </button>
+              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-courier')}>
+                Ready for courier
+              </button>
+            </>}
+            {rs === 'ready-pickup' && (
+              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'picked-up')}>
+                Picked up
+              </button>
+            )}
+            {rs === 'ready-courier' && (
+              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'delivered')}>
+                Delivered
+              </button>
+            )}
+            {(rs === 'picked-up' || rs === 'delivered') && (
+              <button className="btn-sv" onClick={handleRefill}>
+                Mark refilled
+              </button>
             )}
             <button
               className="btn-ghost"

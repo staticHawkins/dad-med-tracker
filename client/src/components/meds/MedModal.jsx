@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { saveMed, delMed } from '../../lib/firestore'
+import { saveMed, delMed, updateRefillStatus, markRefilled } from '../../lib/firestore'
+import { refillStatusLabel } from '../../lib/medUtils'
 
 const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
@@ -122,6 +123,18 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
     } catch { alert('Failed to remove. Check your connection.') }
   }
 
+  async function handleRefillStatus(status) {
+    const med = meds.find(x => x.id === editId)
+    if (!med) return
+    try { await updateRefillStatus(med, status) } catch { alert('Failed to update. Check your connection.') }
+  }
+
+  async function handleMarkRefilled() {
+    const med = meds.find(x => x.id === editId)
+    if (!med) return
+    try { await markRefilled(med) } catch { alert('Failed to update. Check your connection.') }
+  }
+
   // Swipe-to-dismiss touch handlers
   function onTouchStart(e) {
     dragStartY.current = e.touches[0].clientY
@@ -180,6 +193,38 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
         </div>
 
         <div className="sheet-body">
+          {isEditing && (() => {
+            const med = meds.find(x => x.id === editId)
+            const rs = med?.refillStatus || null
+            const rsl = med ? refillStatusLabel(med) : null
+            return (
+              <div className="refill-status-panel">
+                <div className="refill-status-panel-header">
+                  <span className="sheet-section" style={{ margin: 0 }}>Refill status</span>
+                  {rsl && <span className="refill-status-badge">{rsl}</span>}
+                </div>
+                <div className="refill-status-panel-actions">
+                  {!rs && (
+                    <button className="btn-ghost" onClick={() => handleRefillStatus('requested')}>Place request</button>
+                  )}
+                  {rs === 'requested' && <>
+                    <button className="btn-ghost" onClick={() => handleRefillStatus('ready-pickup')}>Ready for pickup</button>
+                    <button className="btn-ghost" onClick={() => handleRefillStatus('ready-courier')}>Ready for courier</button>
+                  </>}
+                  {rs === 'ready-pickup' && (
+                    <button className="btn-ghost" onClick={() => handleRefillStatus('picked-up')}>Picked up</button>
+                  )}
+                  {rs === 'ready-courier' && (
+                    <button className="btn-ghost" onClick={() => handleRefillStatus('delivered')}>Delivered</button>
+                  )}
+                  {(rs === 'picked-up' || rs === 'delivered') && (
+                    <button className="btn-ghost" onClick={handleMarkRefilled}>Mark refilled</button>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
           <div className="sheet-section">Medication info</div>
           <div className="fr">
             <label>Name <span className="req">*</span></label>
