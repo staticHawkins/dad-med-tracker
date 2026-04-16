@@ -9,7 +9,7 @@ const GROUP_META = {
   ok:     { label: 'Stocked up',       variant: 'ok',     defaultOpen: false },
 }
 
-export default function MedGroupSection({ groupKey, meds, sectionRef, onEdit }) {
+export default function MedGroupSection({ groupKey, meds, sectionRef, careTeam = [] }) {
   const meta = GROUP_META[groupKey]
   const [isOpen, setIsOpen] = useState(meta.defaultOpen)
   const [expandedId, setExpandedId] = useState(null)
@@ -40,7 +40,7 @@ export default function MedGroupSection({ groupKey, meds, sectionRef, onEdit }) 
               <MedRow
                 key={m.id}
                 m={m}
-                onEdit={onEdit}
+                careTeam={careTeam}
                 isExpanded={expandedId === m.id}
                 onToggleExpand={() => toggleRow(m.id)}
               />

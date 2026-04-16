@@ -891,7 +891,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 
 /* ── Mobile inline drawer ── */
 .med-drawer{overflow:hidden;max-height:0;transition:max-height .28s ease}
-.med-drawer.open{max-height:320px}
+.med-drawer.open{max-height:900px}
 .med-drawer-inner{
   padding:0 16px 16px;border-top:1px solid var(--border);
 }
@@ -1514,6 +1514,21 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .autosave-pill.saved .autosave-pill-dot{background:#1D9E75}
 .autosave-pill.error{color:#D85A30;cursor:pointer}
 .autosave-pill.error .autosave-pill-dot{background:#D85A30}
+/* ── Inline editing ── */
+.inline-val{
+  display:inline-block;cursor:pointer;
+  padding:2px 6px;border-radius:5px;min-width:30px;
+  transition:background .12s;
+}
+.inline-val:hover{background:var(--panel2)}
+.inline-input{
+  font-family:var(--ff);font-size:inherit;
+  width:100%;padding:3px 6px;border:1px solid var(--border2);
+  border-radius:5px;background:var(--panel2);color:var(--text);
+  outline:none;transition:border-color .15s;box-sizing:border-box;
+}
+.inline-input:focus{border-color:rgba(255,255,255,.26)}
+[data-theme="light"] .inline-input:focus{border-color:rgba(0,0,0,.26)}
 /* sheet section label */
 .sheet-section{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
 /* pharmacy row: 2:1 ratio */

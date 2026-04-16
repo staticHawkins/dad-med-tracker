@@ -9,13 +9,10 @@ import AptDetailModal from './AptDetailModal'
 
 export default function AppointmentsView({ apts, careTeam }) {
   const [search, setSearch] = useState('')
-  const [editId, setEditId] = useState(undefined)
+  const [addOpen, setAddOpen] = useState(false)
   const [detailId, setDetailId] = useState(null)
   const [pastExpanded, setPastExpanded] = useState(false)
   const noteById = useNotes()
-
-  function openModal(id = null) { setEditId(id) }
-  function closeModal() { setEditId(undefined) }
 
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const nextApt = sorted.find(a => aptStatus(a) !== 'past') || null
@@ -46,7 +43,7 @@ export default function AppointmentsView({ apts, careTeam }) {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <button className="btn-add" onClick={() => openModal()}>+ Add appointment</button>
+            <button className="btn-add" onClick={() => setAddOpen(true)}>+ Add appointment</button>
           </div>
           <div id="apt-agenda">
             <AgendaGroups
@@ -61,16 +58,16 @@ export default function AppointmentsView({ apts, careTeam }) {
         </div>
       </div>
 
-      {editId !== undefined && (
-        <AptModal apts={apts} careTeam={careTeam} editId={editId} onClose={closeModal} />
+      {addOpen && (
+        <AptModal careTeam={careTeam} onClose={() => setAddOpen(false)} />
       )}
 
       {detailApt && (
         <AptDetailModal
           apt={detailApt}
           note={detailNote}
+          careTeam={careTeam}
           onClose={() => setDetailId(null)}
-          onEdit={id => { setDetailId(null); openModal(id) }}
         />
       )}
     </div>

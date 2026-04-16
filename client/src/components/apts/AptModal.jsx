@@ -1,55 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveApt } from '../../lib/firestore'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const EMPTY = {
   title: '', dateTime: '', doctor: '', location: '', covering: '',
   prep: '', postNotes: ''
 }
 
-export default function AptModal({ apts, careTeam = [], editId, onClose }) {
+// Add-new only. Editing existing appointments is handled inline in AptDetailModal.
+export default function AptModal({ careTeam = [], onClose }) {
   const specialties = useSpecialties()
+  const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
-  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
   const [creating, setCreating] = useState(false)
-  const saveTimer = useRef(null)
-  const savedTimer = useRef(null)
-  const isDirty = useRef(false)
-  const lastForm = useRef(null)
+  const [open, setOpen] = useState(false)
+  const sheetRef = useRef(null)
   const dragStartY = useRef(null)
 
-  const isEditing = !!editId
-  const isOpen = editId !== undefined
-
-  useEffect(() => {
-    isDirty.current = false
-    if (!editId) { setForm(EMPTY); return }
-    const a = apts.find(x => x.id === editId)
-    if (a) setForm({
-      title: a.title || '', dateTime: a.dateTime || '',
-      doctor: a.doctor || '', location: a.location || '', covering: a.covering || '',
-      prep: a.prep || '', postNotes: a.postNotes || ''
-    })
-  }, [editId])
-
-  useEffect(() => {
-    if (!isEditing || !isDirty.current) return
-    if (!form.title.trim() || !form.dateTime || !form.doctor) return
-    lastForm.current = form
-    setSaveStatus('saving')
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await saveApt(form, editId)
-        setSaveStatus('saved')
-        clearTimeout(savedTimer.current)
-        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
-      } catch {
-        setSaveStatus('error')
-      }
-    }, 600)
-    return () => clearTimeout(saveTimer.current)
-  }, [form])
+  useEffect(() => { setOpen(true) }, [])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -58,23 +27,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   }, [onClose])
 
   function set(field) {
-    return e => {
-      isDirty.current = true
-      setForm(f => ({ ...f, [field]: e.target.value }))
-    }
-  }
-
-  async function retryWrite() {
-    if (!lastForm.current) return
-    setSaveStatus('saving')
-    try {
-      await saveApt(lastForm.current, editId)
-      setSaveStatus('saved')
-      clearTimeout(savedTimer.current)
-      savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
-    } catch {
-      setSaveStatus('error')
-    }
+    return e => setForm(f => ({ ...f, [field]: e.target.value }))
   }
 
   async function handleCreate() {
@@ -89,11 +42,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     setCreating(false)
   }
 
-  const sheetRef = useRef(null)
-
-  function onTouchStart(e) {
-    dragStartY.current = e.touches[0].clientY
-  }
+  function onTouchStart(e) { dragStartY.current = e.touches[0].clientY }
   function onTouchMove(e) {
     if (dragStartY.current === null || !sheetRef.current) return
     const delta = e.touches[0].clientY - dragStartY.current
@@ -107,108 +56,96 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
     if (delta > 80) onClose()
   }
 
+  const formContent = (
+    <>
+      <div className="sheet-section">Required</div>
+      <div className="fr">
+        <label>Title <span className="req">*</span></label>
+        <input value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />
+      </div>
+      <div className="fr">
+        <label>Date &amp; time <span className="req">*</span></label>
+        <input type="datetime-local" value={form.dateTime} onChange={set('dateTime')} />
+      </div>
+      <div className="fr">
+        <label>Doctor / provider <span className="req">*</span></label>
+        <select value={form.doctor} onChange={set('doctor')}>
+          <option value="">Select doctor…</option>
+          {careTeam.map(dr => (
+            <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${specialtyLabel(specialties, dr.specialty)}` : ''}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="sheet-section">Optional</div>
+      <div className="fr">
+        <label>Location</label>
+        <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" />
+      </div>
+      <div className="fr">
+        <label>Covering</label>
+        <div className="assignee-pills covering-pills">
+          {[{v:'fanuel',l:'Fanuel'},{v:'saron',l:'Saron'}].map(({v,l}) => {
+            const selected = form.covering === v
+            return (
+              <button key={v} type="button"
+                className={`assignee-pill${selected ? ' selected' : ''}`}
+                onClick={() => setForm(f => ({ ...f, covering: f.covering === v ? '' : v }))}
+              >
+                {selected && <span className="assignee-pill-dot" />}
+                {l}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      <div className="fr">
+        <label>Prep instructions &amp; questions</label>
+        <textarea value={form.prep} onChange={set('prep')} placeholder="Pre-visit instructions, questions to ask…" style={{ minHeight: 80 }} />
+      </div>
+      <div className="fr">
+        <label>Appointment notes</label>
+        <textarea value={form.postNotes} onChange={set('postNotes')} placeholder="Follow-up notes from the visit…" style={{ minHeight: 80 }} />
+      </div>
+
+      <div className="mf">
+        <button className="btn-cx" onClick={onClose}>Cancel</button>
+        <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+          {creating ? 'Adding…' : 'Add appointment'}
+        </button>
+      </div>
+    </>
+  )
+
+  if (!isMobile) {
+    return (
+      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="modal" role="dialog" aria-modal="true">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span className="sheet-title">Add appointment</span>
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+          {formContent}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
-      {isOpen && (
-        <div className="sheet-backdrop" onClick={onClose} />
-      )}
+      <div className="sheet-backdrop" onClick={onClose} />
       <div
         ref={sheetRef}
-        className={`edit-sheet${isOpen ? ' open' : ''}`}
+        className={`edit-sheet${open ? ' open' : ''}`}
         role="dialog"
         aria-modal="true"
       >
-        <div
-          className="sheet-handle"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        />
-        <div
-          className="sheet-header"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          <span className="sheet-title">{isEditing ? 'Edit appointment' : 'Add appointment'}</span>
-          <div className="sheet-header-right">
-            {saveStatus !== 'idle' && (
-              <span
-                className={`autosave-pill ${saveStatus}`}
-                onClick={saveStatus === 'error' ? retryWrite : undefined}
-              >
-                <span className="autosave-pill-dot" />
-                {saveStatus === 'saving' && 'Saving…'}
-                {saveStatus === 'saved'  && 'Saved'}
-                {saveStatus === 'error'  && 'Not saved · Retry'}
-              </span>
-            )}
-            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
-          </div>
+        <div className="sheet-handle" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
+        <div className="sheet-header" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          <span className="sheet-title">Add appointment</span>
+          <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
-
-        <div className="sheet-body">
-          <div className="sheet-section">Required</div>
-          <div className="fr">
-            <label>Title <span className="req">*</span></label>
-            <input value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />
-          </div>
-          <div className="fr">
-            <label>Date &amp; time <span className="req">*</span></label>
-            <input type="datetime-local" value={form.dateTime} onChange={set('dateTime')} />
-          </div>
-          <div className="fr">
-            <label>Doctor / provider <span className="req">*</span></label>
-            <select value={form.doctor} onChange={set('doctor')}>
-              <option value="">Select doctor…</option>
-              {careTeam.map(dr => (
-                <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${specialtyLabel(specialties, dr.specialty)}` : ''}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="sheet-section">Optional</div>
-          <div className="f2">
-            <div className="fr">
-              <label>Location</label>
-              <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" />
-            </div>
-          </div>
-          <div className="fr">
-            <label>Covering</label>
-            <div className="assignee-pills covering-pills">
-              {[{v:'fanuel',l:'Fanuel'},{v:'saron',l:'Saron'}].map(({v,l}) => {
-                const selected = form.covering === v
-                return (
-                  <button key={v} type="button"
-                    className={`assignee-pill${selected ? ' selected' : ''}`}
-                    onClick={() => { isDirty.current = true; setForm(f => ({ ...f, covering: f.covering === v ? '' : v })) }}
-                  >
-                    {selected && <span className="assignee-pill-dot" />}
-                    {l}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div className="fr">
-            <label>Prep instructions &amp; questions</label>
-            <textarea value={form.prep} onChange={set('prep')} placeholder="Pre-visit instructions, questions to ask…" style={{ minHeight: 80 }} />
-          </div>
-          <div className="fr">
-            <label>Appointment notes</label>
-            <textarea value={form.postNotes} onChange={set('postNotes')} placeholder="Follow-up notes from the visit…" style={{ minHeight: 80 }} />
-          </div>
-
-          {!isEditing && (
-            <div className="mf">
-              <button className="btn-cx" onClick={onClose}>Cancel</button>
-              <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-                {creating ? 'Adding…' : 'Add appointment'}
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="sheet-body">{formContent}</div>
       </div>
     </>
   )

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveTask, addComment, deleteComment, newId } from '../../lib/firestore'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' }
@@ -10,24 +11,33 @@ const EMPTY = {
 }
 
 export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
+  const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
-  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
+  const [saveStatus, setSaveStatus] = useState('idle')
   const [creating, setCreating] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [postingComment, setPostingComment] = useState(false)
+
+  // Inline edit state (edit mode only)
+  const [editingField, setEditingField] = useState(null)
+  const [draftValue, setDraftValue] = useState('')
+
   const doctorDropRef = useRef(null)
   const commentsEndRef = useRef(null)
-  const saveTimer = useRef(null)
+  const saveTimer  = useRef(null)
   const savedTimer = useRef(null)
-  const isDirty = useRef(false)
-  const lastForm = useRef(null)
+  const isDirty    = useRef(false)
+  const lastForm   = useRef(null)
   const dragStartY = useRef(null)
+  const sheetRef   = useRef(null)
+  const [open, setOpen] = useState(false)
 
   const task = tasks.find(x => x.id === editId)
   const comments = task?.comments || []
   const isEditing = !!editId
-  const isOpen = editId !== undefined
+
+  useEffect(() => { if (!isEditing) setOpen(true) }, [])
 
   useEffect(() => {
     isDirty.current = false
@@ -43,30 +53,16 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     })
   }, [editId])
 
-  // Debounced autosave for text fields
   useEffect(() => {
-    if (!isEditing || !isDirty.current || !form.title.trim() || !form.dueDate) return
-    lastForm.current = form
-    setSaveStatus('saving')
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await saveTask(form, editId)
-        setSaveStatus('saved')
-        clearTimeout(savedTimer.current)
-        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
-      } catch {
-        setSaveStatus('error')
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        if (editingField) { cancelEdit(); return }
+        onClose()
       }
-    }, 600)
-    return () => clearTimeout(saveTimer.current)
-  }, [form])
-
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose() }
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, editingField])
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -89,7 +85,6 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     }
   }
 
-  // Immediate save helper for toggle fields
   async function saveImmediate(nextForm) {
     if (!isEditing || !nextForm.title.trim()) return
     lastForm.current = nextForm
@@ -120,23 +115,23 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   function toggleDoctor(id) {
     isDirty.current = true
-    setForm(f => ({
-      ...f,
-      doctorIds: f.doctorIds.includes(id)
-        ? f.doctorIds.filter(d => d !== id)
-        : [...f.doctorIds, id]
-    }))
+    const next = {
+      ...form,
+      doctorIds: form.doctorIds.includes(id)
+        ? form.doctorIds.filter(d => d !== id)
+        : [...form.doctorIds, id]
+    }
+    setForm(next)
+    saveImmediate(next)
   }
 
   function setStatus(s) {
-    isDirty.current = true
     const next = { ...form, status: s }
     setForm(next)
     saveImmediate(next)
   }
 
   function setAssignee(uid) {
-    isDirty.current = true
     const next = {
       ...form,
       assigneeUids: form.assigneeUids[0] === uid ? [] : [uid]
@@ -179,11 +174,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
-  const sheetRef = useRef(null)
-
-  function onTouchStart(e) {
-    dragStartY.current = e.touches[0].clientY
-  }
+  function onTouchStart(e) { dragStartY.current = e.touches[0].clientY }
   function onTouchMove(e) {
     if (dragStartY.current === null || !sheetRef.current) return
     const delta = e.touches[0].clientY - dragStartY.current
@@ -197,65 +188,240 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     if (delta > 80) onClose()
   }
 
+  // ── Inline edit helpers (edit mode only) ───────────────────────────────────
+
+  function startEdit(field, currentValue) {
+    setEditingField(field)
+    setDraftValue(currentValue ?? '')
+  }
+
+  function cancelEdit() { setEditingField(null) }
+
+  async function commitEdit(field, value) {
+    setEditingField(null)
+    if (value === (form[field] ?? '')) return
+    const updated = { ...form, [field]: value }
+    setForm(updated)
+    lastForm.current = updated
+    setSaveStatus('saving')
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await saveTask(updated, editId)
+        setSaveStatus('saved')
+        clearTimeout(savedTimer.current)
+        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
+      } catch {
+        setSaveStatus('error')
+      }
+    }, 600)
+  }
+
+  function InlineField({ field, value, type = 'text', placeholder = '' }) {
+    if (editingField === field) {
+      return (
+        <input
+          className="inline-input"
+          type={type}
+          value={draftValue}
+          autoFocus
+          onChange={e => setDraftValue(e.target.value)}
+          onBlur={() => commitEdit(field, draftValue)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commitEdit(field, draftValue)
+            if (e.key === 'Escape') cancelEdit()
+          }}
+          placeholder={placeholder}
+        />
+      )
+    }
+    return (
+      <span
+        className="inline-val"
+        tabIndex={0}
+        onClick={() => startEdit(field, value)}
+        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+      >
+        {value || <span style={{ color: 'var(--text3)' }}>{placeholder || '—'}</span>}
+      </span>
+    )
+  }
+
+  function InlineTextarea({ field, value, placeholder = '' }) {
+    if (editingField === field) {
+      return (
+        <textarea
+          className="inline-input"
+          rows={4}
+          value={draftValue}
+          autoFocus
+          onChange={e => setDraftValue(e.target.value)}
+          onBlur={() => commitEdit(field, draftValue)}
+          onKeyDown={e => e.key === 'Escape' && cancelEdit()}
+          placeholder={placeholder}
+        />
+      )
+    }
+    return (
+      <span
+        className="inline-val"
+        style={{ whiteSpace: 'pre-wrap', display: 'block' }}
+        tabIndex={0}
+        onClick={() => startEdit(field, value)}
+        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+      >
+        {value || <span style={{ color: 'var(--text3)' }}>Not documented</span>}
+      </span>
+    )
+  }
+
   const priorityColor = { low: 'var(--text2)', medium: '#BA7517', high: '#D85A30' }
 
-  return (
-    <>
-      {isOpen && (
-        <div className="sheet-backdrop" onClick={onClose} />
-      )}
-      <div
-        ref={sheetRef}
-        className={`edit-sheet${isOpen ? ' open' : ''}`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div
-          className="sheet-handle"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        />
-        <div
-          className="sheet-header"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          <span className="sheet-title">{isEditing ? 'Edit task' : 'Add task'}</span>
-          <div className="sheet-header-right">
-            {saveStatus !== 'idle' && (
-              <span
-                className={`autosave-pill ${saveStatus}`}
-                onClick={saveStatus === 'error' ? retryWrite : undefined}
+  // ── Shared sections ────────────────────────────────────────────────────────
+
+  const doctorsSection = (
+    <div className="fr">
+      <label>Doctors</label>
+      <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
+        {form.doctorIds.length > 0 && (
+          <div className="doctor-chips">
+            {form.doctorIds.map(id => {
+              const dr = careTeam.find(d => d.id === id)
+              if (!dr) return null
+              return (
+                <span key={id} className="doctor-chip">
+                  👨‍⚕️ {dr.name}
+                  <button type="button" className="doctor-chip-remove" onClick={() => toggleDoctor(id)}>×</button>
+                </span>
+              )
+            })}
+          </div>
+        )}
+        <button type="button" className="doctor-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
+          {form.doctorIds.length === 0 ? 'Add doctor' : 'Add another'}
+          <span className="doctor-dropdown-caret">{dropdownOpen ? '▴' : '▾'}</span>
+        </button>
+        {dropdownOpen && (
+          <div className="doctor-dropdown-menu">
+            {careTeam.map(dr => (
+              <div
+                key={dr.id}
+                className={`doctor-dropdown-item${form.doctorIds.includes(dr.id) ? ' selected' : ''}`}
+                onClick={() => toggleDoctor(dr.id)}
               >
-                <span className="autosave-pill-dot" />
-                {saveStatus === 'saving' && 'Saving…'}
-                {saveStatus === 'saved'  && 'Saved'}
-                {saveStatus === 'error'  && 'Not saved · Retry'}
-              </span>
-            )}
-            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+                {dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}
+              </div>
+            ))}
+            {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
           </div>
-        </div>
+        )}
+      </div>
+    </div>
+  )
 
-        <div className="sheet-body">
-          <div className="sheet-section">Required</div>
-          <div className="fr">
-            <label>Title <span className="req">*</span></label>
-            <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
-          </div>
-          <div className="fr">
-            <label>Due date <span className="req">*</span></label>
-            <input type="date" value={form.dueDate} onChange={set('dueDate')} />
+  const assigneeSection = users.length > 0 && (
+    <div className="fr">
+      <label>Assign to</label>
+      <div className="assignee-pills">
+        {users.map(u => {
+          const selected = form.assigneeUids[0] === u.uid
+          return (
+            <button
+              key={u.uid}
+              type="button"
+              className={`assignee-pill${selected ? ' selected' : ''}`}
+              onClick={() => setAssignee(u.uid)}
+            >
+              {selected && <span className="assignee-pill-dot" />}
+              {(u.displayName || u.email).split(' ')[0]}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const commentsSection = (
+    <div className="task-comments">
+      <div className="sheet-section" style={{ marginTop: 20 }}>Comments</div>
+      {comments.length === 0 ? (
+        <div className="comments-empty">No comments yet.</div>
+      ) : (
+        <ul className="comments-list">
+          {[...comments].sort((a, b) => a.at?.localeCompare(b.at || '') || 0).map(c => (
+            <li key={c.id} className="comment-item">
+              <div className="comment-header">
+                <span className="comment-author">{c.name}</span>
+                <span className="comment-time">{formatCommentTime(c.at)}</span>
+                {c.uid === user?.uid && (
+                  <button
+                    className="comment-delete"
+                    title="Delete comment"
+                    onClick={() => deleteComment(task, c.id)}
+                  >✕</button>
+                )}
+              </div>
+              <div className="comment-text">{c.text}</div>
+            </li>
+          ))}
+          <div ref={commentsEndRef} />
+        </ul>
+      )}
+      <div className="comment-input-row">
+        <textarea
+          className="comment-input"
+          placeholder="Add a comment…"
+          value={newComment}
+          onChange={e => setNewComment(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
+          rows={2}
+        />
+        <button
+          className="btn-post-comment"
+          onClick={handlePostComment}
+          disabled={postingComment || !newComment.trim()}
+        >
+          {postingComment ? '…' : 'Post'}
+        </button>
+      </div>
+    </div>
+  )
+
+  // ── Edit mode: centered popup with inline-editable view ────────────────────
+
+  if (isEditing) {
+    return (
+      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="modal modal-task" role="dialog" aria-modal="true">
+
+          {/* Header */}
+          <div className="modal-task-header">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                <InlineField field="title" value={form.title} placeholder="Task title" />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                <InlineField field="dueDate" value={form.dueDate} type="date" />
+              </div>
+            </div>
+            <div className="modal-header-right">
+              {saveStatus !== 'idle' && (
+                <span
+                  className={`autosave-pill ${saveStatus}`}
+                  onClick={saveStatus === 'error' ? retryWrite : undefined}
+                >
+                  <span className="autosave-pill-dot" />
+                  {saveStatus === 'saving' && 'Saving…'}
+                  {saveStatus === 'saved'  && 'Saved'}
+                  {saveStatus === 'error'  && 'Not saved · Retry'}
+                </span>
+              )}
+              <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+            </div>
           </div>
 
-          <div className="sheet-section">Optional</div>
-          <div className="fr">
-            <label>Description</label>
-            <textarea value={form.description} onChange={set('description')} placeholder="Additional details…" />
-          </div>
-          <div className="fr">
+          {/* Status */}
+          <div className="fr" style={{ marginTop: 12 }}>
             <label>Status</label>
             <div className="status-selector">
               {STATUSES.map(s => (
@@ -270,135 +436,147 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
               ))}
             </div>
           </div>
+
+          {/* Priority — inline select */}
           <div className="fr">
             <label>Priority</label>
-            <select
-              value={form.priority}
-              onChange={set('priority')}
-              style={{ color: priorityColor[form.priority] || 'inherit' }}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-
-          <div className="sheet-section">Assignment</div>
-          <div className="fr">
-            <label>Doctors</label>
-            <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
-              {form.doctorIds.length > 0 && (
-                <div className="doctor-chips">
-                  {form.doctorIds.map(id => {
-                    const dr = careTeam.find(d => d.id === id)
-                    if (!dr) return null
-                    return (
-                      <span key={id} className="doctor-chip">
-                        👨‍⚕️ {dr.name}
-                        <button type="button" className="doctor-chip-remove" onClick={() => toggleDoctor(id)}>×</button>
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
-              <button type="button" className="doctor-dropdown-trigger" onClick={() => setDropdownOpen(o => !o)}>
-                {form.doctorIds.length === 0 ? 'Add doctor' : 'Add another'}
-                <span className="doctor-dropdown-caret">{dropdownOpen ? '▴' : '▾'}</span>
-              </button>
-              {dropdownOpen && (
-                <div className="doctor-dropdown-menu">
-                  {careTeam.map(dr => (
-                    <div
-                      key={dr.id}
-                      className={`doctor-dropdown-item${form.doctorIds.includes(dr.id) ? ' selected' : ''}`}
-                      onClick={() => toggleDoctor(dr.id)}
-                    >
-                      {dr.name}{dr.specialty && <span className="doctor-dropdown-specialty"> · {dr.specialty}</span>}
-                    </div>
-                  ))}
-                  {careTeam.length === 0 && <div className="doctor-dropdown-empty">No care team members</div>}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {users.length > 0 && (
-            <div className="fr">
-              <label>Assign to</label>
-              <div className="assignee-pills">
-                {users.map(u => {
-                  const selected = form.assigneeUids[0] === u.uid
-                  return (
-                    <button
-                      key={u.uid}
-                      type="button"
-                      className={`assignee-pill${selected ? ' selected' : ''}`}
-                      onClick={() => setAssignee(u.uid)}
-                    >
-                      {selected && <span className="assignee-pill-dot" />}
-                      {(u.displayName || u.email).split(' ')[0]}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {isEditing && (
-            <div className="task-comments">
-              <div className="sheet-section" style={{ marginTop: 20 }}>Comments</div>
-              {comments.length === 0 ? (
-                <div className="comments-empty">No comments yet.</div>
-              ) : (
-                <ul className="comments-list">
-                  {[...comments].sort((a, b) => a.at?.localeCompare(b.at || '') || 0).map(c => (
-                    <li key={c.id} className="comment-item">
-                      <div className="comment-header">
-                        <span className="comment-author">{c.name}</span>
-                        <span className="comment-time">{formatCommentTime(c.at)}</span>
-                        {c.uid === user?.uid && (
-                          <button
-                            className="comment-delete"
-                            title="Delete comment"
-                            onClick={() => deleteComment(task, c.id)}
-                          >✕</button>
-                        )}
-                      </div>
-                      <div className="comment-text">{c.text}</div>
-                    </li>
-                  ))}
-                  <div ref={commentsEndRef} />
-                </ul>
-              )}
-              <div className="comment-input-row">
-                <textarea
-                  className="comment-input"
-                  placeholder="Add a comment…"
-                  value={newComment}
-                  onChange={e => setNewComment(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
-                  rows={2}
-                />
-                <button
-                  className="btn-post-comment"
-                  onClick={handlePostComment}
-                  disabled={postingComment || !newComment.trim()}
+            {editingField === 'priority'
+              ? (
+                <select
+                  className="inline-input"
+                  value={draftValue}
+                  autoFocus
+                  onChange={e => setDraftValue(e.target.value)}
+                  onBlur={() => commitEdit('priority', draftValue)}
+                  onKeyDown={e => e.key === 'Escape' && cancelEdit()}
+                  style={{ color: priorityColor[draftValue] || 'inherit' }}
                 >
-                  {postingComment ? '…' : 'Post'}
-                </button>
-              </div>
-            </div>
-          )}
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              )
+              : (
+                <span
+                  className="inline-val"
+                  tabIndex={0}
+                  onClick={() => startEdit('priority', form.priority)}
+                  onKeyDown={e => e.key === 'Enter' && startEdit('priority', form.priority)}
+                  style={{ color: priorityColor[form.priority] || 'inherit', fontWeight: 600 }}
+                >
+                  {form.priority ? form.priority.charAt(0).toUpperCase() + form.priority.slice(1) : 'Medium'}
+                </span>
+              )
+            }
+          </div>
 
-          {!isEditing && (
-            <div className="mf" style={{ marginTop: 20 }}>
-              <button className="btn-cx" onClick={onClose}>Cancel</button>
-              <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-                {creating ? 'Creating…' : 'Create task'}
-              </button>
-            </div>
-          )}
+          {/* Description */}
+          <div className="fr">
+            <label>Description</label>
+            <InlineTextarea field="description" value={form.description} placeholder="Additional details…" />
+          </div>
+
+          {/* Doctors & Assignee */}
+          {doctorsSection}
+          {assigneeSection}
+
+          {/* Comments */}
+          {commentsSection}
+
         </div>
+      </div>
+    )
+  }
+
+  // ── Add mode: responsive bottom sheet (mobile) / centered popup (desktop) ──
+
+  const addFormContent = (
+    <>
+      <div className="sheet-section">Required</div>
+      <div className="fr">
+        <label>Title <span className="req">*</span></label>
+        <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
+      </div>
+      <div className="fr">
+        <label>Due date <span className="req">*</span></label>
+        <input type="date" value={form.dueDate} onChange={set('dueDate')} />
+      </div>
+
+      <div className="sheet-section">Optional</div>
+      <div className="fr">
+        <label>Description</label>
+        <textarea value={form.description} onChange={set('description')} placeholder="Additional details…" />
+      </div>
+      <div className="fr">
+        <label>Status</label>
+        <div className="status-selector">
+          {STATUSES.map(s => (
+            <button
+              key={s}
+              type="button"
+              className={`status-sel-btn status-sel-${s.replace('-', '')}${form.status === s ? ' active' : ''}`}
+              onClick={() => setForm(f => ({ ...f, status: s }))}
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="fr">
+        <label>Priority</label>
+        <select
+          value={form.priority}
+          onChange={set('priority')}
+          style={{ color: priorityColor[form.priority] || 'inherit' }}
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div className="sheet-section">Assignment</div>
+      {doctorsSection}
+      {assigneeSection}
+
+      <div className="mf" style={{ marginTop: 20 }}>
+        <button className="btn-cx" onClick={onClose}>Cancel</button>
+        <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+          {creating ? 'Creating…' : 'Create task'}
+        </button>
+      </div>
+    </>
+  )
+
+  if (!isMobile) {
+    return (
+      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="modal modal-task" role="dialog" aria-modal="true">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span className="sheet-title">Add task</span>
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+          {addFormContent}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div
+        ref={sheetRef}
+        className={`edit-sheet${open ? ' open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="sheet-handle" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
+        <div className="sheet-header" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          <span className="sheet-title">Add task</span>
+          <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="sheet-body">{addFormContent}</div>
       </div>
     </>
   )

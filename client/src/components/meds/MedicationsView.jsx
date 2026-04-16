@@ -7,15 +7,12 @@ import { supplyStatus, pillsNow } from '../../lib/medUtils'
 export default function MedicationsView({ meds, careTeam }) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [editId, setEditId] = useState(undefined)  // undefined=closed, null=new, string=editing
+  const [addOpen, setAddOpen] = useState(false)
   const fileRef = useRef()
 
   const urgentRef = useRef()
   const soonRef   = useRef()
   const okRef     = useRef()
-
-  function openModal(id = null) { setEditId(id) }
-  function closeModal() { setEditId(undefined) }
 
   async function handleImport(e) {
     const file = e.target.files[0]; if (!file) return
@@ -92,7 +89,7 @@ export default function MedicationsView({ meds, careTeam }) {
           <button className="btn-ghost" onClick={() => exportJSON(meds)}>💾 Backup</button>
           <button className="btn-ghost" onClick={() => fileRef.current.click()}>⬆ Import</button>
           <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-          <button className="btn-add" onClick={() => openModal()}>+ Add medication</button>
+          <button className="btn-add" onClick={() => setAddOpen(true)}>+ Add medication</button>
         </div>
       </div>
 
@@ -104,14 +101,14 @@ export default function MedicationsView({ meds, careTeam }) {
         </div>
       ) : (
         <div className="med-groups">
-          <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onEdit={openModal} />
-          <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onEdit={openModal} />
-          <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onEdit={openModal} />
+          <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} careTeam={careTeam} />
+          <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   careTeam={careTeam} />
+          <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     careTeam={careTeam} />
         </div>
       )}
 
-      {editId !== undefined && (
-        <MedModal meds={meds} careTeam={careTeam} editId={editId} onClose={closeModal} />
+      {addOpen && (
+        <MedModal careTeam={careTeam} onClose={() => setAddOpen(false)} />
       )}
     </div>
   )
