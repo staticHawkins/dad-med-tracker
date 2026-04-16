@@ -45,7 +45,6 @@ export async function saveMed(fields, editId) {
     rxNum: fields.rxNum,
     doctor: fields.doctor,
     instructions: fields.instructions,
-    notes: fields.notes,
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'medications', med.id), med)
@@ -281,8 +280,8 @@ export async function upsertUser(firebaseUser) {
 }
 
 export function exportCSV(meds) {
-  const rows = [['Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions', 'Notes']]
-  meds.forEach(m => rows.push([m.name, m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions, m.notes]))
+  const rows = [['Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions']]
+  meds.forEach(m => rows.push([m.name, m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions]))
   dl('familycarehub-medications.csv', rows.map(r => r.map(c => '"' + (c || '').replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv')
 }
 
