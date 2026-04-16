@@ -225,22 +225,26 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
             )
           })()}
 
-          <div className="sheet-section">Medication info</div>
+          <div className="sheet-section">Required</div>
           <div className="fr">
             <label>Name <span className="req">*</span></label>
             <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
           </div>
           <div className="f2">
             <div className="fr">
-              <label>Dose / strength</label>
-              <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
+              <label>Last filled <span className="req">*</span></label>
+              <input type="date" value={form.filledDate} onChange={set('filledDate')} />
             </div>
             <div className="fr">
-              <label>Frequency <span className="req">*</span></label>
-              <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
-                {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
+              <label>Pills in bottle <span className="req">*</span></label>
+              <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" />
             </div>
+          </div>
+          <div className="fr">
+            <label>Frequency <span className="req">*</span></label>
+            <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
+              {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
           </div>
           {form.frequencyPreset === 'custom' && (
             <div className="f2">
@@ -261,23 +265,15 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
             </div>
           )}
 
-          <div className="sheet-section">Supply tracking</div>
-          <div className="f2">
-            <div className="fr">
-              <label>Last filled <span className="req">*</span></label>
-              <input type="date" value={form.filledDate} onChange={set('filledDate')} />
-            </div>
-            <div className="fr">
-              <label>Pills in bottle <span className="req">*</span></label>
-              <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" />
-            </div>
+          <div className="sheet-section">Optional</div>
+          <div className="fr">
+            <label>Dose / strength</label>
+            <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
           </div>
           <div className="fr">
-            <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>optional · overrides calculated date</span></label>
+            <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>overrides calculated date</span></label>
             <input type="date" value={form.refillDate} onChange={set('refillDate')} />
           </div>
-
-          <div className="sheet-section">Pharmacy</div>
           <div className="f2-pharmacy">
             <div className="fr">
               <label>Pharmacy</label>
@@ -288,8 +284,6 @@ export default function MedModal({ meds, careTeam = [], editId, onClose }) {
               <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" />
             </div>
           </div>
-
-          <div className="sheet-section">Doctor &amp; notes</div>
           <div className="fr">
             <label>Doctor</label>
             <select value={form.doctor} onChange={set('doctor')}>

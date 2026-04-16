@@ -34,7 +34,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
 
   useEffect(() => {
     if (!isEditing || !isDirty.current) return
-    if (!form.title.trim() || !form.dateTime) return
+    if (!form.title.trim() || !form.dateTime || !form.doctor) return
     lastForm.current = form
     setSaveStatus('saving')
     clearTimeout(saveTimer.current)
@@ -80,6 +80,7 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
   async function handleCreate() {
     if (!form.title.trim()) { alert('Please enter the appointment title.'); return }
     if (!form.dateTime)     { alert('Please enter the date and time.'); return }
+    if (!form.doctor)       { alert('Please select a doctor or provider.'); return }
     setCreating(true)
     try {
       await saveApt(form, null)
@@ -147,16 +148,27 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
         </div>
 
         <div className="sheet-body">
-          <div className="sheet-section">Appointment details</div>
+          <div className="sheet-section">Required</div>
           <div className="fr">
             <label>Title <span className="req">*</span></label>
             <input value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />
           </div>
+          <div className="fr">
+            <label>Date &amp; time <span className="req">*</span></label>
+            <input type="datetime-local" value={form.dateTime} onChange={set('dateTime')} />
+          </div>
+          <div className="fr">
+            <label>Doctor / provider <span className="req">*</span></label>
+            <select value={form.doctor} onChange={set('doctor')}>
+              <option value="">Select doctor…</option>
+              {careTeam.map(dr => (
+                <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${specialtyLabel(specialties, dr.specialty)}` : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sheet-section">Optional</div>
           <div className="f2">
-            <div className="fr">
-              <label>Date &amp; time <span className="req">*</span></label>
-              <input type="datetime-local" value={form.dateTime} onChange={set('dateTime')} />
-            </div>
             <div className="fr">
               <label>Type</label>
               <select value={form.type} onChange={set('type')}>
@@ -168,49 +180,34 @@ export default function AptModal({ apts, careTeam = [], editId, onClose }) {
                 <option value="other">Other</option>
               </select>
             </div>
-          </div>
-
-          <div className="sheet-section">Provider &amp; location</div>
-          <div className="fr">
-            <label>Doctor / provider</label>
-            <select value={form.doctor} onChange={set('doctor')}>
-              <option value="">No doctor</option>
-              {careTeam.map(dr => (
-                <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${specialtyLabel(specialties, dr.specialty)}` : ''}</option>
-              ))}
-            </select>
-          </div>
-          <div className="f2">
             <div className="fr">
               <label>Location</label>
               <input value={form.location} onChange={set('location')} placeholder="Clinic or hospital" />
             </div>
-            <div className="fr">
-              <label>Covering</label>
-              <div className="assignee-pills covering-pills">
-                {[{v:'fanuel',l:'Fanuel'},{v:'saron',l:'Saron'}].map(({v,l}) => {
-                  const selected = form.covering === v
-                  return (
-                    <button key={v} type="button"
-                      className={`assignee-pill${selected ? ' selected' : ''}`}
-                      onClick={() => { isDirty.current = true; setForm(f => ({ ...f, covering: f.covering === v ? '' : v })) }}
-                    >
-                      {selected && <span className="assignee-pill-dot" />}
-                      {l}
-                    </button>
-                  )
-                })}
-              </div>
+          </div>
+          <div className="fr">
+            <label>Covering</label>
+            <div className="assignee-pills covering-pills">
+              {[{v:'fanuel',l:'Fanuel'},{v:'saron',l:'Saron'}].map(({v,l}) => {
+                const selected = form.covering === v
+                return (
+                  <button key={v} type="button"
+                    className={`assignee-pill${selected ? ' selected' : ''}`}
+                    onClick={() => { isDirty.current = true; setForm(f => ({ ...f, covering: f.covering === v ? '' : v })) }}
+                  >
+                    {selected && <span className="assignee-pill-dot" />}
+                    {l}
+                  </button>
+                )
+              })}
             </div>
           </div>
-
-          <div className="sheet-section">Prep instructions &amp; questions</div>
           <div className="fr">
+            <label>Prep instructions &amp; questions</label>
             <textarea value={form.prep} onChange={set('prep')} placeholder="Pre-visit instructions, questions to ask…" style={{ minHeight: 80 }} />
           </div>
-
-          <div className="sheet-section">Post appointment notes</div>
           <div className="fr">
+            <label>Post appointment notes</label>
             <textarea value={form.postNotes} onChange={set('postNotes')} placeholder="Follow-up notes from the visit…" style={{ minHeight: 80 }} />
           </div>
 

@@ -45,7 +45,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   // Debounced autosave for text fields
   useEffect(() => {
-    if (!isEditing || !isDirty.current || !form.title.trim()) return
+    if (!isEditing || !isDirty.current || !form.title.trim() || !form.dueDate) return
     lastForm.current = form
     setSaveStatus('saving')
     clearTimeout(saveTimer.current)
@@ -147,6 +147,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   async function handleCreate() {
     if (!form.title.trim()) { alert('Please enter a task title.'); return }
+    if (!form.dueDate)      { alert('Please enter a due date.'); return }
     setCreating(true)
     try {
       await saveTask(form, null)
@@ -239,27 +240,47 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
         </div>
 
         <div className="sheet-body">
+          <div className="sheet-section">Required</div>
           <div className="fr">
             <label>Title <span className="req">*</span></label>
             <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />
           </div>
           <div className="fr">
+            <label>Due date <span className="req">*</span></label>
+            <input type="date" value={form.dueDate} onChange={set('dueDate')} />
+          </div>
+
+          <div className="sheet-section">Optional</div>
+          <div className="fr">
             <label>Description</label>
             <textarea value={form.description} onChange={set('description')} placeholder="Additional details…" />
           </div>
-
-          <div className="sheet-section">Status</div>
-          <div className="status-selector">
-            {STATUSES.map(s => (
-              <button
-                key={s}
-                type="button"
-                className={`status-sel-btn status-sel-${s.replace('-', '')}${form.status === s ? ' active' : ''}`}
-                onClick={() => setStatus(s)}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
+          <div className="fr">
+            <label>Status</label>
+            <div className="status-selector">
+              {STATUSES.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`status-sel-btn status-sel-${s.replace('-', '')}${form.status === s ? ' active' : ''}`}
+                  onClick={() => setStatus(s)}
+                >
+                  {STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fr">
+            <label>Priority</label>
+            <select
+              value={form.priority}
+              onChange={set('priority')}
+              style={{ color: priorityColor[form.priority] || 'inherit' }}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
           </div>
 
           <div className="sheet-section">Assignment</div>
@@ -322,25 +343,6 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
               </div>
             </div>
           )}
-
-          <div className="f2">
-            <div className="fr">
-              <label>Due date <span className="req">*</span></label>
-              <input type="date" value={form.dueDate} onChange={set('dueDate')} />
-            </div>
-            <div className="fr">
-              <label>Priority</label>
-              <select
-                value={form.priority}
-                onChange={set('priority')}
-                style={{ color: priorityColor[form.priority] || 'inherit' }}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
 
           {isEditing && (
             <div className="task-comments">
