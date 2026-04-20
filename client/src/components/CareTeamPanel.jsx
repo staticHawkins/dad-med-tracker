@@ -86,7 +86,7 @@ export default function CareTeamPanel({ careTeam }) {
   const avatarSrc = photoPreview || form.imageUrl
 
   return (
-    <div className="view-wrap">
+    <div className="page">
       <div className="care-team-panel">
         {view === 'list' ? (
           <>
