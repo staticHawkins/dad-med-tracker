@@ -142,7 +142,7 @@ export default function CareTeamPanel({ careTeam }) {
 
             <div className="fr">
               <label>Name <span className="req">*</span></label>
-              <input autoFocus value={form.name} onChange={set('name')} placeholder="e.g. Dr. Patel" />
+              <input value={form.name} onChange={set('name')} placeholder="e.g. Dr. Patel" />
             </div>
             <div className="f2">
               <div className="fr">
