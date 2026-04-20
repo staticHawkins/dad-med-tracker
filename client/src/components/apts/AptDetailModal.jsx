@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { fmtAptDateBlock, fmtAptTime, coveringLabel } from '../../lib/aptUtils'
+import { fmtAptDateBlock, fmtAptTime, coveringLabel, exportToICS } from '../../lib/aptUtils'
 import { saveApt, delApt } from '../../lib/firestore'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
 
@@ -220,6 +220,9 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
                 {saveStatus === 'error'  && 'Error'}
               </span>
             )}
+            <button className="btn-export-ics" onClick={() => exportToICS(apt)} aria-label="Export to calendar" title="Export to calendar (.ics)">
+              📅
+            </button>
             <button className="btn-delete-detail" onClick={async () => {
               if (!confirm(`Remove "${apt.title}"?`)) return
               try { await delApt(apt.id); onClose() } catch { alert('Failed to delete. Check your connection.') }
