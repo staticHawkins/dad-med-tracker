@@ -39,3 +39,44 @@ export function coveringLabel(c) {
   return { fanuel: 'Fanuel', saron: 'Saron', both: 'Both', tbd: 'TBD' }[c] || 'TBD'
 }
 
+export function exportToICS(apt) {
+  const start = new Date(apt.dateTime)
+  const end = new Date(start.getTime() + 60 * 60 * 1000)
+  const toICSDate = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const icsEsc = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Dad Med Tracker//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${apt.id}@dad-med-tracker`,
+    `DTSTAMP:${toICSDate(new Date())}`,
+    `DTSTART:${toICSDate(start)}`,
+    `DTEND:${toICSDate(end)}`,
+    `SUMMARY:${icsEsc(apt.title || 'Appointment')}`,
+  ]
+
+  if (apt.location) lines.push(`LOCATION:${icsEsc(apt.location)}`)
+
+  const descParts = []
+  if (apt.doctor) descParts.push(`Doctor: ${apt.doctor}`)
+  if (apt.prep) descParts.push(`Prep: ${apt.prep}`)
+  if (apt.postNotes) descParts.push(`Notes: ${apt.postNotes}`)
+  if (descParts.length) lines.push(`DESCRIPTION:${icsEsc(descParts.join('\n'))}`)
+
+  lines.push('END:VEVENT', 'END:VCALENDAR')
+
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(apt.title || 'appointment').replace(/\s+/g, '-').toLowerCase()}.ics`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+

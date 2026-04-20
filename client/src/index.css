@@ -386,6 +386,8 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .btn-edit-detail:hover{background:rgba(91,138,240,.1)}
 .btn-delete-detail{font-size:14px;background:transparent;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.5}
 .btn-delete-detail:hover{opacity:1;background:rgba(216,90,48,.1)}
+.btn-export-ics{font-size:14px;background:transparent;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.5}
+.btn-export-ics:hover{opacity:1;background:rgba(91,138,240,.1)}
 .apt-note-indicator{font-size:13px;margin-left:auto;flex-shrink:0;width:24px;text-align:center;opacity:.45}
 .apt-note-indicator.has-note{opacity:1}
 .apt-note-indicator.no-note{font-size:11px;color:var(--text3)}
