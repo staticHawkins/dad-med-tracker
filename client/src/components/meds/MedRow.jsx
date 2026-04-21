@@ -10,6 +10,101 @@ const PRESETS = [
   { value: 'custom',          label: 'Custom…' },
 ]
 
+function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
+  const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  if (editingField === field) {
+    return (
+      <input
+        className="inline-input"
+        type={type}
+        value={draftValue}
+        autoFocus
+        onChange={e => setDraftValue(e.target.value)}
+        onBlur={() => commitEdit(field, draftValue)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commitEdit(field, draftValue)
+          if (e.key === 'Escape') cancelEdit()
+        }}
+        placeholder={placeholder}
+        onClick={e => e.stopPropagation()}
+      />
+    )
+  }
+  return (
+    <span
+      className="inline-val"
+      tabIndex={0}
+      onClick={e => { e.stopPropagation(); startEdit(field, value) }}
+      onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+    >
+      {value || <span style={{ color: 'var(--text3)' }}>—</span>}
+    </span>
+  )
+}
+
+function InlineTextarea({ field, value, placeholder = '', editCtx }) {
+  const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  if (editingField === field) {
+    return (
+      <textarea
+        className="inline-input"
+        rows={3}
+        value={draftValue}
+        autoFocus
+        onChange={e => setDraftValue(e.target.value)}
+        onBlur={() => commitEdit(field, draftValue)}
+        onKeyDown={e => e.key === 'Escape' && cancelEdit()}
+        placeholder={placeholder}
+        onClick={e => e.stopPropagation()}
+      />
+    )
+  }
+  return (
+    <span
+      className="inline-val"
+      style={{ whiteSpace: 'pre-wrap', display: 'block' }}
+      tabIndex={0}
+      onClick={e => { e.stopPropagation(); startEdit(field, value) }}
+      onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+    >
+      {value || <span style={{ color: 'var(--text3)' }}>—</span>}
+    </span>
+  )
+}
+
+function InlineSelect({ field, value, options, placeholder = '', editCtx }) {
+  const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  if (editingField === field) {
+    return (
+      <select
+        className="inline-input"
+        value={draftValue}
+        autoFocus
+        onChange={e => setDraftValue(e.target.value)}
+        onBlur={() => commitEdit(field, draftValue)}
+        onKeyDown={e => e.key === 'Escape' && cancelEdit()}
+        onClick={e => e.stopPropagation()}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    )
+  }
+  const found = options.find(o => o.value === value)
+  return (
+    <span
+      className="inline-val"
+      tabIndex={0}
+      onClick={e => { e.stopPropagation(); startEdit(field, value) }}
+      onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+    >
+      {found ? found.label : (value || <span style={{ color: 'var(--text3)' }}>—</span>)}
+    </span>
+  )
+}
+
 export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -94,97 +189,7 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
     }, 600)
   }
 
-  function InlineField({ field, value, type = 'text', placeholder = '' }) {
-    if (editingField === field) {
-      return (
-        <input
-          className="inline-input"
-          type={type}
-          value={draftValue}
-          autoFocus
-          onChange={e => setDraftValue(e.target.value)}
-          onBlur={() => commitEdit(field, draftValue)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commitEdit(field, draftValue)
-            if (e.key === 'Escape') cancelEdit()
-          }}
-          placeholder={placeholder}
-          onClick={e => e.stopPropagation()}
-        />
-      )
-    }
-    return (
-      <span
-        className="inline-val"
-        tabIndex={0}
-        onClick={e => { e.stopPropagation(); startEdit(field, value) }}
-        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
-      >
-        {value || <span style={{ color: 'var(--text3)' }}>—</span>}
-      </span>
-    )
-  }
-
-  function InlineTextarea({ field, value, placeholder = '' }) {
-    if (editingField === field) {
-      return (
-        <textarea
-          className="inline-input"
-          rows={3}
-          value={draftValue}
-          autoFocus
-          onChange={e => setDraftValue(e.target.value)}
-          onBlur={() => commitEdit(field, draftValue)}
-          onKeyDown={e => e.key === 'Escape' && cancelEdit()}
-          placeholder={placeholder}
-          onClick={e => e.stopPropagation()}
-        />
-      )
-    }
-    return (
-      <span
-        className="inline-val"
-        style={{ whiteSpace: 'pre-wrap', display: 'block' }}
-        tabIndex={0}
-        onClick={e => { e.stopPropagation(); startEdit(field, value) }}
-        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
-      >
-        {value || <span style={{ color: 'var(--text3)' }}>—</span>}
-      </span>
-    )
-  }
-
-  function InlineSelect({ field, value, options, placeholder = '' }) {
-    if (editingField === field) {
-      return (
-        <select
-          className="inline-input"
-          value={draftValue}
-          autoFocus
-          onChange={e => setDraftValue(e.target.value)}
-          onBlur={() => commitEdit(field, draftValue)}
-          onKeyDown={e => e.key === 'Escape' && cancelEdit()}
-          onClick={e => e.stopPropagation()}
-        >
-          {placeholder && <option value="">{placeholder}</option>}
-          {options.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      )
-    }
-    const found = options.find(o => o.value === value)
-    return (
-      <span
-        className="inline-val"
-        tabIndex={0}
-        onClick={e => { e.stopPropagation(); startEdit(field, value) }}
-        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
-      >
-        {found ? found.label : (value || <span style={{ color: 'var(--text3)' }}>—</span>)}
-      </span>
-    )
-  }
+  const editCtx = { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit }
 
   const doctorOptions = [
     { value: '', label: 'No doctor' },
@@ -315,13 +320,13 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
             {/* Name — full width */}
             <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>
               <span className="med-drawer-lbl">Name</span>
-              <InlineField field="name" value={m.name} placeholder="e.g. Metformin" />
+              <InlineField field="name" value={m.name} placeholder="e.g. Metformin" editCtx={editCtx} />
             </div>
 
             {/* Dose + Frequency */}
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Dose / strength</span>
-              <InlineField field="dose" value={m.dose} placeholder="e.g. 500 mg" />
+              <InlineField field="dose" value={m.dose} placeholder="e.g. 500 mg" editCtx={editCtx} />
             </div>
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Frequency</span>
@@ -329,6 +334,7 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
                 field="frequencyPreset"
                 value={m.frequencyPreset || 'once-daily'}
                 options={PRESETS}
+                editCtx={editCtx}
               />
             </div>
 
@@ -336,48 +342,48 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
             {(pendingData.current ?? m).frequencyPreset === 'custom' && <>
               <div className="med-drawer-item">
                 <span className="med-drawer-lbl">Pills / dose</span>
-                <InlineField field="frequencyCustomCount" value={m.frequencyCustomCount} type="number" placeholder="1" />
+                <InlineField field="frequencyCustomCount" value={m.frequencyCustomCount} type="number" placeholder="1" editCtx={editCtx} />
               </div>
               <div className="med-drawer-item">
                 <span className="med-drawer-lbl">Every (days)</span>
-                <InlineField field="frequencyCustomEvery" value={m.frequencyCustomEvery} type="number" placeholder="1" />
+                <InlineField field="frequencyCustomEvery" value={m.frequencyCustomEvery} type="number" placeholder="1" editCtx={editCtx} />
               </div>
             </>}
 
             {/* Last filled + Supply */}
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Last filled</span>
-              <InlineField field="filledDate" value={m.filledDate} type="date" />
+              <InlineField field="filledDate" value={m.filledDate} type="date" editCtx={editCtx} />
             </div>
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Pills in bottle</span>
-              <InlineField field="supply" value={m.supply} type="number" placeholder="e.g. 30" />
+              <InlineField field="supply" value={m.supply} type="number" placeholder="e.g. 30" editCtx={editCtx} />
             </div>
 
             {/* Refill date + Pharmacy */}
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Next refill</span>
-              <InlineField field="refillDate" value={m.refillDate} type="date" />
+              <InlineField field="refillDate" value={m.refillDate} type="date" editCtx={editCtx} />
             </div>
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Pharmacy</span>
-              <InlineField field="pharmacy" value={m.pharmacy} placeholder="e.g. Walgreens" />
+              <InlineField field="pharmacy" value={m.pharmacy} placeholder="e.g. Walgreens" editCtx={editCtx} />
             </div>
 
             {/* Rx # + Doctor */}
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Rx #</span>
-              <InlineField field="rxNum" value={m.rxNum} placeholder="optional" />
+              <InlineField field="rxNum" value={m.rxNum} placeholder="optional" editCtx={editCtx} />
             </div>
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Doctor</span>
-              <InlineSelect field="doctor" value={m.doctor} options={doctorOptions} />
+              <InlineSelect field="doctor" value={m.doctor} options={doctorOptions} editCtx={editCtx} />
             </div>
 
             {/* Instructions — full width */}
             <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>
               <span className="med-drawer-lbl">Instructions</span>
-              <InlineTextarea field="instructions" value={m.instructions} placeholder="e.g. Take with food" />
+              <InlineTextarea field="instructions" value={m.instructions} placeholder="e.g. Take with food" editCtx={editCtx} />
             </div>
 
           </div>
