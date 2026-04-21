@@ -10,6 +10,66 @@ const EMPTY = {
   dueDate: '', status: 'todo', priority: 'medium'
 }
 
+function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
+  const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  if (editingField === field) {
+    return (
+      <input
+        className="inline-input"
+        type={type}
+        value={draftValue}
+        autoFocus
+        onChange={e => setDraftValue(e.target.value)}
+        onBlur={() => commitEdit(field, draftValue)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commitEdit(field, draftValue)
+          if (e.key === 'Escape') cancelEdit()
+        }}
+        placeholder={placeholder}
+      />
+    )
+  }
+  return (
+    <span
+      className="inline-val"
+      tabIndex={0}
+      onClick={() => startEdit(field, value)}
+      onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+    >
+      {value || <span style={{ color: 'var(--text3)' }}>{placeholder || '—'}</span>}
+    </span>
+  )
+}
+
+function InlineTextarea({ field, value, placeholder = '', editCtx }) {
+  const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  if (editingField === field) {
+    return (
+      <textarea
+        className="inline-input"
+        rows={4}
+        value={draftValue}
+        autoFocus
+        onChange={e => setDraftValue(e.target.value)}
+        onBlur={() => commitEdit(field, draftValue)}
+        onKeyDown={e => e.key === 'Escape' && cancelEdit()}
+        placeholder={placeholder}
+      />
+    )
+  }
+  return (
+    <span
+      className="inline-val"
+      style={{ whiteSpace: 'pre-wrap', display: 'block' }}
+      tabIndex={0}
+      onClick={() => startEdit(field, value)}
+      onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
+    >
+      {value || <span style={{ color: 'var(--text3)' }}>Not documented</span>}
+    </span>
+  )
+}
+
 export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
   const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
@@ -217,63 +277,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     }, 600)
   }
 
-  function InlineField({ field, value, type = 'text', placeholder = '' }) {
-    if (editingField === field) {
-      return (
-        <input
-          className="inline-input"
-          type={type}
-          value={draftValue}
-          autoFocus
-          onChange={e => setDraftValue(e.target.value)}
-          onBlur={() => commitEdit(field, draftValue)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commitEdit(field, draftValue)
-            if (e.key === 'Escape') cancelEdit()
-          }}
-          placeholder={placeholder}
-        />
-      )
-    }
-    return (
-      <span
-        className="inline-val"
-        tabIndex={0}
-        onClick={() => startEdit(field, value)}
-        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
-      >
-        {value || <span style={{ color: 'var(--text3)' }}>{placeholder || '—'}</span>}
-      </span>
-    )
-  }
-
-  function InlineTextarea({ field, value, placeholder = '' }) {
-    if (editingField === field) {
-      return (
-        <textarea
-          className="inline-input"
-          rows={4}
-          value={draftValue}
-          autoFocus
-          onChange={e => setDraftValue(e.target.value)}
-          onBlur={() => commitEdit(field, draftValue)}
-          onKeyDown={e => e.key === 'Escape' && cancelEdit()}
-          placeholder={placeholder}
-        />
-      )
-    }
-    return (
-      <span
-        className="inline-val"
-        style={{ whiteSpace: 'pre-wrap', display: 'block' }}
-        tabIndex={0}
-        onClick={() => startEdit(field, value)}
-        onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
-      >
-        {value || <span style={{ color: 'var(--text3)' }}>Not documented</span>}
-      </span>
-    )
-  }
+  const editCtx = { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit }
 
   const priorityColor = { low: 'var(--text2)', medium: '#BA7517', high: '#D85A30' }
 
@@ -398,10 +402,10 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
           <div className="modal-task-header">
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                <InlineField field="title" value={form.title} placeholder="Task title" />
+                <InlineField field="title" value={form.title} placeholder="Task title" editCtx={editCtx} />
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                <InlineField field="dueDate" value={form.dueDate} type="date" />
+                <InlineField field="dueDate" value={form.dueDate} type="date" editCtx={editCtx} />
               </div>
             </div>
             <div className="modal-header-right">
@@ -473,7 +477,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
           {/* Description */}
           <div className="fr">
             <label>Description</label>
-            <InlineTextarea field="description" value={form.description} placeholder="Additional details…" />
+            <InlineTextarea field="description" value={form.description} placeholder="Additional details…" editCtx={editCtx} />
           </div>
 
           {/* Doctors & Assignee */}
