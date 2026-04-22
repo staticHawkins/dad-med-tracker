@@ -43,7 +43,7 @@ describe('MedsTable', () => {
 
   it('renders status pills', () => {
     render(<MedsTable meds={[med2]} filter="all" search="" onEdit={noop} />)
-    // med2 has 5 days supply → 'soon'
+    // med2 has 5 days supply → 'urgent'
     expect(screen.getByText(/Refill in/)).toBeInTheDocument()
   })
 

@@ -61,8 +61,8 @@ export default function MedicationsView({ meds, careTeam }) {
           <div className="filter-tabs">
             {[
               ['all',    'All'],
-              ['urgent', '≤ 3d'],
-              ['soon',   '4–7d'],
+              ['urgent', '≤ 7d'],
+              ['soon',   '8–14d'],
               ['ok',     'Stocked'],
             ].map(([f, label]) => (
               <button
