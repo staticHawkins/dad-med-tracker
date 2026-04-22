@@ -5,7 +5,7 @@ import MedStockedCollapsed from './MedStockedCollapsed'
 
 const GROUP_META = {
   urgent: { label: 'Refill urgently', variant: 'urgent', defaultOpen: true },
-  soon:   { label: 'Refill this week', variant: 'soon',   defaultOpen: true },
+  soon:   { label: 'Refill in 2 weeks', variant: 'soon',   defaultOpen: true },
   ok:     { label: 'Stocked up',       variant: 'ok',     defaultOpen: false },
 }
 

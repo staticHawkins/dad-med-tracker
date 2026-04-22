@@ -115,17 +115,17 @@ describe('supplyStatus', () => {
     expect(supplyStatus(med)).toBe('urgent')
   })
 
-  it('returns urgent when ≤3 days remain', () => {
+  it('returns urgent when ≤7 days remain', () => {
     const med = { filledDate: '2026-03-29', supply: 30, frequency: 10 } // ~2 days left
     expect(supplyStatus(med)).toBe('urgent')
   })
 
-  it('returns soon when 4–7 days remain', () => {
-    const med = { filledDate: '2026-03-31', supply: 5, frequency: 1 } // 5 days
+  it('returns soon when 8–14 days remain', () => {
+    const med = { filledDate: '2026-03-31', supply: 10, frequency: 1 } // 10 days
     expect(supplyStatus(med)).toBe('soon')
   })
 
-  it('returns ok when 8+ days remain', () => {
+  it('returns ok when 15+ days remain', () => {
     const med = { filledDate: '2026-03-31', supply: 30, frequency: 1 } // 30 days
     expect(supplyStatus(med)).toBe('ok')
   })

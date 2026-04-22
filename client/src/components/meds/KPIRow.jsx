@@ -17,7 +17,7 @@ export default function KPIRow({ meds }) {
       <div className="kpi kpi-urgent">
         <div className="kpi-num">{urgent.length}</div>
         <div className="kpi-lbl">
-          <span className="lbl-full">Refill within 3 days</span>
+          <span className="lbl-full">Refill within 7 days</span>
           <span className="lbl-short">Urgent</span>
         </div>
         {urgent.length > 0 && (
@@ -27,8 +27,8 @@ export default function KPIRow({ meds }) {
       <div className="kpi kpi-soon">
         <div className="kpi-num">{soon.length}</div>
         <div className="kpi-lbl">
-          <span className="lbl-full">Refill this week</span>
-          <span className="lbl-short">This week</span>
+          <span className="lbl-full">Refill in 2 weeks</span>
+          <span className="lbl-short">2 weeks</span>
         </div>
       </div>
       <div className="kpi kpi-ok">
