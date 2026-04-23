@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
+import { getMessaging } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey:            "AIzaSyCD1uMNkBMdbArrv4zKppc54Lgxg66xMdo",
@@ -20,3 +21,7 @@ export const provider = new GoogleAuthProvider()
 export const db = getFirestore(firebaseApp)
 export const storage = getStorage(firebaseApp)
 export const functions = getFunctions(firebaseApp)
+
+let messaging = null
+try { messaging = getMessaging(firebaseApp) } catch { /* unsupported browser */ }
+export { messaging }

@@ -9,6 +9,7 @@ import { useUsers } from '../hooks/useUsers'
 import { useMilestones } from '../hooks/useMilestones'
 import { usePhases } from '../hooks/usePhases'
 import { upsertUser } from '../lib/firestore'
+import { useNotifications } from '../hooks/useNotifications'
 import MedicationsView from './meds/MedicationsView'
 import AppointmentsView from './apts/AppointmentsView'
 import TasksView from './tasks/TasksView'
@@ -42,6 +43,8 @@ export default function MainApp({ user }) {
   useEffect(() => {
     upsertUser(user).catch(() => {})
   }, [user])
+
+  useNotifications(user)
 
   const meds = useMeds()
   const apts = useApts()
