@@ -40,14 +40,29 @@ function InlineField({ field, value, type = 'text', placeholder = '', editCtx })
 
 function InlineTextarea({ field, value, placeholder = '', editCtx }) {
   const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
+  const taRef = useRef(null)
+
+  useEffect(() => {
+    if (editingField === field && taRef.current) {
+      const el = taRef.current
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+  }, [editingField, field])
+
   if (editingField === field) {
     return (
       <textarea
+        ref={taRef}
         className="inline-input"
-        rows={4}
+        style={{ resize: 'vertical', minHeight: '4lh', overflow: 'hidden' }}
         value={draftValue}
         autoFocus
-        onChange={e => setDraftValue(e.target.value)}
+        onChange={e => {
+          setDraftValue(e.target.value)
+          e.target.style.height = 'auto'
+          e.target.style.height = e.target.scrollHeight + 'px'
+        }}
         onBlur={() => commitEdit(field, draftValue)}
         onKeyDown={e => e.key === 'Escape' && cancelEdit()}
         placeholder={placeholder}
