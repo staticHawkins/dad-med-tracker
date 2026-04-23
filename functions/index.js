@@ -12,7 +12,7 @@ if (getApps().length === 0) initializeApp();
 const anthropicKey = defineSecret("ANTHROPIC_API_KEY");
 
 // Update this URL once the Vercel project is created
-const APP_URL = "https://dad-med-tracker.vercel.app";
+const APP_URL = "https://family-care-hub-rho.vercel.app";
 
 exports.askClaude = onCall({ secrets: [anthropicKey] }, async (request) => {
   if (!request.auth) {
