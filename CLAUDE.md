@@ -21,11 +21,16 @@ npm_config_cache=/tmp/npm-cache npm install
 
 ```bash
 cd client
-npm run test:run   # single run
-npm run test       # watch mode
+npm run test:run   # unit tests, single run
+npm run test       # unit tests, watch mode
+npm run test:e2e   # e2e browser tests (Playwright + Chromium)
 ```
 
-Tests use Vitest + React Testing Library. Config: `client/vite.config.js`.
+Unit tests use Vitest + React Testing Library. Config: `client/vite.config.js`.
+
+E2e tests live in `client/e2e/`. Config: `client/playwright.config.js`. The dev server auto-starts if not already running (`reuseExistingServer: true`).
+
+**After any UI change, run `npm run test:e2e` from `client/` and confirm all e2e tests pass before reporting the task as complete.** Take a screenshot via Playwright to verify the visual result when relevant.
 
 ## Build & Deploy
 
