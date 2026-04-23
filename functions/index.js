@@ -88,14 +88,8 @@ exports.checkMedSupply = onSchedule(
     const tokens = tokenEntries.map((e) => e.token);
     const response = await messaging.sendEachForMulticast({
       tokens,
-      notification: { title, body },
+      data: { title, body },
       webpush: {
-        notification: {
-          icon: `${APP_URL}/favicon.png`,
-          badge: `${APP_URL}/favicon.png`,
-          tag: "med-supply-alert",
-          renotify: true,
-        },
         fcmOptions: { link: APP_URL },
       },
     });

@@ -16,13 +16,12 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const { title, body } = payload.notification;
+  const { title, body } = payload.data;
   self.registration.showNotification(title, {
     body,
     icon: '/favicon.png',
     badge: '/favicon.png',
     tag: 'med-supply-alert',
-    renotify: true,
     data: { url: '/' },
   });
 });
