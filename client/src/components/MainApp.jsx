@@ -17,6 +17,7 @@ import CareTeamPanel from './CareTeamPanel'
 import DashboardView, { BackBar } from './DashboardView'
 import TimelineView from './timeline/TimelineView'
 import AskAiSheet from './chat/AskAiSheet'
+import NotificationBanner from './NotificationBanner'
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -84,6 +85,8 @@ export default function MainApp({ user }) {
           </div>
         </div>
       </div>
+
+      <NotificationBanner user={user} />
 
       {activeTab === 'dashboard' && (
         <DashboardView
