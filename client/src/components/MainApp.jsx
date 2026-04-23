@@ -79,9 +79,6 @@ export default function MainApp({ user }) {
           <button className="btn-ask-ai" onClick={() => setAskAiOpen(true)}>
             <span className="ask-ai-icon-sm">?</span> Ask AI
           </button>
-          <button className="btn-ghost" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-            {theme === 'dark' ? '☀' : '☽'}
-          </button>
           <div className="topbar-menu-wrap" ref={userMenuRef}>
             <button className="btn-ghost topbar-user-btn" onClick={() => setUserMenuOpen(o => !o)}>
               {user.photoURL
@@ -102,6 +99,14 @@ export default function MainApp({ user }) {
                     {notifPermission === 'denied' && 'Blocked'}
                     {notifPermission === 'unsupported' && 'Unavailable'}
                   </span>
+                </button>
+                <div className="menu-divider" />
+                <button className="menu-item" onClick={() => { setActiveTab('care-team'); setUserMenuOpen(false) }}>
+                  <span className="menu-item-label">Doctors</span>
+                </button>
+                <button className="menu-item menu-item-notif" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
+                  <span className="menu-item-label">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                  <span>{theme === 'dark' ? '☀' : '☽'}</span>
                 </button>
                 <div className="menu-divider" />
                 <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
