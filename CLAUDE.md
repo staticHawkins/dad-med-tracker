@@ -33,7 +33,7 @@ Tests use Vitest + React Testing Library. Config: `client/vite.config.js`.
 cd client && npm run build   # outputs to client/dist/
 ```
 
-GitHub Actions (`.github/workflows/deploy.yml`) builds from `client/` and deploys `client/dist/` to GitHub Pages on every push to `main`.
+Pushing to `main` triggers an automatic production deploy via Vercel's Git integration. No GitHub Actions or Vercel CLI needed.
 
 ## Architecture
 
@@ -47,10 +47,13 @@ client/src/
 ├── components/
 │   ├── LoginScreen.jsx
 │   ├── MainApp.jsx
+│   ├── DashboardView.jsx
 │   ├── CareTeamPanel.jsx
-│   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow
-│   ├── apts/            # AppointmentsView, AptCard, AptModal, HeroCard, MiniCalendar, AgendaGroups, ClinicalNoteModal
-│   └── tasks/           # TasksView, TaskModal
+│   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
+│   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
+│   ├── tasks/           # TasksView, TaskModal
+│   ├── timeline/        # TimelineView, DiseaseTimelineCard, MilestoneRow, MilestoneTag, PhaseStrip
+│   └── chat/            # AskAiSheet
 ├── hooks/
 │   ├── useAuth.js       # onAuthStateChanged
 │   ├── useMeds.js       # Firestore medications listener
@@ -59,13 +62,20 @@ client/src/
 │   ├── useCareTeam.js   # Firestore care team listener
 │   ├── useTasks.js      # Firestore tasks listener
 │   ├── useUsers.js      # Firestore users listener
-│   └── useSpecialties.js
+│   ├── useSpecialties.js
+│   ├── useMilestones.js
+│   ├── usePhases.js
+│   ├── useNotifications.js
+│   └── useIsMobile.js
 ├── lib/
 │   ├── medUtils.js      # pillsNow(), getStatus(), getRefillDate()
 │   ├── aptUtils.js      # appointment helpers
-│   ├── noteUtils.js     # clinical note helpers
 │   ├── firestore.js     # Firestore write operations, newId(), export/import
+│   ├── notifications.js # push notification helpers
 │   └── storageUtils.js  # Firebase Storage helpers
+├── data/
+│   ├── clinical-notes/  # enriched clinical notes JSON
+│   └── milestones/      # patient milestone data
 └── test/                # Vitest test files
 ```
 
@@ -74,6 +84,10 @@ client/src/
 - `pillsNow(med)` — remaining pills and days until runout from `filledDate`, `supply`, `frequency`
 - `getStatus(med)` — `urgent` (≤3 days), `soon` (4–7 days), `ok` (8+ days)
 - `getRefillDate(med)` — explicit `refillDate` or calculated runout date
+
+### lib/notifications.js
+
+Push notification helpers for med supply alerts.
 
 ### Firebase Config
 
