@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
+import { requestNotificationPermission } from '../lib/notifications'
 import { useMeds } from '../hooks/useMeds'
 import { useApts } from '../hooks/useApts'
 import { useCareTeam } from '../hooks/useCareTeam'
@@ -25,6 +26,18 @@ export default function MainApp({ user }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [askAiOpen, setAskAiOpen] = useState(false)
   const userMenuRef = useRef(null)
+
+  const [notifPermission, setNotifPermission] = useState(
+    () => ('Notification' in window ? Notification.permission : 'unsupported')
+  )
+
+  const handleNotifClick = useCallback(async () => {
+    if (notifPermission === 'granted') return
+    if (notifPermission === 'denied') return
+    const token = await requestNotificationPermission(user?.uid)
+    setNotifPermission('Notification' in window ? Notification.permission : 'unsupported')
+    if (token) setUserMenuOpen(false)
+  }, [notifPermission, user?.uid])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -77,6 +90,20 @@ export default function MainApp({ user }) {
             </button>
             {userMenuOpen && (
               <div className="topbar-menu">
+                <button
+                  className="menu-item menu-item-notif"
+                  onClick={handleNotifClick}
+                  disabled={notifPermission === 'granted' || notifPermission === 'denied' || notifPermission === 'unsupported'}
+                >
+                  <span className="menu-item-label">Notifications</span>
+                  <span className={`notif-status-badge notif-status-${notifPermission}`}>
+                    {notifPermission === 'granted' && 'Enabled'}
+                    {notifPermission === 'default' && 'Tap to enable'}
+                    {notifPermission === 'denied' && 'Blocked'}
+                    {notifPermission === 'unsupported' && 'Unavailable'}
+                  </span>
+                </button>
+                <div className="menu-divider" />
                 <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
                   Sign out
                 </button>
