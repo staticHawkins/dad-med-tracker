@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp, getApps } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const Anthropic = require("@anthropic-ai/sdk");
 const { supplyStatus } = require("./lib/medSupplyUtils");
@@ -56,26 +56,36 @@ exports.checkMedSupply = onSchedule(
     const urgentMeds = meds.filter((m) => supplyStatus(m) === "urgent");
     const soonMeds   = meds.filter((m) => supplyStatus(m) === "soon");
 
+    let title, body;
     if (urgentMeds.length === 0 && soonMeds.length === 0) {
-      console.log("checkMedSupply: all meds OK, no notifications sent");
-      return;
+      title = "All meds are stocked";
+      body  = "No refills needed today.";
+    } else {
+      const parts = [];
+      if (urgentMeds.length > 0) parts.push(`Urgent refill needed: ${urgentMeds.map((m) => m.name).join(", ")}`);
+      if (soonMeds.length > 0)   parts.push(`Refill soon: ${soonMeds.map((m) => m.name).join(", ")}`);
+      body  = parts.join(" · ");
+      title = urgentMeds.length > 0
+        ? `⚠ ${urgentMeds.length} med${urgentMeds.length > 1 ? "s" : ""} need urgent refill`
+        : `${soonMeds.length} med${soonMeds.length > 1 ? "s need" : " needs"} refill soon`;
     }
 
-    const parts = [];
-    if (urgentMeds.length > 0) parts.push(`Urgent refill needed: ${urgentMeds.map((m) => m.name).join(", ")}`);
-    if (soonMeds.length > 0)   parts.push(`Refill soon: ${soonMeds.map((m) => m.name).join(", ")}`);
-    const body  = parts.join(" · ");
-    const title = urgentMeds.length > 0
-      ? `⚠ ${urgentMeds.length} med${urgentMeds.length > 1 ? "s" : ""} need urgent refill`
-      : `${soonMeds.length} med${soonMeds.length > 1 ? "s need" : " needs"} refill soon`;
+    // Collect all tokens across all users, tracking which user each token belongs to
+    const tokenEntries = []; // { token, userDoc }
+    for (const userDoc of usersSnap.docs) {
+      const data = userDoc.data();
+      const tokens = Array.isArray(data.fcmTokens) ? data.fcmTokens : (data.fcmToken ? [data.fcmToken] : []);
+      for (const token of tokens) {
+        if (token) tokenEntries.push({ token, userDoc });
+      }
+    }
 
-    const tokens = usersSnap.docs.map((d) => d.data().fcmToken).filter(Boolean);
-
-    if (tokens.length === 0) {
+    if (tokenEntries.length === 0) {
       console.log("checkMedSupply: no FCM tokens registered");
       return;
     }
 
+    const tokens = tokenEntries.map((e) => e.token);
     const response = await messaging.sendEachForMulticast({
       tokens,
       notification: { title, body },
@@ -91,7 +101,7 @@ exports.checkMedSupply = onSchedule(
     });
 
     // Remove stale tokens from Firestore
-    const staleUsers = usersSnap.docs.filter((d, idx) => {
+    const staleEntries = tokenEntries.filter((_, idx) => {
       const resp = response.responses[idx];
       return !resp.success && (
         resp.error?.code === "messaging/registration-token-not-registered" ||
@@ -99,16 +109,16 @@ exports.checkMedSupply = onSchedule(
       );
     });
 
-    if (staleUsers.length > 0) {
+    if (staleEntries.length > 0) {
       await Promise.all(
-        staleUsers.map((d) => d.ref.update({ fcmToken: null, fcmTokenUpdatedAt: null }))
+        staleEntries.map((e) => e.userDoc.ref.update({ fcmTokens: FieldValue.arrayRemove(e.token) }))
       );
-      console.log(`checkMedSupply: removed ${staleUsers.length} stale token(s)`);
+      console.log(`checkMedSupply: removed ${staleEntries.length} stale token(s)`);
     }
 
     console.log(
-      `checkMedSupply: sent to ${response.successCount}/${tokens.length} token(s). ` +
-      `Urgent: ${urgentMeds.length}, Soon: ${soonMeds.length}`
+      `checkMedSupply: sent to ${response.successCount}/${tokens.length} token(s) across ${usersSnap.size} user(s). ` +
+      `Urgent: ${urgentMeds.length}, Soon: ${soonMeds.length}, OK: ${meds.length - urgentMeds.length - soonMeds.length}`
     );
   }
 );

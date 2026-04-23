@@ -1,6 +1,6 @@
 import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from '../firebase'
-import { today } from './medUtils'
+import { today, todayStr } from './medUtils'
 
 export function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
@@ -57,7 +57,7 @@ export async function delMed(id) {
 export async function markRefilled(med) {
   const updated = {
     ...med,
-    filledDate: today().toISOString().slice(0, 10),
+    filledDate: todayStr(),
     refillDate: '',
     refillStatus: null,
     updatedAt: new Date().toISOString()
@@ -283,7 +283,7 @@ export async function deleteComment(task, commentId) {
 
 export async function saveFcmToken(uid, token) {
   await setDoc(doc(db, 'users', uid), {
-    fcmToken: token,
+    fcmTokens: arrayUnion(token),
     fcmTokenUpdatedAt: new Date().toISOString(),
   }, { merge: true })
 }
