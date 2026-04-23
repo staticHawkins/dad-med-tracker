@@ -281,6 +281,13 @@ export async function deleteComment(task, commentId) {
   await setDoc(doc(db, 'tasks', task.id), { ...task, comments, updatedAt: new Date().toISOString() })
 }
 
+export async function saveFcmToken(uid, token) {
+  await setDoc(doc(db, 'users', uid), {
+    fcmToken: token,
+    fcmTokenUpdatedAt: new Date().toISOString(),
+  }, { merge: true })
+}
+
 export async function upsertUser(firebaseUser) {
   await setDoc(doc(db, 'users', firebaseUser.uid), {
     uid: firebaseUser.uid,
