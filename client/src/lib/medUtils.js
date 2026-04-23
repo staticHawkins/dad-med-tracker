@@ -4,6 +4,11 @@ export function today() {
   return d
 }
 
+export function todayStr() {
+  const d = today()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function daysBetween(a, b) {
   return Math.round((b - a) / 86400000)
 }
