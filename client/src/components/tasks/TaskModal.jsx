@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { saveTask, addComment, deleteComment, newId } from '../../lib/firestore'
+import { saveTask, updateTaskFields, addComment, deleteComment, newId } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 const STATUSES = ['todo', 'in-progress', 'done']
@@ -103,7 +103,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   const saveTimer  = useRef(null)
   const savedTimer = useRef(null)
   const isDirty    = useRef(false)
-  const lastForm   = useRef(null)
+  const lastPatch  = useRef(null)
   const dragStartY = useRef(null)
   const sheetRef   = useRef(null)
   const [open, setOpen] = useState(false)
@@ -160,13 +160,12 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     }
   }
 
-  async function saveImmediate(nextForm) {
-    if (!isEditing || !nextForm.title.trim()) return
-    lastForm.current = nextForm
-    clearTimeout(saveTimer.current)
+  async function saveFields(patch) {
+    if (!isEditing) return
+    lastPatch.current = patch
     setSaveStatus('saving')
     try {
-      await saveTask(nextForm, editId)
+      await updateTaskFields(editId, patch)
       setSaveStatus('saved')
       clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
@@ -176,10 +175,10 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   }
 
   async function retryWrite() {
-    if (!lastForm.current) return
+    if (!lastPatch.current) return
     setSaveStatus('saving')
     try {
-      await saveTask(lastForm.current, editId)
+      await updateTaskFields(editId, lastPatch.current)
       setSaveStatus('saved')
       clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
@@ -190,29 +189,22 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   function toggleDoctor(id) {
     isDirty.current = true
-    const next = {
-      ...form,
-      doctorIds: form.doctorIds.includes(id)
-        ? form.doctorIds.filter(d => d !== id)
-        : [...form.doctorIds, id]
-    }
-    setForm(next)
-    saveImmediate(next)
+    const nextDoctorIds = form.doctorIds.includes(id)
+      ? form.doctorIds.filter(d => d !== id)
+      : [...form.doctorIds, id]
+    setForm(f => ({ ...f, doctorIds: nextDoctorIds }))
+    saveFields({ doctorIds: nextDoctorIds })
   }
 
   function setStatus(s) {
-    const next = { ...form, status: s }
-    setForm(next)
-    saveImmediate(next)
+    setForm(f => ({ ...f, status: s }))
+    saveFields({ status: s, done: s === 'done' })
   }
 
   function setAssignee(uid) {
-    const next = {
-      ...form,
-      assigneeUids: form.assigneeUids[0] === uid ? [] : [uid]
-    }
-    setForm(next)
-    saveImmediate(next)
+    const nextAssigneeUids = form.assigneeUids[0] === uid ? [] : [uid]
+    setForm(f => ({ ...f, assigneeUids: nextAssigneeUids }))
+    saveFields({ assigneeUids: nextAssigneeUids })
   }
 
   async function handleCreate() {
@@ -275,21 +267,9 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   async function commitEdit(field, value) {
     setEditingField(null)
     if (value === (form[field] ?? '')) return
-    const updated = { ...form, [field]: value }
-    setForm(updated)
-    lastForm.current = updated
-    setSaveStatus('saving')
+    setForm(f => ({ ...f, [field]: value }))
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await saveTask(updated, editId)
-        setSaveStatus('saved')
-        clearTimeout(savedTimer.current)
-        savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
-      } catch {
-        setSaveStatus('error')
-      }
-    }, 600)
+    saveTimer.current = setTimeout(() => saveFields({ [field]: value }), 600)
   }
 
   const editCtx = { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit }

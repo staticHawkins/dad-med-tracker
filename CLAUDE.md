@@ -54,6 +54,7 @@ client/src/
 │   ├── MainApp.jsx
 │   ├── DashboardView.jsx
 │   ├── CareTeamPanel.jsx
+│   ├── NotificationBanner.jsx
 │   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
 │   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
 │   ├── tasks/           # TasksView, TaskModal
@@ -73,7 +74,7 @@ client/src/
 │   ├── useNotifications.js
 │   └── useIsMobile.js
 ├── lib/
-│   ├── medUtils.js      # pillsNow(), getStatus(), getRefillDate()
+│   ├── medUtils.js      # pillsNow(), supplyStatus(), getRefillDate()
 │   ├── aptUtils.js      # appointment helpers
 │   ├── firestore.js     # Firestore write operations, newId(), export/import
 │   ├── notifications.js # push notification helpers
@@ -87,8 +88,9 @@ client/src/
 ### Key Utilities (client/src/lib/)
 
 - `pillsNow(med)` — remaining pills and days until runout from `filledDate`, `supply`, `frequency`
-- `getStatus(med)` — `urgent` (≤3 days), `soon` (4–7 days), `ok` (8+ days)
+- `supplyStatus(med)` — `urgent` (≤7 days or out), `soon` (8–14 days), `ok` (15+ days)
 - `getRefillDate(med)` — explicit `refillDate` or calculated runout date
+- `todayStr()` — today's date as a `YYYY-MM-DD` string
 
 ### lib/notifications.js
 

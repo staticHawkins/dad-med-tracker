@@ -241,11 +241,19 @@ export async function saveTask(fields, editId) {
     doctorIds: fields.doctorIds || [],
     assigneeUids: fields.assigneeUids || [],
     dueDate: fields.dueDate || '',
+    priority: fields.priority || 'medium',
     status,
     done: status === 'done',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'tasks', task.id), task)
+}
+
+export async function updateTaskFields(taskId, fields) {
+  await updateDoc(doc(db, 'tasks', taskId), {
+    ...fields,
+    updatedAt: new Date().toISOString()
+  })
 }
 
 export async function delTask(id) {
