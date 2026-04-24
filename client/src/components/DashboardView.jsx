@@ -393,7 +393,6 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
         <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
-        <CareCard careTeam={careTeam} onClick={() => onNavigate('care-team')} />
       </div>
     </div>
   )
