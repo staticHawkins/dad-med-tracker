@@ -61,6 +61,7 @@ export default function MainApp({ user }) {
   useNotifications(user)
 
   const meds = useMeds()
+  const activeMeds = meds.filter(m => m.active !== false)
   const apts = useApts()
   const careTeam = useCareTeam()
   const tasks = useTasks()
@@ -122,7 +123,7 @@ export default function MainApp({ user }) {
 
       {activeTab === 'dashboard' && (
         <DashboardView
-          meds={meds}
+          meds={activeMeds}
           apts={apts}
           tasks={tasks}
           careTeam={careTeam}

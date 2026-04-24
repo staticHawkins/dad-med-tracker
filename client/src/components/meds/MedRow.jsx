@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel } from '../../lib/medUtils'
-import { saveMed, markRefilled, updateRefillStatus, delMed } from '../../lib/firestore'
+import { saveMed, markRefilled, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
 
 const PRESETS = [
   { value: 'once-daily',      label: 'Once daily' },
@@ -118,6 +118,7 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
   const savedTimer  = useRef(null)
   const pendingData = useRef(null)
 
+  const isInactive = m.active === false
   const s = supplyStatus(m)
   const lbl = supplyStatusLabel(m)
   const rsl = refillStatusLabel(m)
@@ -152,11 +153,17 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
     setMenuOpen(false)
   }
 
-  async function handleDelete(e) {
+  async function handleDeactivate(e) {
     e.stopPropagation()
     if (!confirming) { setConfirming(true); return }
     setMenuOpen(false)
-    try { await delMed(m.id) } catch { alert('Failed to delete. Check your connection.') }
+    try { await deactivateMed(m.id) } catch { alert('Failed to deactivate. Check your connection.') }
+  }
+
+  async function handleReactivate(e) {
+    e.stopPropagation()
+    setMenuOpen(false)
+    try { await reactivateMed(m.id) } catch { alert('Failed to reactivate. Check your connection.') }
   }
 
   // ── Inline edit helpers ────────────────────────────────────────────────────
@@ -197,7 +204,7 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
   ]
 
   return (
-    <div className={`med-row${isExpanded ? ' row-open' : ''}`}>
+    <div className={`med-row${isExpanded ? ' row-open' : ''}${isInactive ? ' med-row-inactive' : ''}`}>
       {/* ── Main row ── */}
       <div className="med-row-main" onClick={onToggleExpand}>
 
@@ -255,28 +262,31 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
           </button>
           {menuOpen && (
             <div className="med-menu-pop">
-              {!rs && (
+              {!isInactive && !rs && (
                 <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'requested')}>Place request</button>
               )}
-              {rs === 'requested' && <>
+              {!isInactive && rs === 'requested' && <>
                 <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'ready-pickup')}>Ready for pickup</button>
                 <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'ready-courier')}>Ready for courier</button>
               </>}
-              {rs === 'ready-pickup' && (
+              {!isInactive && rs === 'ready-pickup' && (
                 <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'picked-up')}>Picked up</button>
               )}
-              {rs === 'ready-courier' && (
+              {!isInactive && rs === 'ready-courier' && (
                 <button className="med-menu-item" onClick={e => handleRefillStatus(e, 'delivered')}>Delivered</button>
               )}
-              {(rs === 'picked-up' || rs === 'delivered') && (
+              {!isInactive && (rs === 'picked-up' || rs === 'delivered') && (
                 <button className="med-menu-item" onClick={handleRefill}>Mark refilled</button>
               )}
-              <button
-                className={`med-menu-item${confirming ? ' danger confirm' : ' danger'}`}
-                onClick={handleDelete}
-              >
-                {confirming ? 'Confirm delete?' : 'Delete'}
-              </button>
+              {isInactive
+                ? <button className="med-menu-item" onClick={handleReactivate}>Reactivate</button>
+                : <button
+                    className={`med-menu-item${confirming ? ' danger confirm' : ' danger'}`}
+                    onClick={handleDeactivate}
+                  >
+                    {confirming ? 'Confirm deactivate?' : 'Deactivate'}
+                  </button>
+              }
             </div>
           )}
         </div>
@@ -296,22 +306,33 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
                 {saveStatus === 'error'  && 'Error'}
               </span>
             )}
-            {!rs && (
-              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'requested')}>Place request</button>
-            )}
-            {rs === 'requested' && <>
-              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-pickup')}>Ready for pickup</button>
-              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-courier')}>Ready for courier</button>
-            </>}
-            {rs === 'ready-pickup' && (
-              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'picked-up')}>Picked up</button>
-            )}
-            {rs === 'ready-courier' && (
-              <button className="btn-sv" onClick={e => handleRefillStatus(e, 'delivered')}>Delivered</button>
-            )}
-            {(rs === 'picked-up' || rs === 'delivered') && (
-              <button className="btn-sv" onClick={handleRefill}>Mark refilled</button>
-            )}
+            {isInactive
+              ? <button className="btn-sv" onClick={handleReactivate}>Reactivate</button>
+              : <>
+                  {!rs && (
+                    <button className="btn-sv" onClick={e => handleRefillStatus(e, 'requested')}>Place request</button>
+                  )}
+                  {rs === 'requested' && <>
+                    <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-pickup')}>Ready for pickup</button>
+                    <button className="btn-sv" onClick={e => handleRefillStatus(e, 'ready-courier')}>Ready for courier</button>
+                  </>}
+                  {rs === 'ready-pickup' && (
+                    <button className="btn-sv" onClick={e => handleRefillStatus(e, 'picked-up')}>Picked up</button>
+                  )}
+                  {rs === 'ready-courier' && (
+                    <button className="btn-sv" onClick={e => handleRefillStatus(e, 'delivered')}>Delivered</button>
+                  )}
+                  {(rs === 'picked-up' || rs === 'delivered') && (
+                    <button className="btn-sv" onClick={handleRefill}>Mark refilled</button>
+                  )}
+                  <button
+                    className={`btn-cx drawer-deactivate${confirming ? ' danger' : ''}`}
+                    onClick={handleDeactivate}
+                  >
+                    {confirming ? 'Confirm?' : 'Deactivate'}
+                  </button>
+                </>
+            }
           </div>
 
           {/* All fields — inline editable */}

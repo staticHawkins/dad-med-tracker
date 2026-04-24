@@ -45,13 +45,18 @@ export async function saveMed(fields, editId) {
     rxNum: fields.rxNum,
     doctor: fields.doctor,
     instructions: fields.instructions,
+    active: fields.active ?? true,
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'medications', med.id), med)
 }
 
-export async function delMed(id) {
-  await deleteDoc(doc(db, 'medications', id))
+export async function deactivateMed(id) {
+  await updateDoc(doc(db, 'medications', id), { active: false })
+}
+
+export async function reactivateMed(id) {
+  await updateDoc(doc(db, 'medications', id), { active: true })
 }
 
 export async function markRefilled(med) {

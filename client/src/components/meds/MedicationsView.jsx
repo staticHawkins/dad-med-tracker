@@ -1,6 +1,8 @@
 import { useState, useRef, useMemo } from 'react'
 import MedGroupSection from './MedGroupSection'
+import MedRow from './MedRow'
 import MedModal from './MedModal'
+import MedGroupHeader from './MedGroupHeader'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
 import { supplyStatus, pillsNow } from '../../lib/medUtils'
 
@@ -8,6 +10,8 @@ export default function MedicationsView({ meds, careTeam }) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [showInactive, setShowInactive] = useState(false)
+  const [expandedInactiveId, setExpandedInactiveId] = useState(null)
   const fileRef = useRef()
 
   const urgentRef = useRef()
@@ -38,15 +42,18 @@ export default function MedicationsView({ meds, careTeam }) {
 
   const q = search.toLowerCase()
 
+  const activeMeds   = useMemo(() => meds.filter(m => m.active !== false), [meds])
+  const inactiveMeds = useMemo(() => meds.filter(m => m.active === false), [meds])
+
   const filtered = useMemo(() => {
-    let rows = [...meds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+    let rows = [...activeMeds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
     if (q) rows = rows.filter(m =>
       m.name.toLowerCase().includes(q) ||
       (m.pharmacy || '').toLowerCase().includes(q) ||
       (m.doctor || '').toLowerCase().includes(q)
     )
     return rows
-  }, [meds, q])
+  }, [activeMeds, q])
 
   const grouped = useMemo(() => ({
     urgent: filtered.filter(m => supplyStatus(m) === 'urgent'),
@@ -93,7 +100,7 @@ export default function MedicationsView({ meds, careTeam }) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && inactiveMeds.length === 0 ? (
         <div className="med-empty">
           {meds.length === 0
             ? 'No medications yet. Click "+ Add medication" to get started.'
@@ -101,9 +108,35 @@ export default function MedicationsView({ meds, careTeam }) {
         </div>
       ) : (
         <div className="med-groups">
-          <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} careTeam={careTeam} />
-          <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   careTeam={careTeam} />
-          <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     careTeam={careTeam} />
+          {filtered.length > 0 && <>
+            <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} careTeam={careTeam} />
+            <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   careTeam={careTeam} />
+            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     careTeam={careTeam} />
+          </>}
+          {inactiveMeds.length > 0 && (
+            <div className="med-group med-group-inactive">
+              <MedGroupHeader
+                label="Inactive"
+                count={inactiveMeds.length}
+                variant="inactive"
+                isOpen={showInactive}
+                onToggle={() => setShowInactive(o => !o)}
+              />
+              {showInactive && (
+                <div className="med-group-body">
+                  {inactiveMeds.map(m => (
+                    <MedRow
+                      key={m.id}
+                      m={m}
+                      careTeam={careTeam}
+                      isExpanded={expandedInactiveId === m.id}
+                      onToggleExpand={() => setExpandedInactiveId(prev => prev === m.id ? null : m.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

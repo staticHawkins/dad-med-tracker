@@ -869,7 +869,11 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 }
 .med-group-urgent .med-group-body{border-left:2px solid var(--red);border-radius:0 10px 10px 0}
 .med-group-soon   .med-group-body{border-left:2px solid var(--amber);border-radius:0 10px 10px 0}
-.med-group-ok     .med-group-body{border-left:2px solid var(--green);border-radius:0 10px 10px 0}
+.med-group-ok       .med-group-body{border-left:2px solid var(--green);border-radius:0 10px 10px 0}
+.med-group-inactive .med-group-body{border-left:2px solid var(--text3);border-radius:0 10px 10px 0}
+.med-group-hdr-inactive .med-group-label{color:var(--text3)}
+.med-row-inactive .med-row-main{opacity:.45}
+.med-row-inactive .med-row-main:hover{opacity:.7}
 
 /* ── Individual med row ── */
 .med-row{border-bottom:1px solid var(--border)}
@@ -936,8 +940,10 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   padding:0 16px 16px;border-top:1px solid var(--border);
 }
 .med-drawer-actions{
-  display:flex;gap:8px;padding-top:14px;margin-bottom:14px;
+  display:flex;gap:8px;padding-top:14px;margin-bottom:14px;flex-wrap:wrap;
 }
+.drawer-deactivate{display:none;margin-left:auto}
+.drawer-deactivate.danger{color:var(--red);border-color:var(--red-border)}
 .btn-call{
   flex:1;font-family:var(--ff);font-size:13px;font-weight:600;
   padding:10px 16px;border-radius:7px;
@@ -1003,6 +1009,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   .med-col-date{display:none}
   .med-col-pharm{display:none}
   .med-col-menu{display:none}
+  .drawer-deactivate{display:block}
   /* Status col becomes vertical: pill + mini bar */
   .med-col-status{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
   .med-mobile-pills{display:flex}
