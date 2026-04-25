@@ -8,10 +8,23 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     browserName: 'chromium',
     headless: true,
-    viewport: { width: 1280, height: 800 },
     screenshot: 'only-on-failure',
     video: 'off',
   },
+  projects: [
+    {
+      name: 'desktop',
+      use: { viewport: { width: 1280, height: 800 } },
+    },
+    {
+      name: 'tablet',
+      use: { ...devices['iPad (gen 7)'] },
+    },
+    {
+      name: 'mobile',
+      use: { ...devices['iPhone 14'] },
+    },
+  ],
   webServer: [
     {
       command: 'npm run dev',

@@ -18,7 +18,7 @@ test.describe('task comments', () => {
 
     // Create a new task
     await page.getByRole('button', { name: '+ Add Task' }).click();
-    await page.waitForSelector('.modal-task', { timeout: 5_000 });
+    await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
     await page.fill('input[placeholder="e.g. Call cardiology to schedule follow-up"]', taskTitle);
     await page.fill('input[type="date"]', '2099-12-31');
     await page.getByRole('button', { name: 'Create task' }).click();
@@ -28,7 +28,7 @@ test.describe('task comments', () => {
 
     // Open the task
     await page.locator('.task-title', { hasText: taskTitle }).click();
-    await page.waitForSelector('.modal-task', { timeout: 5_000 });
+    await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
 
     // Post a comment
     await page.fill('.comment-input', commentText);

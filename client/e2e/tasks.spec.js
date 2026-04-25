@@ -11,7 +11,8 @@ async function goToTasks(page) {
 
 async function createTask(page, title) {
   await page.getByRole('button', { name: '+ Add Task' }).click();
-  await page.waitForSelector('.modal-task', { timeout: 5_000 });
+  // Desktop renders .modal-task; mobile renders .edit-sheet bottom sheet
+  await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
   await page.fill('input[placeholder="e.g. Call cardiology to schedule follow-up"]', title);
   await page.fill('input[type="date"]', '2099-12-31');
   await page.getByRole('button', { name: 'Create task' }).click();
@@ -37,14 +38,15 @@ test.describe('tasks', () => {
 
   test('required-field validation prevents empty task creation', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add Task' }).click();
-    await page.waitForSelector('.modal-task', { timeout: 5_000 });
+    // Desktop renders .modal-task; mobile renders .edit-sheet bottom sheet
+    await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
     const submitBtn = page.getByRole('button', { name: 'Create task' });
     // Title is empty — button should be disabled or alert fires
     const isDisabled = await submitBtn.isDisabled();
     if (!isDisabled) {
       page.on('dialog', d => d.dismiss());
       await submitBtn.click();
-      await expect(page.locator('.modal-task')).toBeVisible();
+      await expect(page.locator('.modal-task, .edit-sheet.open').first()).toBeVisible();
     } else {
       await expect(submitBtn).toBeDisabled();
     }

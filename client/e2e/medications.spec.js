@@ -108,41 +108,55 @@ test.describe('medications', () => {
     await row.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).click();
     await row.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).waitFor({ timeout: 15_000 });
     await row.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).click();
-    // After marking refilled, "Place request" reappears (refillStatus cleared)
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).waitFor({ timeout: 15_000 });
-    await expect(row.locator('.med-row-main')).not.toContainText(/Requested/);
+    // After marking refilled the med moves to the collapsed stocked group — expand it first
+    await page.locator('.med-group-ok').waitFor({ timeout: 15_000 });
+    await page.locator('.med-group-ok .stk-show-btn').click();
+    const stockedRow = page.locator('.med-group-ok .med-row', { hasText: name });
+    await stockedRow.locator('.med-row-main').click();
+    await stockedRow.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
+    await expect(stockedRow.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' })).toBeVisible();
+    await expect(stockedRow.locator('.med-row-main')).not.toContainText(/Requested/);
   });
+
+  async function deactivateRow(row) {
+    // ⋯ menu is hidden on mobile — use drawer button instead
+    if (await row.locator('.med-menu-btn').isVisible()) {
+      await row.locator('.med-menu-btn').click();
+      await row.locator('.med-menu-pop').waitFor({ timeout: 3_000 });
+      await row.locator('.med-menu-pop').getByRole('button', { name: 'Deactivate' }).click();
+      await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).waitFor({ timeout: 5_000 });
+      await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).click();
+    } else {
+      await row.locator('.med-row-main').click();
+      await row.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
+      await row.locator('.drawer-deactivate').click();
+      await row.locator('.drawer-deactivate.danger').waitFor({ timeout: 3_000 });
+      await row.locator('.drawer-deactivate.danger').click();
+    }
+  }
 
   test('deactivate moves med to inactive group', async ({ page }) => {
     const name = `[e2e] DeactMed ${Date.now()}`;
     await addMed(page, name);
-    const row = page.locator('.med-row', { hasText: name });
-    // Use the ⋯ menu — two-click confirm flow, stable popup
-    await row.locator('.med-menu-btn').click();
-    await row.locator('.med-menu-pop').waitFor({ timeout: 3_000 });
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Deactivate' }).click();
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).waitFor({ timeout: 5_000 });
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).click();
-    await page.waitForSelector(`.med-group-inactive .med-row-main >> text=${name}`, { timeout: 15_000 });
+    await deactivateRow(page.locator('.med-row', { hasText: name }));
+    // Inactive group starts collapsed — expand it first
+    await page.locator('.med-group-inactive').waitFor({ timeout: 15_000 });
+    await page.locator('.med-group-inactive .med-group-toggle').click();
     await expect(page.locator('.med-group-inactive .med-row-main', { hasText: name })).toBeVisible();
   });
 
   test('reactivate moves med back to active groups', async ({ page }) => {
     const name = `[e2e] ReactMed ${Date.now()}`;
     await addMed(page, name);
-    const row = page.locator('.med-row', { hasText: name });
-    // Deactivate via ⋯ menu first
-    await row.locator('.med-menu-btn').click();
-    await row.locator('.med-menu-pop').waitFor({ timeout: 3_000 });
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Deactivate' }).click();
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).waitFor({ timeout: 5_000 });
-    await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).click();
-    await page.waitForSelector(`.med-group-inactive .med-row-main >> text=${name}`, { timeout: 15_000 });
-    // Reactivate via ⋯ menu on the inactive row
+    await deactivateRow(page.locator('.med-row', { hasText: name }));
+    // Inactive group starts collapsed — expand it first
+    await page.locator('.med-group-inactive').waitFor({ timeout: 15_000 });
+    await page.locator('.med-group-inactive .med-group-toggle').click();
+    // Reactivate via drawer on the inactive row (Reactivate button is always in drawer)
     const inactiveRow = page.locator('.med-group-inactive .med-row', { hasText: name });
-    await inactiveRow.locator('.med-menu-btn').click();
-    await inactiveRow.locator('.med-menu-pop').waitFor({ timeout: 3_000 });
-    await inactiveRow.locator('.med-menu-pop').getByRole('button', { name: 'Reactivate' }).click();
+    await inactiveRow.locator('.med-row-main').click();
+    await inactiveRow.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
+    await inactiveRow.locator('.med-drawer-actions').getByRole('button', { name: 'Reactivate' }).click();
     await page.waitForSelector(`.med-row:not(.med-row-inactive) .med-row-main >> text=${name}`, { timeout: 15_000 });
     await expect(page.locator('.med-row:not(.med-row-inactive) .med-row-main', { hasText: name })).toBeVisible();
   });

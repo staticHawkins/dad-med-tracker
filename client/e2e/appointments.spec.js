@@ -115,7 +115,8 @@ test.describe('appointments', () => {
     await addApt(page, title);
     await page.locator('.apt-card', { hasText: title }).click();
     await page.waitForSelector('.note-modal', { timeout: 5_000 });
-    await page.locator('.covering-pill').first().click();
+    // Scope to modal — AptCard also renders .covering-pill spans in the background
+    await page.locator('.note-modal .covering-pill').first().click();
     await page.waitForSelector('.autosave-pill.saved', { timeout: 15_000 });
     await expect(page.locator('.autosave-pill.saved')).toBeVisible();
   });
