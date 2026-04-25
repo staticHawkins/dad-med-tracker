@@ -30,6 +30,8 @@ Unit tests use Vitest + React Testing Library. Config: `client/vite.config.js`.
 
 E2e tests live in `client/e2e/`. Config: `client/playwright.config.js`. Both the dev server and the Firebase Emulator (Firestore port 8080, Auth port 9099) auto-start when not already running (`reuseExistingServer: true`). `VITE_USE_EMULATOR=true` (set by `test:e2e`) connects the app to the local emulator instead of production Firebase. Permissive rules in `firestore.rules` allow all reads/writes in emulator mode — never deployed to production.
 
+Tests run across three Playwright projects: **desktop** (1280×800), **tablet** (iPad gen 7), and **mobile** (iPhone 14). The app renders differently on mobile (bottom sheets instead of modals, hidden ⋯ menu on medications) — tests are written to handle both layouts.
+
 Spec files:
 - `smoke.spec.js` — app loads, auth bypass works
 - `navigation.spec.js` — all view transitions from the dashboard
@@ -40,6 +42,8 @@ Spec files:
 - `timeline.spec.js` — timeline view renders correctly
 - `ask-ai.spec.js` — sheet open/close, context chips, message sending
 - `task-comment-status.spec.js` — comment survives a status change (regression)
+- `color-audit.spec.js` — screenshots for dark/light mode color audit
+- `profile-dropdown.spec.js` — profile dropdown open/close, navigation, theme toggle
 
 If ports are already occupied from a previous run, kill them first:
 ```bash
