@@ -167,8 +167,8 @@ export async function seedAppointmentsFromNotes({ force = false } = {}) {
   const existingDates = new Set(existing.docs.map(d => (d.data().dateTime || '').slice(0, 10)))
 
   function aptFromNote(n) {
-    const dateKey = n.date.slice(0, 10)
-    const lastName = n.author.split(',')[0].trim()
+    const dateKey = n.date?.slice(0, 10) ?? ''
+    const lastName = n.author?.split(',')[0]?.trim() ?? ''
     const isTelemedicine = /telehealth|telemedicine/i.test(n.noteName)
     const isPalliative = /palliative/i.test(n.noteName)
     const isConsult = /consult/i.test(n.noteName)
@@ -192,7 +192,7 @@ export async function seedAppointmentsFromNotes({ force = false } = {}) {
 
   const toSeed = force
     ? notes
-    : notes.filter(n => !existingDates.has(n.date.slice(0, 10)))
+    : notes.filter(n => !existingDates.has(n.date?.slice(0, 10)))
 
   if (toSeed.length === 0) {
     console.log('seedAppointmentsFromNotes: all note dates already have appointments, nothing to add.')
@@ -266,16 +266,14 @@ export async function delTask(id) {
 }
 
 export async function updateTaskAssignees(task, assigneeUids) {
-  await setDoc(doc(db, 'tasks', task.id), {
-    ...task,
+  await updateDoc(doc(db, 'tasks', task.id), {
     assigneeUids,
     updatedAt: new Date().toISOString()
   })
 }
 
 export async function updateTaskStatus(task, status) {
-  await setDoc(doc(db, 'tasks', task.id), {
-    ...task,
+  await updateDoc(doc(db, 'tasks', task.id), {
     status,
     done: status === 'done',
     updatedAt: new Date().toISOString()
@@ -290,8 +288,9 @@ export async function addComment(taskId, comment) {
 }
 
 export async function deleteComment(task, commentId) {
+  if (!task?.id) return
   const comments = (task.comments || []).filter(c => c.id !== commentId)
-  await setDoc(doc(db, 'tasks', task.id), { ...task, comments, updatedAt: new Date().toISOString() })
+  await updateDoc(doc(db, 'tasks', task.id), { comments, updatedAt: new Date().toISOString() })
 }
 
 export async function saveFcmToken(uid, token) {

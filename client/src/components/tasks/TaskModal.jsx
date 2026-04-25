@@ -356,7 +356,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
                   <button
                     className="comment-delete"
                     title="Delete comment"
-                    onClick={() => deleteComment(task, c.id)}
+                    onClick={() => task && deleteComment(task, c.id)}
                   >✕</button>
                 )}
               </div>

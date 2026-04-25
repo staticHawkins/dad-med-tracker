@@ -157,10 +157,12 @@ export default function CareTeamPanel({ careTeam }) {
                       onKeyDown={async e => {
                         if (e.key === 'Enter' && newSpecialtyLabel.trim()) {
                           const id = newSpecialtyLabel.trim().toLowerCase().replace(/\s+/g, '-')
-                          await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
-                          setForm(f => ({ ...f, specialty: id }))
-                          setNewSpecialtyLabel('')
-                          setAddingSpecialty(false)
+                          try {
+                            await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
+                            setForm(f => ({ ...f, specialty: id }))
+                            setNewSpecialtyLabel('')
+                            setAddingSpecialty(false)
+                          } catch { alert('Failed to save specialty. Check your connection.') }
                         } else if (e.key === 'Escape') {
                           setNewSpecialtyLabel('')
                           setAddingSpecialty(false)
@@ -170,8 +172,10 @@ export default function CareTeamPanel({ careTeam }) {
                     <button className="btn-ghost" onClick={async () => {
                       if (newSpecialtyLabel.trim()) {
                         const id = newSpecialtyLabel.trim().toLowerCase().replace(/\s+/g, '-')
-                        await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
-                        setForm(f => ({ ...f, specialty: id }))
+                        try {
+                          await saveSpecialty({ id, label: newSpecialtyLabel.trim() })
+                          setForm(f => ({ ...f, specialty: id }))
+                        } catch { alert('Failed to save specialty. Check your connection.') }
                       }
                       setNewSpecialtyLabel('')
                       setAddingSpecialty(false)
