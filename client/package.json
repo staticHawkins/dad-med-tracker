@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:e2e": "playwright test",
+    "emulator": "npx firebase emulators:start --only firestore,auth --project demo-test --config ../firebase.json",
+    "test:e2e": "VITE_USE_EMULATOR=true playwright test",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "firebase-tools": "^15.15.0",
     "globals": "^17.4.0",
     "jsdom": "^29.0.1",
     "vite": "^8.0.1",

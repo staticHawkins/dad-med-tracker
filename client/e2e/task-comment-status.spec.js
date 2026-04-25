@@ -38,7 +38,7 @@ test.describe('task comments', () => {
     await page.waitForSelector(`.comment-text >> text=${commentText}`, { timeout: 10_000 });
 
     // Change status — this was the operation that wiped comments before the fix
-    await page.getByRole('button', { name: 'In progress' }).click();
+    await page.locator('.modal-task .status-sel-btn', { hasText: 'In progress' }).click();
 
     // Wait for the save to complete
     await page.waitForSelector('.autosave-pill.saved', { timeout: 10_000 });

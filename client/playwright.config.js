@@ -12,10 +12,18 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
   },
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
-    timeout: 30_000,
-  },
+  webServer: [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:5173',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    {
+      command: 'npm run emulator',
+      url: 'http://localhost:4000',
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+  ],
 });
