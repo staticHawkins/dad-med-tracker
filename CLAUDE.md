@@ -28,7 +28,23 @@ npm run test:e2e   # e2e browser tests (Playwright + Chromium)
 
 Unit tests use Vitest + React Testing Library. Config: `client/vite.config.js`.
 
-E2e tests live in `client/e2e/`. Config: `client/playwright.config.js`. The dev server auto-starts if not already running (`reuseExistingServer: true`).
+E2e tests live in `client/e2e/`. Config: `client/playwright.config.js`. Both the dev server and the Firebase Emulator (Firestore port 8080, Auth port 9099) auto-start when not already running (`reuseExistingServer: true`). `VITE_USE_EMULATOR=true` (set by `test:e2e`) connects the app to the local emulator instead of production Firebase. Permissive rules in `firestore.rules` allow all reads/writes in emulator mode — never deployed to production.
+
+Spec files:
+- `smoke.spec.js` — app loads, auth bypass works
+- `navigation.spec.js` — all view transitions from the dashboard
+- `medications.spec.js` — add, search, filter, inline edit, refill workflow, deactivate/reactivate, CSV export
+- `appointments.spec.js` — add, search, hero card, detail modal, inline edit, delete, mini-calendar
+- `tasks.spec.js` — add, status changes, comments, assignees, delete
+- `care-team.spec.js` — add/edit/delete doctors, specialty management
+- `timeline.spec.js` — timeline view renders correctly
+- `ask-ai.spec.js` — sheet open/close, context chips, message sending
+- `task-comment-status.spec.js` — comment survives a status change (regression)
+
+If ports are already occupied from a previous run, kill them first:
+```bash
+lsof -ti:8080,9099,4000,5173 | xargs kill -9
+```
 
 **After any UI change, run `npm run test:e2e` from `client/` and confirm all e2e tests pass before reporting the task as complete.** Take a screenshot via Playwright to verify the visual result when relevant.
 
