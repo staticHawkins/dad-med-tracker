@@ -383,6 +383,9 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
+        <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
+        <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
+        <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
         <div className="dash-card-timeline-wrap">
           <DiseaseTimelineCard
             milestones={milestones}
@@ -390,9 +393,6 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
             onViewTimeline={() => onNavigate('timeline')}
           />
         </div>
-        <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
-        <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
-        <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
       </div>
     </div>
   )
