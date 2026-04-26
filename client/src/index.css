@@ -159,7 +159,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
 .kpi-urgent::after{background:var(--red)}
 .kpi-soon::after{background:var(--amber)}
 .kpi-ok::after{background:var(--green)}
-.kpi-num{font-size:36px;font-weight:700;letter-spacing:-1.5px;line-height:1;font-family:var(--ffd)}
+.kpi-num{font-size:36px;font-weight:700;letter-spacing:-.5px;line-height:1;font-family:var(--ffm)}
 .kpi-total .kpi-num{color:var(--blue)}
 .kpi-urgent .kpi-num{color:var(--red)}
 .kpi-soon .kpi-num{color:var(--amber)}
@@ -249,7 +249,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .pills-cell{}
 .pills-top{display:flex;align-items:baseline;gap:6px}
 .pill-count{
-  font-family:var(--ffd);font-size:20px;font-weight:700;line-height:1;letter-spacing:-1px;
+  font-family:var(--ffm);font-size:20px;font-weight:700;line-height:1;letter-spacing:0;
 }
 .pill-count.zero{color:var(--red)}
 .pill-count.low{color:var(--amber)}
@@ -361,7 +361,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:72px;text-align:center;flex-shrink:0;
 }
 .hero-date-month{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-family:var(--ffm)}
-.hero-date-day{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1;font-family:var(--ffd)}
+.hero-date-day{font-size:44px;font-weight:700;letter-spacing:-1px;line-height:1;font-family:var(--ffm)}
 .hero-inner{display:flex;align-items:center;gap:20px;width:100%}
 .hero-body{flex:1;min-width:0}
 
@@ -484,7 +484,7 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 /* date block */
 .apt-date{display:flex;flex-direction:column;align-items:center;min-width:40px;flex-shrink:0;text-align:center}
 .apt-date-month{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-family:var(--ffm)}
-.apt-date-day{font-size:24px;font-weight:800;letter-spacing:-1px;line-height:1.1;font-family:var(--ffd);color:var(--text)}
+.apt-date-day{font-size:24px;font-weight:700;letter-spacing:0;line-height:1.1;font-family:var(--ffm);color:var(--text)}
 .apt-card.today .apt-date-day{color:var(--blue)}
 .apt-card.past .apt-date-day,.apt-card.past .apt-date-month{color:var(--text3)}
 .apt-divider{width:1px;background:var(--border);align-self:stretch;flex-shrink:0;margin:2px 0}
@@ -1170,8 +1170,8 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
 .dash-stat-row{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
 .dash-stat{display:flex;flex-direction:column;gap:2px}
 .dash-stat-num{
-  font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;
-  font-family:var(--ffd);color:var(--text);
+  font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1;
+  font-family:var(--ffm);color:var(--text);
 }
 .dash-stat-num.stat-red{color:var(--red)}
 .dash-stat-num.stat-amber{color:var(--amber)}
@@ -1205,8 +1205,8 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   color:var(--amber);font-family:var(--ffm);
 }
 .dash-apt-day{
-  font-size:30px;font-weight:800;letter-spacing:-1.5px;line-height:1;
-  color:var(--amber);font-family:var(--ffd);
+  font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1;
+  color:var(--amber);font-family:var(--ffm);
 }
 .dash-apt-info{flex:1;min-width:0}
 .dash-apt-title{
@@ -1232,8 +1232,8 @@ tbody tr:hover{background:rgba(255,255,255,.022)}
   border-radius:8px;padding:10px 8px;text-align:center;
 }
 .dash-task-num{
-  font-size:24px;font-weight:800;letter-spacing:-1px;
-  font-family:var(--ffd);color:var(--text);line-height:1;
+  font-size:24px;font-weight:700;letter-spacing:0;
+  font-family:var(--ffm);color:var(--text);line-height:1;
 }
 .dash-task-num.overdue-num{color:var(--red)}
 .dash-task-num.soon-num{color:var(--amber)}
