@@ -42,7 +42,8 @@ test.describe('profile dropdown', () => {
   test('closes when clicking outside', async ({ page }) => {
     await page.getByRole('button', { name: /Test User|▾/ }).click();
     await expect(page.locator('.topbar-menu')).toBeVisible();
-    await page.locator('.brand').click();
+    // Click somewhere in the page content area outside the menu
+    await page.mouse.click(400, 400);
     await expect(page.locator('.topbar-menu')).not.toBeVisible();
   });
 
