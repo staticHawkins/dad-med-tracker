@@ -129,7 +129,7 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
         <button className="dash-week-section" onClick={() => onNavigate('apts')} aria-label="This week: appointments">
           <div className="dash-week-sec-label" style={{color:'var(--amber)'}}>
             <span className="dash-week-dot" style={{background:'var(--amber)'}} />
-            Appointments
+            Apts
           </div>
           <div className={`dash-week-num${weekApts.length === 0 ? ' dash-week-num-zero' : ''}`}
                style={weekApts.length > 0 ? {color:'var(--amber)'} : undefined}>
