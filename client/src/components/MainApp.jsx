@@ -61,7 +61,6 @@ function Sidebar({ activeTab, onNavigate, onAskAi }) {
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [askAiOpen, setAskAiOpen] = useState(false)
   const userMenuRef = useRef(null)
@@ -77,11 +76,6 @@ export default function MainApp({ user }) {
     setNotifPermission('Notification' in window ? Notification.permission : 'unsupported')
     if (token) setUserMenuOpen(false)
   }, [notifPermission, user?.uid])
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    localStorage.setItem('theme', theme)
-  }, [theme])
 
   useEffect(() => {
     function handleClick(e) {
@@ -149,10 +143,6 @@ export default function MainApp({ user }) {
                     <div className="menu-divider" />
                     <button className="menu-item" onClick={() => { setActiveTab('care-team'); setUserMenuOpen(false) }}>
                       <span className="menu-item-label">Doctors</span>
-                    </button>
-                    <button className="menu-item menu-item-notif" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
-                      <span className="menu-item-label">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-                      <span>{theme === 'dark' ? '☀' : '☽'}</span>
                     </button>
                     <div className="menu-divider" />
                     <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
