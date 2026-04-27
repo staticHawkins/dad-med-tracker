@@ -170,7 +170,7 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
         <button className="dash-week-section" onClick={() => onNavigate('meds')} aria-label="This week: medications">
           <div className="dash-week-sec-label" style={{color:'var(--blue)'}}>
             <span className="dash-week-dot" style={{background:'var(--blue)'}} />
-            Meds to Refill
+            Refills
           </div>
           <div className={`dash-week-num${weekMeds === 0 ? ' dash-week-num-zero' : ''}`}
                style={weekMeds === 0 ? undefined : {color: urgentMeds.length > 0 ? 'var(--red)' : 'var(--blue)'}}>
