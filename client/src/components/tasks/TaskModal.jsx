@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveTask, updateTaskFields, addComment, deleteComment, newId } from '../../lib/firestore'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' }
@@ -85,6 +86,7 @@ function InlineTextarea({ field, value, placeholder = '', editCtx }) {
 }
 
 export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
+  const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [creating, setCreating] = useState(false)
@@ -526,6 +528,20 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       </div>
     </>
   )
+
+  if (!isMobile) {
+    return (
+      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="modal modal-task" role="dialog" aria-modal="true">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span className="sheet-title">Add task</span>
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+          {addFormContent}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fs-overlay" role="dialog" aria-modal="true">
