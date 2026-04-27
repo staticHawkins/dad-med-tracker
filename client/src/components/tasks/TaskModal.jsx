@@ -517,15 +517,29 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     </div>
   )
 
+  const allComments = [
+    ...comments.map(c => ({ ...c, _source: task })),
+    ...subtasks.flatMap(st => (st.comments || []).map(c => ({ ...c, _source: st })))
+  ].sort((a, b) => (a.at || '').localeCompare(b.at || ''))
+
   const commentsSection = (
     <div className="task-comments">
       <div className="sheet-section" style={{ marginTop: 20 }}>Comments</div>
-      {comments.length === 0 ? (
+      {allComments.length === 0 ? (
         <div className="comments-empty">No comments yet.</div>
       ) : (
         <ul className="comments-list">
-          {[...comments].sort((a, b) => a.at?.localeCompare(b.at || '') || 0).map(c => (
-            <li key={c.id} className="comment-item">
+          {allComments.map(c => (
+            <li key={`${c._source.id}-${c.id}`} className="comment-item">
+              {c._source.id !== editId && (
+                <button
+                  type="button"
+                  className="comment-subtask-ref"
+                  onClick={() => onNavigate?.(c._source.id)}
+                >
+                  ↳ {c._source.title}
+                </button>
+              )}
               <div className="comment-header">
                 <span className="comment-author">{c.name}</span>
                 <span className="comment-time">{formatCommentTime(c.at)}</span>
@@ -533,7 +547,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
                   <button
                     className="comment-delete"
                     title="Delete comment"
-                    onClick={() => task && deleteComment(task, c.id)}
+                    onClick={() => deleteComment(c._source, c.id)}
                   >✕</button>
                 )}
               </div>
