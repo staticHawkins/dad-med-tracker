@@ -712,6 +712,14 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .dot-todo{background:rgba(139,143,168,.5)}
 .dot-inprogress{background:var(--violet)}
 .dot-done{background:var(--green)}
+.task-done-toggle{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text3);background:none;border:none;cursor:pointer;padding:0;
+  transition:color .12s;
+}
+.task-done-toggle:hover{color:var(--text2)}
+.task-done-caret{font-size:8px;margin-left:2px}
 
 /* ── Task categories ─────────────────────────────────────────────────────── */
 .task-cat-badge{

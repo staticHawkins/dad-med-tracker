@@ -21,6 +21,7 @@ test.describe('task comments', () => {
     await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
     await page.fill('input[placeholder="e.g. Call cardiology to schedule follow-up"]', taskTitle);
     await page.fill('input[type="date"]', '2099-12-31');
+    await page.getByRole('button', { name: 'Medical' }).first().click();
     await page.getByRole('button', { name: 'Create task' }).click();
 
     // Wait for the task to appear in the list (Firestore listener sync)

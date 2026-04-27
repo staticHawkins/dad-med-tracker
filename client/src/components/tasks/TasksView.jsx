@@ -31,6 +31,7 @@ function isOverdue(dueDate) {
 export default function TasksView({ tasks, careTeam, users, user }) {
   const [editId, setEditId] = useState(undefined)
   const [assignPopupId, setAssignPopupId] = useState(null)
+  const [showDone, setShowDone] = useState({})
   const assignPopupRef = useRef(null)
 
   useEffect(() => {
@@ -156,8 +157,28 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     )
   }
 
-  function renderStatusGroup(statusKey, statusTasks) {
+  function renderStatusGroup(statusKey, statusTasks, catKey) {
     if (statusTasks.length === 0) return null
+    if (statusKey === 'done') {
+      const visible = showDone[catKey]
+      return (
+        <div key={statusKey} className="task-cat-status-group">
+          <button
+            className="task-done-toggle"
+            onClick={() => setShowDone(s => ({ ...s, [catKey]: !s[catKey] }))}
+          >
+            <span className={`task-cat-status-dot dot-done`} />
+            {visible ? `Hide done (${statusTasks.length})` : `Show done (${statusTasks.length})`}
+            <span className="task-done-caret">{visible ? '▴' : '▾'}</span>
+          </button>
+          {visible && (
+            <ul className="task-list" style={{ marginTop: 6 }}>
+              {statusTasks.map(renderTask)}
+            </ul>
+          )}
+        </div>
+      )
+    }
     return (
       <div key={statusKey} className="task-cat-status-group">
         <div className="task-cat-status-label">
@@ -191,9 +212,9 @@ export default function TasksView({ tasks, careTeam, users, user }) {
                   <span className={`task-cat-header-count count-${colorClass}`}>{catTasks.length}</span>
                 </div>
                 <div className="task-cat-body">
-                  {renderStatusGroup('todo', byStatus['todo'])}
-                  {renderStatusGroup('in-progress', byStatus['in-progress'])}
-                  {renderStatusGroup('done', byStatus['done'])}
+                  {renderStatusGroup('todo', byStatus['todo'], key)}
+                  {renderStatusGroup('in-progress', byStatus['in-progress'], key)}
+                  {renderStatusGroup('done', byStatus['done'], key)}
                 </div>
               </div>
             )
@@ -206,7 +227,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
               </div>
               <div className="task-cat-body">
                 {['todo', 'in-progress', 'done'].map(s =>
-                  renderStatusGroup(s, uncategorized.filter(t => getStatus(t) === s))
+                  renderStatusGroup(s, uncategorized.filter(t => getStatus(t) === s), 'uncategorized')
                 )}
               </div>
             </div>

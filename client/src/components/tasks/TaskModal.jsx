@@ -215,6 +215,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   async function handleCreate() {
     if (!form.title.trim()) { alert('Please enter a task title.'); return }
     if (!form.dueDate)      { alert('Please enter a due date.'); return }
+    if (!form.category)     { alert('Please select a category.'); return }
     setCreating(true)
     try {
       await saveTask(form, null)
@@ -269,7 +270,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   // ── Shared sections ────────────────────────────────────────────────────────
 
-  const doctorsSection = (
+  const doctorsSection = form.category === 'medical' && (
     <div className="fr">
       <label>Doctors</label>
       <div className="doctor-dropdown-wrap" ref={doctorDropRef}>
