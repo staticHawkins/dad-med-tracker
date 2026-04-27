@@ -44,6 +44,7 @@ Spec files:
 - `task-comment-status.spec.js` — comment survives a status change (regression)
 - `color-audit.spec.js` — screenshots for dark/light mode color audit
 - `profile-dropdown.spec.js` — profile dropdown open/close, navigation, theme toggle
+- `pwa.spec.js` — manifest fields, icons, PWA meta tags, service worker registration, mobile bottom nav
 
 If ports are already occupied from a previous run, kill them first:
 ```bash
@@ -73,6 +74,7 @@ client/src/
 │   ├── LoginScreen.jsx
 │   ├── MainApp.jsx
 │   ├── DashboardView.jsx
+│   ├── BottomNav.jsx
 │   ├── CareTeamPanel.jsx
 │   ├── NotificationBanner.jsx
 │   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed

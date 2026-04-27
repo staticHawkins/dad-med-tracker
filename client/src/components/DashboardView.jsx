@@ -91,7 +91,7 @@ function SummaryBar({ meds, apts, tasks }) {
 
 // ── This Week card ───────────────────────────────────────────────────────────
 
-function WeekCard({ meds, apts, tasks }) {
+function WeekCard({ meds, apts, tasks, onNavigate }) {
   const { start, end } = getWeekRange()
 
   const weekApts = [...apts]
@@ -126,7 +126,7 @@ function WeekCard({ meds, apts, tasks }) {
       </div>
       <div className="dash-week-body">
 
-        <div className="dash-week-section">
+        <button className="dash-week-section" onClick={() => onNavigate('apts')} aria-label="This week: appointments">
           <div className="dash-week-sec-label" style={{color:'var(--amber)'}}>
             <span className="dash-week-dot" style={{background:'var(--amber)'}} />
             Appointments
@@ -144,9 +144,9 @@ function WeekCard({ meds, apts, tasks }) {
               {weekApts.length > 3 && <span className="dash-status-chip dash-chip-todo">+{weekApts.length - 3} more</span>}
             </div>
           )}
-        </div>
+        </button>
 
-        <div className="dash-week-section">
+        <button className="dash-week-section" onClick={() => onNavigate('tasks')} aria-label="This week: tasks">
           <div className="dash-week-sec-label" style={{color:'var(--violet)'}}>
             <span className="dash-week-dot" style={{background:'var(--violet)'}} />
             Tasks Due
@@ -165,9 +165,9 @@ function WeekCard({ meds, apts, tasks }) {
               {todoTasksCt    > 0 && <span className="dash-status-chip dash-chip-todo">{todoTasksCt} to do</span>}
             </div>
           )}
-        </div>
+        </button>
 
-        <div className="dash-week-section">
+        <button className="dash-week-section" onClick={() => onNavigate('meds')} aria-label="This week: medications">
           <div className="dash-week-sec-label" style={{color:'var(--blue)'}}>
             <span className="dash-week-dot" style={{background:'var(--blue)'}} />
             Meds to Refill
@@ -185,7 +185,7 @@ function WeekCard({ meds, apts, tasks }) {
               {soonMeds.length   > 0 && <span className="dash-status-chip dash-chip-soon">{soonMeds.length} soon</span>}
             </div>
           )}
-        </div>
+        </button>
 
       </div>
     </div>
@@ -435,7 +435,7 @@ export default function DashboardView({ meds, apts, tasks, milestones, phases, o
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
         <div className="dash-card-week-wrap">
-          <WeekCard meds={meds} apts={apts} tasks={tasks} />
+          <WeekCard meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />
         </div>
         <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={apts} onClick={() => onNavigate('apts')} />

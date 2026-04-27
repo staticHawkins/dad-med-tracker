@@ -1,5 +1,6 @@
 .claude/
 /data/
+.mockup/
 # OS
 .DS_Store
 Thumbs.db
