@@ -2,7 +2,7 @@ import { aptStatus } from '../../lib/aptUtils'
 import { today } from '../../lib/medUtils'
 import AptCard from './AptCard'
 
-export default function AgendaGroups({ apts, search, noteById, onView, pastExpanded, onPastExpand }) {
+export default function AgendaGroups({ apts, search, noteById, onView, pastExpanded, onPastExpand, careTeam = [] }) {
   const q = search.toLowerCase()
 
   const rows = [...apts]
@@ -42,7 +42,7 @@ export default function AgendaGroups({ apts, search, noteById, onView, pastExpan
             <div className="group-line" />
             <span className="group-count">{grouped.today.length}</span>
           </div>
-          {grouped.today.map(a => <AptCard key={a.id} apt={a} status="today" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} />)}
+          {grouped.today.map(a => <AptCard key={a.id} apt={a} status="today" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} careTeam={careTeam} />)}
         </div>
       )}
 
@@ -53,7 +53,7 @@ export default function AgendaGroups({ apts, search, noteById, onView, pastExpan
             <div className="group-line" />
             <span className="group-count">{grouped.soon.length}</span>
           </div>
-          {grouped.soon.map(a => <AptCard key={a.id} apt={a} status="soon" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} />)}
+          {grouped.soon.map(a => <AptCard key={a.id} apt={a} status="soon" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} careTeam={careTeam} />)}
         </div>
       )}
 
@@ -64,7 +64,7 @@ export default function AgendaGroups({ apts, search, noteById, onView, pastExpan
             <div className="group-line" />
             <span className="group-count">{grouped.upcoming.length}</span>
           </div>
-          {grouped.upcoming.map(a => <AptCard key={a.id} apt={a} status="upcoming" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} />)}
+          {grouped.upcoming.map(a => <AptCard key={a.id} apt={a} status="upcoming" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} careTeam={careTeam} />)}
         </div>
       )}
 
@@ -83,7 +83,7 @@ export default function AgendaGroups({ apts, search, noteById, onView, pastExpan
               <span className="group-count">{grouped.past.length}</span>
             </div>
             <div className="past-group-wrap">
-              {[...grouped.past].reverse().map(a => <AptCard key={a.id} apt={a} status="past" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} />)}
+              {[...grouped.past].reverse().map(a => <AptCard key={a.id} apt={a} status="past" onView={onView} hasNote={!!noteById[a.dateTime?.slice(0,10)]} careTeam={careTeam} />)}
             </div>
           </div>
         </div>

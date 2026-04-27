@@ -53,6 +53,7 @@ export default function AppointmentsView({ apts, careTeam }) {
               onView={id => setDetailId(id)}
               pastExpanded={pastExpanded}
               onPastExpand={() => setPastExpanded(o => !o)}
+              careTeam={careTeam}
             />
           </div>
         </div>
