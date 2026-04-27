@@ -1,11 +1,11 @@
 {
-  "name": "FamilyCareHub",
-  "short_name": "FamilyCareHub",
+  "name": "Family Care Hub",
+  "short_name": "CareHub",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f1117",
-  "theme_color": "#0f1117",
+  "background_color": "#F6F3F2",
+  "theme_color": "#F6F3F2",
   "icons": [
     { "src": "/icons/favicon-16.png", "sizes": "16x16", "type": "image/png" },
     { "src": "/icons/favicon-32.png", "sizes": "32x32", "type": "image/png" },

@@ -99,7 +99,7 @@ function MedsCard({ meds, onClick }) {
       </div>
       <div className="dash-card-body">
         {meds.length === 0 ? (
-          <p className="dash-empty">No medications added</p>
+          <div className="dash-empty"><span className="dash-empty-icon">💊</span><span className="dash-empty-text">No medications added yet</span></div>
         ) : (
           <>
             <div className="dash-med-stats">
@@ -178,7 +178,7 @@ function AptsCard({ apts, onClick }) {
       </div>
       <div className="dash-card-body">
         {!nextApt ? (
-          <p className="dash-empty">No upcoming appointments</p>
+          <div className="dash-empty"><span className="dash-empty-icon">📅</span><span className="dash-empty-text">No upcoming appointments</span></div>
         ) : (
           <>
             <div className="dash-apt-block">
@@ -249,7 +249,7 @@ function TasksCard({ tasks, onClick }) {
       </div>
       <div className="dash-card-body">
         {tasks.length === 0 ? (
-          <p className="dash-empty">No tasks yet</p>
+          <div className="dash-empty"><span className="dash-empty-icon">✓</span><span className="dash-empty-text">No tasks yet</span></div>
         ) : (
           <>
             <div className="dash-task-stats">
@@ -316,7 +316,7 @@ function CareCard({ careTeam, onClick }) {
       </div>
       <div className="dash-card-body">
         {careTeam.length === 0 ? (
-          <p className="dash-empty">No doctors added yet</p>
+          <div className="dash-empty"><span className="dash-empty-icon">👥</span><span className="dash-empty-text">No doctors added yet</span></div>
         ) : (
           <>
             <div className="dash-stat-row">
@@ -383,6 +383,10 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
+        <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
+        <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
+        <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
+        <CareCard careTeam={careTeam} onClick={() => onNavigate('care-team')} />
         <div className="dash-card-timeline-wrap">
           <DiseaseTimelineCard
             milestones={milestones}
@@ -390,9 +394,6 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
             onViewTimeline={() => onNavigate('timeline')}
           />
         </div>
-        <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
-        <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
-        <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
       </div>
     </div>
   )

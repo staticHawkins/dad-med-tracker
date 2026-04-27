@@ -25,24 +25,19 @@ test.describe('profile dropdown', () => {
     await expect(page.locator('.back-bar')).toContainText('Care Team');
   });
 
-  test('contains theme toggle that switches between light and dark mode', async ({ page }) => {
-    // Starts in dark mode (default)
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-
+  test('has no theme toggle (Fog & Rose is the fixed theme)', async ({ page }) => {
     await page.getByRole('button', { name: /Test User|▾/ }).click();
-    const themeBtn = page.getByRole('button', { name: 'Light mode' });
-    await expect(themeBtn).toBeVisible();
-    await themeBtn.click();
-
-    // Theme switches to light; dropdown stays open and label flips to "Dark mode"
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect(page.getByRole('button', { name: 'Dark mode' })).toBeVisible();
+    await expect(page.locator('.topbar-menu')).toBeVisible();
+    // Theme toggle has been removed; no light/dark mode buttons should exist
+    await expect(page.getByRole('button', { name: 'Light mode' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dark mode' })).not.toBeVisible();
   });
 
   test('closes when clicking outside', async ({ page }) => {
     await page.getByRole('button', { name: /Test User|▾/ }).click();
     await expect(page.locator('.topbar-menu')).toBeVisible();
-    await page.locator('.brand').click();
+    // Click somewhere in the page content area outside the menu
+    await page.mouse.click(400, 400);
     await expect(page.locator('.topbar-menu')).not.toBeVisible();
   });
 

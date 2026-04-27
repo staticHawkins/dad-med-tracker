@@ -29,7 +29,7 @@ export default function LoginScreen() {
       <div className="login-card">
         <div className="login-brand">
           <span className="brand-dot" />
-          FamilyCareHub
+          Family Care Hub
         </div>
         <div className="login-title">Sign in to access the tracker</div>
         <button className="btn-google" onClick={login} disabled={loading}>
