@@ -35,7 +35,7 @@ function Sidebar({ activeTab, onNavigate, onAskAi }) {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <span className="brand-dot" />
-        FamilyCareHub
+        Family Care Hub
       </div>
       <nav className="sidebar-nav">
         {SIDEBAR_ITEMS.map(item => (
@@ -113,7 +113,7 @@ export default function MainApp({ user }) {
           <div className="topbar">
             <div className="brand topbar-brand-mobile">
               <span className="brand-dot" />
-              FamilyCareHub
+              Family Care Hub
             </div>
             <div className="topbar-right">
               <button className="btn-ask-ai" onClick={() => setAskAiOpen(true)}>

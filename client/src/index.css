@@ -27,7 +27,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
   box-shadow:0 24px 64px rgba(0,0,0,.6);
   animation:mIn .18s ease;text-align:center;
 }
-.login-brand{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:700;margin-bottom:.75rem;color:var(--text)}
+.login-brand{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:700;margin-bottom:.75rem;color:var(--text);font-family:var(--ffm)}
 .login-title{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
 .l-error{font-size:12px;color:var(--red);min-height:18px;margin-top:10px}
 .btn-google{
@@ -47,7 +47,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
   display:flex; align-items:center; justify-content:space-between;
   padding:0 28px; height:54px; gap:16px; position:sticky; top:0; z-index:10;
 }
-.brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text);white-space:nowrap;font-family:var(--ffd)}
+.brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text);white-space:nowrap;font-family:var(--ffm)}
 .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);flex-shrink:0}
 .topbar-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
 .topbar-right{display:flex;align-items:center;gap:10px}
@@ -1683,7 +1683,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   }
   .sidebar-brand{
     display:flex;align-items:center;gap:9px;
-    font-family:var(--ffd);font-size:15px;font-weight:700;
+    font-family:var(--ffm);font-size:15px;font-weight:700;
     color:var(--text);padding:6px 10px 18px;letter-spacing:-.1px;
     border-bottom:1px solid var(--border);margin-bottom:8px;
   }
@@ -1789,7 +1789,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 
 /* ── SECTION HEADINGS (modal, view titles) use DM Sans 600 ── */
 .modal h2{font-family:var(--ff);font-weight:700}
-.back-bar-title{font-family:var(--ffd);font-size:15px;font-weight:700;letter-spacing:-.1px}
+.back-bar-title{font-family:var(--ff);font-size:15px;font-weight:700;letter-spacing:-.1px}
 
 /* ── TOPBAR improvements ── */
 .topbar{height:52px}
