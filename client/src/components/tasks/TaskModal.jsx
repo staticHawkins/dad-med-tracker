@@ -10,7 +10,7 @@ const CATEGORY_LABELS = { house: 'House', medical: 'Medical', finances: 'Finance
 
 const EMPTY = {
   title: '', description: '', doctorIds: [], assigneeUids: [],
-  dueDate: '', status: 'todo', priority: 'medium', category: 'medical'
+  dueDate: '', status: 'todo', priority: 'medium', category: ''
 }
 
 function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
@@ -124,7 +124,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       dueDate: task.dueDate || '',
       status: task.status || (task.done ? 'done' : 'todo'),
       priority: task.priority || 'medium',
-      category: task.category || 'medical'
+      category: task.category || ''
     })
   }, [editId])
 

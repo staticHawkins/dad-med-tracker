@@ -53,7 +53,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
 
   const filtered = tasks.filter(t => {
     if (filter === 'mine' && !t.assigneeUids?.includes(user.uid)) return false
-    if (categoryFilter !== 'all' && (t.category || 'medical') !== categoryFilter) return false
+    if (categoryFilter !== 'all' && t.category !== categoryFilter) return false
     return true
   }).sort((a, b) => {
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
@@ -107,7 +107,7 @@ async function handleDelete(id) {
 <div className="task-body">
           <div className="task-title">{task.title}</div>
           <div className="task-meta">
-            {task.category && task.category !== 'medical' && (
+            {task.category && (
               <span className={`task-cat-badge task-cat-${task.category}`}>
                 {task.category.charAt(0).toUpperCase() + task.category.slice(1)}
               </span>
