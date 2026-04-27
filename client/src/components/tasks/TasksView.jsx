@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { updateTaskAssignees, delTask } from '../../lib/firestore'
+import { updateTaskAssignees, updateTaskStatus, delTask } from '../../lib/firestore'
 import TaskModal from './TaskModal'
 
 const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
@@ -117,14 +117,25 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   function renderSubtaskRow(child, isLast) {
     const status = getStatus(child)
     const overdue = status !== 'done' && isOverdue(child.dueDate)
+
+    function cycleStatus(e) {
+      e.stopPropagation()
+      const next = status === 'done' ? 'todo' : status === 'in-progress' ? 'done' : 'in-progress'
+      updateTaskStatus(child, next).catch(() => alert('Failed to update.'))
+    }
+
     return (
       <li
         key={child.id}
         className={`subtask-row${status === 'done' ? ' subtask-done' : ''}${isLast ? ' subtask-last' : ''}`}
-        onClick={() => setEditId(child.id)}
       >
-        <span className={`subtask-status-dot subtask-dot-${status.replace('-', '')}`} />
-        <span className="subtask-title">{child.title}</span>
+        <button
+          type="button"
+          className={`subtask-status-dot subtask-dot-${status.replace('-', '')}`}
+          title={`Status: ${STATUS_LABELS[status]} — click to advance`}
+          onClick={cycleStatus}
+        />
+        <span className="subtask-title" onClick={() => setEditId(child.id)}>{child.title}</span>
         {child.dueDate && (
           <span className={`subtask-due${overdue ? ' overdue' : ''}`}>
             {overdue ? '⚠ ' : ''}{formatDue(child.dueDate)}
