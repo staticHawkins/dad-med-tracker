@@ -275,7 +275,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
         <div className="task-empty">No tasks yet. Click "+ Add Task" to get started.</div>
       ) : (
         <div className="task-cat-sections">
-          {catSections.map(({ key, label, icon, colorClass, catTasks, byStatus }) => (
+          {catSections.map(({ key, label, icon, colorClass, catTasks, byStatus, activeCount }) => (
             catTasks.length === 0 ? null : (
               <div key={key} className="task-cat-section">
                 <div className={`task-cat-header task-cat-header-${colorClass}`}>
