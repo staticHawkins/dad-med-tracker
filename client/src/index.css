@@ -48,7 +48,16 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
   padding:0 28px; height:54px; gap:16px; position:sticky; top:0; z-index:10;
 }
 .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text);white-space:nowrap;font-family:var(--ffd)}
-.brand-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);flex-shrink:0}
+@keyframes brandPulse{
+  0%  {box-shadow:0 0 0 0   rgba(168,84,106,.4)}
+  60% {box-shadow:0 0 0 6px rgba(168,84,106,0)}
+  100%{box-shadow:0 0 0 0   rgba(168,84,106,0)}
+}
+.brand-dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--blue);flex-shrink:0;
+  animation:brandPulse 2.8s ease-out infinite;
+}
 .topbar-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .topbar-date{font-size:12px;color:var(--text2);font-family:var(--ffm)}
