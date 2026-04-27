@@ -18,7 +18,7 @@ test.describe('task comments', () => {
 
     // Create a new task
     await page.getByRole('button', { name: '+ Add Task' }).click();
-    await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
+    await page.waitForSelector('.modal-task, .fs-overlay', { timeout: 5_000 });
     await page.fill('input[placeholder="e.g. Call cardiology to schedule follow-up"]', taskTitle);
     await page.fill('input[type="date"]', '2099-12-31');
     await page.getByRole('button', { name: 'Medical' }).first().click();
@@ -29,7 +29,7 @@ test.describe('task comments', () => {
 
     // Open the task
     await page.locator('.task-title', { hasText: taskTitle }).click();
-    await page.waitForSelector('.modal-task, .edit-sheet.open', { timeout: 5_000 });
+    await page.waitForSelector('.task-edit-modal, .fs-overlay', { timeout: 5_000 });
 
     // Post a comment
     await page.fill('.comment-input', commentText);
@@ -39,7 +39,7 @@ test.describe('task comments', () => {
     await page.waitForSelector(`.comment-text >> text=${commentText}`, { timeout: 10_000 });
 
     // Change status — this was the operation that wiped comments before the fix
-    await page.locator('.modal-task .status-sel-btn', { hasText: 'In progress' }).click();
+    await page.locator('.task-edit-modal .status-sel-btn', { hasText: 'In progress' }).click();
 
     // Wait for the save to complete
     await page.waitForSelector('.autosave-pill.saved', { timeout: 10_000 });

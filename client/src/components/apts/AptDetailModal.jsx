@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { fmtAptDateBlock, fmtAptTime, coveringLabel, exportToICS } from '../../lib/aptUtils'
 import { saveApt, delApt } from '../../lib/firestore'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 function PhaseChip({ label }) {
   return <span className="apt-detail-chip">{label}</span>
@@ -143,6 +144,7 @@ function CoveringPills({ covering, commitEdit }) {
 
 export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
   const specialties = useSpecialties()
+  const isMobile = useIsMobile()
   const [fullOpen, setFullOpen] = useState(false)
   const [editingField, setEditingField] = useState(null)
   const [draftValue, setDraftValue] = useState('')
@@ -210,12 +212,10 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
 
   const editCtx = { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit }
 
-  return (
-    <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="modal note-modal">
-
-        {/* Header */}
-        <div className="apt-detail-header">
+  const detailContent = (
+    <>
+        {/* Header — hidden on mobile (fs-header takes over) */}
+        {!isMobile && <div className="apt-detail-header">
           <div className="apt-detail-header-left">
             <div className="apt-detail-date-block">
               <span className="apt-detail-month">{db.month}</span>
@@ -248,7 +248,7 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
             }} aria-label="Delete">🗑</button>
             <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
           </div>
-        </div>
+        </div>}
 
         {/* Appointment meta — inline editable */}
         <div className="apt-detail-meta">
@@ -380,8 +380,39 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
             {fullOpen && <div className="note-full-text">{note.textContent}</div>}
           </>
         )}
+    </>
+  )
 
+  if (!isMobile) {
+    return (
+      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="modal note-modal">{detailContent}</div>
       </div>
+    )
+  }
+
+  return (
+    <div className="fs-overlay" role="dialog" aria-modal="true">
+      <div className="fs-header">
+        <span className="fs-title">{apt.title || 'Appointment'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {saveStatus !== 'idle' && (
+            <span className={`autosave-pill ${saveStatus}`}>
+              <span className="autosave-pill-dot" />
+              {saveStatus === 'saving' && 'Saving…'}
+              {saveStatus === 'saved'  && 'Saved'}
+              {saveStatus === 'error'  && 'Error'}
+            </span>
+          )}
+          <button className="btn-export-ics" onClick={() => exportToICS(apt)} aria-label="Export to calendar" title="Export to calendar (.ics)">📅</button>
+          <button className="btn-delete-detail" onClick={async () => {
+            if (!confirm(`Remove "${apt.title}"?`)) return
+            try { await delApt(apt.id); onClose() } catch { alert('Failed to delete. Check your connection.') }
+          }} aria-label="Delete">🗑</button>
+          <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div className="fs-body">{detailContent}</div>
     </div>
   )
 }

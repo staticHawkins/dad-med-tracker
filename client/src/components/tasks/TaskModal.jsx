@@ -381,12 +381,22 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   // ── Edit mode: centered popup with inline-editable view ────────────────────
 
   if (isEditing) {
-    return (
-      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-        <div className="modal modal-task" role="dialog" aria-modal="true">
-
-          {/* Header */}
-          <div className="modal-task-header">
+    const editContent = (
+      <>
+          {/* Title + date — mobile shows inline rows; desktop shows full header */}
+          {isMobile && (
+            <>
+              <div className="fr">
+                <label>Title</label>
+                <InlineField field="title" value={form.title} placeholder="Task title" editCtx={editCtx} />
+              </div>
+              <div className="fr">
+                <label>Due date</label>
+                <InlineField field="dueDate" value={form.dueDate} type="date" editCtx={editCtx} />
+              </div>
+            </>
+          )}
+          {!isMobile && <div className="modal-task-header">
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
                 <InlineField field="title" value={form.title} placeholder="Task title" editCtx={editCtx} />
@@ -409,7 +419,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
               )}
               <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
             </div>
-          </div>
+          </div>}
 
           {/* Status */}
           <div className="fr" style={{ marginTop: 12 }}>
@@ -490,8 +500,39 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
           {/* Comments */}
           {commentsSection}
+      </>
+    )
 
+    if (!isMobile) {
+      return (
+        <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+          <div className="modal modal-task task-edit-modal" role="dialog" aria-modal="true">
+            {editContent}
+          </div>
         </div>
+      )
+    }
+
+    return (
+      <div className="fs-overlay task-edit-modal" role="dialog" aria-modal="true">
+        <div className="fs-header">
+          <span className="fs-title">{form.title || 'Task'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {saveStatus !== 'idle' && (
+              <span
+                className={`autosave-pill ${saveStatus}`}
+                onClick={saveStatus === 'error' ? retryWrite : undefined}
+              >
+                <span className="autosave-pill-dot" />
+                {saveStatus === 'saving' && 'Saving…'}
+                {saveStatus === 'saved'  && 'Saved'}
+                {saveStatus === 'error'  && 'Not saved · Retry'}
+              </span>
+            )}
+            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+        </div>
+        <div className="fs-body">{editContent}</div>
       </div>
     )
   }
