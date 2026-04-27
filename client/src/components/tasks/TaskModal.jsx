@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveTask, updateTaskFields, addComment, deleteComment, newId } from '../../lib/firestore'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' }
@@ -86,7 +85,6 @@ function InlineTextarea({ field, value, placeholder = '', editCtx }) {
 }
 
 export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
-  const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [creating, setCreating] = useState(false)
@@ -104,15 +102,11 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   const savedTimer = useRef(null)
   const isDirty    = useRef(false)
   const lastPatch  = useRef(null)
-  const dragStartY = useRef(null)
-  const sheetRef   = useRef(null)
-  const [open, setOpen] = useState(false)
 
   const task = tasks.find(x => x.id === editId)
   const comments = task?.comments || []
   const isEditing = !!editId
 
-  useEffect(() => { if (!isEditing) setOpen(true) }, [])
 
   useEffect(() => {
     isDirty.current = false
@@ -239,20 +233,6 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     const d = new Date(iso)
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  }
-
-  function onTouchStart(e) { dragStartY.current = e.touches[0].clientY }
-  function onTouchMove(e) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const delta = e.touches[0].clientY - dragStartY.current
-    if (delta > 0) sheetRef.current.style.transform = `translateY(${delta}px)`
-  }
-  function onTouchEnd(e) {
-    if (dragStartY.current === null) return
-    const delta = e.changedTouches[0].clientY - dragStartY.current
-    dragStartY.current = null
-    if (sheetRef.current) sheetRef.current.style.transform = ''
-    if (delta > 80) onClose()
   }
 
   // ── Inline edit helpers (edit mode only) ───────────────────────────────────
@@ -547,36 +527,13 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     </>
   )
 
-  if (!isMobile) {
-    return (
-      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-        <div className="modal modal-task" role="dialog" aria-modal="true">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span className="sheet-title">Add task</span>
-            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
-          </div>
-          {addFormContent}
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <>
-      <div className="sheet-backdrop" onClick={onClose} />
-      <div
-        ref={sheetRef}
-        className={`edit-sheet${open ? ' open' : ''}`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="sheet-handle" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
-        <div className="sheet-header" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <span className="sheet-title">Add task</span>
-          <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
-        </div>
-        <div className="sheet-body">{addFormContent}</div>
+    <div className="fs-overlay" role="dialog" aria-modal="true">
+      <div className="fs-header">
+        <span className="fs-title">Add task</span>
+        <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
       </div>
-    </>
+      <div className="fs-body">{addFormContent}</div>
+    </div>
   )
 }

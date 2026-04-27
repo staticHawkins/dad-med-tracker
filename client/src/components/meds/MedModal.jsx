@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { saveMed } from '../../lib/firestore'
-import { useIsMobile } from '../../hooks/useIsMobile'
 
 const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
@@ -19,14 +18,8 @@ const PRESETS = [
 
 // Add-new only. Editing existing medications is handled inline in MedRow drawer.
 export default function MedModal({ careTeam = [], onClose }) {
-  const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
   const [creating, setCreating] = useState(false)
-  const [open, setOpen] = useState(false)
-  const sheetRef = useRef(null)
-  const dragStartY = useRef(null)
-
-  useEffect(() => { setOpen(true) }, [])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -50,134 +43,93 @@ export default function MedModal({ careTeam = [], onClose }) {
     setCreating(false)
   }
 
-  function onTouchStart(e) { dragStartY.current = e.touches[0].clientY }
-  function onTouchMove(e) {
-    if (dragStartY.current === null || !sheetRef.current) return
-    const delta = e.touches[0].clientY - dragStartY.current
-    if (delta > 0) sheetRef.current.style.transform = `translateY(${delta}px)`
-  }
-  function onTouchEnd(e) {
-    if (dragStartY.current === null) return
-    const delta = e.changedTouches[0].clientY - dragStartY.current
-    dragStartY.current = null
-    if (sheetRef.current) sheetRef.current.style.transform = ''
-    if (delta > 80) onClose()
-  }
-
-  const formContent = (
-    <>
-      <div className="sheet-section">Required</div>
-      <div className="fr">
-        <label>Name <span className="req">*</span></label>
-        <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
+  return (
+    <div className="fs-overlay" role="dialog" aria-modal="true">
+      <div className="fs-header">
+        <span className="fs-title">Add medication</span>
+        <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
       </div>
-      <div className="f2">
+      <div className="fs-body">
+        <div className="sheet-section">Required</div>
         <div className="fr">
-          <label>Last filled <span className="req">*</span></label>
-          <input type="date" value={form.filledDate} onChange={set('filledDate')} />
+          <label>Name <span className="req">*</span></label>
+          <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
         </div>
-        <div className="fr">
-          <label>Pills in bottle <span className="req">*</span></label>
-          <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" />
-        </div>
-      </div>
-      <div className="fr">
-        <label>Frequency <span className="req">*</span></label>
-        <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
-          {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
-      </div>
-      {form.frequencyPreset === 'custom' && (
         <div className="f2">
           <div className="fr">
-            <label>Pills per dose</label>
-            <input type="number" min="0.5" step="0.5" value={form.frequencyCustomCount} onChange={set('frequencyCustomCount')} placeholder="1" />
+            <label>Last filled <span className="req">*</span></label>
+            <input type="date" value={form.filledDate} onChange={set('filledDate')} />
           </div>
           <div className="fr">
-            <label>Every</label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input type="number" min="1" step="1" value={form.frequencyCustomEvery} onChange={set('frequencyCustomEvery')} placeholder="1" style={{ flex: 1 }} />
-              <select value={form.frequencyCustomUnit} onChange={set('frequencyCustomUnit')} style={{ flex: 1 }}>
-                <option value="days">days</option>
-                <option value="weeks">weeks</option>
-              </select>
+            <label>Pills in bottle <span className="req">*</span></label>
+            <input type="number" min="1" value={form.supply} onChange={set('supply')} placeholder="e.g. 30" />
+          </div>
+        </div>
+        <div className="fr">
+          <label>Frequency <span className="req">*</span></label>
+          <select value={form.frequencyPreset} onChange={set('frequencyPreset')}>
+            {PRESETS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        </div>
+        {form.frequencyPreset === 'custom' && (
+          <div className="f2">
+            <div className="fr">
+              <label>Pills per dose</label>
+              <input type="number" min="0.5" step="0.5" value={form.frequencyCustomCount} onChange={set('frequencyCustomCount')} placeholder="1" />
+            </div>
+            <div className="fr">
+              <label>Every</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input type="number" min="1" step="1" value={form.frequencyCustomEvery} onChange={set('frequencyCustomEvery')} placeholder="1" style={{ flex: 1 }} />
+                <select value={form.frequencyCustomUnit} onChange={set('frequencyCustomUnit')} style={{ flex: 1 }}>
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="sheet-section">Optional</div>
-      <div className="fr">
-        <label>Dose / strength</label>
-        <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
-      </div>
-      <div className="fr">
-        <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>overrides calculated date</span></label>
-        <input type="date" value={form.refillDate} onChange={set('refillDate')} />
-      </div>
-      <div className="f2-pharmacy">
+        <div className="sheet-section">Optional</div>
         <div className="fr">
-          <label>Pharmacy</label>
-          <input value={form.pharmacy} onChange={set('pharmacy')} placeholder="e.g. Walgreens" />
+          <label>Dose / strength</label>
+          <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
         </div>
         <div className="fr">
-          <label>Rx #</label>
-          <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" />
+          <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>overrides calculated date</span></label>
+          <input type="date" value={form.refillDate} onChange={set('refillDate')} />
         </div>
-      </div>
-      <div className="fr">
-        <label>Doctor</label>
-        <select value={form.doctor} onChange={set('doctor')}>
-          <option value="">No doctor</option>
-          {careTeam.map(dr => (
-            <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
-          ))}
-        </select>
-      </div>
-      <div className="fr">
-        <label>Instructions</label>
-        <textarea value={form.instructions} onChange={set('instructions')} placeholder="e.g. Take with food" />
-      </div>
-
-      <div className="mf">
-        <button className="btn-cx" onClick={onClose}>Cancel</button>
-        <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-          {creating ? 'Adding…' : 'Add medication'}
-        </button>
-      </div>
-    </>
-  )
-
-  if (!isMobile) {
-    return (
-      <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-        <div className="modal" role="dialog" aria-modal="true">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span className="sheet-title">Add medication</span>
-            <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+        <div className="f2-pharmacy">
+          <div className="fr">
+            <label>Pharmacy</label>
+            <input value={form.pharmacy} onChange={set('pharmacy')} placeholder="e.g. Walgreens" />
           </div>
-          {formContent}
+          <div className="fr">
+            <label>Rx #</label>
+            <input value={form.rxNum} onChange={set('rxNum')} placeholder="optional" />
+          </div>
         </div>
-      </div>
-    )
-  }
+        <div className="fr">
+          <label>Doctor</label>
+          <select value={form.doctor} onChange={set('doctor')}>
+            <option value="">No doctor</option>
+            {careTeam.map(dr => (
+              <option key={dr.id} value={dr.name}>{dr.name}{dr.specialty ? ` · ${dr.specialty}` : ''}</option>
+            ))}
+          </select>
+        </div>
+        <div className="fr">
+          <label>Instructions</label>
+          <textarea value={form.instructions} onChange={set('instructions')} placeholder="e.g. Take with food" />
+        </div>
 
-  return (
-    <>
-      <div className="sheet-backdrop" onClick={onClose} />
-      <div
-        ref={sheetRef}
-        className={`edit-sheet${open ? ' open' : ''}`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="sheet-handle" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} />
-        <div className="sheet-header" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <span className="sheet-title">Add medication</span>
-          <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
+        <div className="mf">
+          <button className="btn-cx" onClick={onClose}>Cancel</button>
+          <button className="btn-sv" onClick={handleCreate} disabled={creating}>
+            {creating ? 'Adding…' : 'Add medication'}
+          </button>
         </div>
-        <div className="sheet-body">{formContent}</div>
       </div>
-    </>
+    </div>
   )
 }

@@ -1562,6 +1562,23 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   padding:12px 1.25rem 8px;flex-shrink:0;
 }
 .sheet-title{font-size:16px;font-weight:700;color:var(--text)}
+/* ── FULL-SCREEN ADD MODALS ── */
+@keyframes fsMIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fs-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:var(--bg);display:flex;flex-direction:column;
+  animation:fsMIn .2s ease;
+}
+.fs-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:54px;flex-shrink:0;
+  background:var(--panel);border-bottom:1px solid var(--border2);
+}
+.fs-title{font-size:15px;font-weight:700;color:var(--text)}
+.fs-body{flex:1;overflow-y:auto;padding:20px 20px 80px}
+@media(min-width:640px){
+  .fs-body{max-width:580px;margin:0 auto;width:100%;padding:28px 0 80px}
+}
 .sheet-header-right{display:flex;align-items:center;gap:8px}
 /* autosave pill */
 .autosave-pill{
