@@ -120,7 +120,7 @@ export default function MainApp({ user }) {
                 <span className="ask-ai-icon-sm">✦</span> Ask AI
               </button>
               <div className="topbar-menu-wrap" ref={userMenuRef}>
-                <button className="btn-ghost topbar-user-btn" onClick={() => setUserMenuOpen(o => !o)}>
+                <button className="topbar-user-btn" onClick={() => setUserMenuOpen(o => !o)}>
                   {user.photoURL
                     ? <img className="topbar-avatar" src={user.photoURL} alt={user.displayName || 'User'} referrerPolicy="no-referrer" />
                     : <>{user.displayName || user.email} ▾</>}
@@ -161,7 +161,6 @@ export default function MainApp({ user }) {
               meds={activeMeds}
               apts={apts}
               tasks={tasks}
-              careTeam={careTeam}
               milestones={milestones}
               phases={phases}
               onNavigate={setActiveTab}

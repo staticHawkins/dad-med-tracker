@@ -20,13 +20,6 @@ function fmtShortDate(dueDate) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function initials(name) {
-  if (!name) return '?'
-  return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
-
-const AVATAR_COLORS = ['blue', 'violet', 'teal', 'amber', 'green']
-
 // ── Summary alert bar (desktop only) ────────────────────────────────────────
 
 function SummaryBar({ meds, apts, tasks }) {
@@ -303,70 +296,6 @@ function TasksCard({ tasks, onClick }) {
   )
 }
 
-function CareCard({ careTeam, onClick }) {
-  const shownList = careTeam.slice(0, 4)
-  const extra = careTeam.length - shownList.length
-
-  return (
-    <button className="dash-card dash-card-care" onClick={onClick} aria-label="Go to Care Team">
-      <div className="dash-card-header">
-        <span className="dash-card-icon">👥</span>
-        <span className="dash-card-title">Care Team</span>
-        <span className="dash-card-arrow">›</span>
-      </div>
-      <div className="dash-card-body">
-        {careTeam.length === 0 ? (
-          <div className="dash-empty"><span className="dash-empty-icon">👥</span><span className="dash-empty-text">No doctors added yet</span></div>
-        ) : (
-          <>
-            <div className="dash-stat-row">
-              <div className="dash-stat">
-                <span className="dash-stat-num stat-teal">{careTeam.length}</span>
-                <span className="dash-stat-lbl">specialists coordinated</span>
-              </div>
-            </div>
-            {/* Mobile: dot list */}
-            <ul className="dash-dr-list dash-mobile-only">
-              {shownList.map(d => (
-                <li key={d.id} className="dash-dr-item">
-                  <span className="dash-dr-dot" />
-                  {d.name}{d.specialty ? ` · ${d.specialty}` : ''}
-                </li>
-              ))}
-              {extra > 0 && <li><span className="dash-more-label">+{extra} more</span></li>}
-            </ul>
-            {/* Desktop: avatar grid */}
-            <div className="dash-desktop">
-              <div className="dash-avatar-grid">
-                {shownList.map((d, i) => (
-                  <div key={d.id} className="dash-avatar-item">
-                    {d.imageUrl ? (
-                      <img
-                        className={`dash-avatar-circle dash-avatar-img`}
-                        src={d.imageUrl}
-                        alt={d.name}
-                      />
-                    ) : (
-                      <div className={`dash-avatar-circle dash-avatar-${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
-                        {initials(d.name)}
-                      </div>
-                    )}
-                    <div className="dash-avatar-info">
-                      <span className="dash-avatar-name">{d.name}</span>
-                      {d.specialty && <span className="dash-avatar-spec">{d.specialty}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {extra > 0 && <div className="dash-care-more">+ {extra} more specialists</div>}
-            </div>
-          </>
-        )}
-      </div>
-    </button>
-  )
-}
-
 // ── Exports ──────────────────────────────────────────────────────────────────
 
 export function BackBar({ label, onBack }) {
@@ -378,7 +307,7 @@ export function BackBar({ label, onBack }) {
   )
 }
 
-export default function DashboardView({ meds, apts, tasks, careTeam, milestones, phases, onNavigate }) {
+export default function DashboardView({ meds, apts, tasks, milestones, phases, onNavigate }) {
   return (
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
@@ -386,7 +315,6 @@ export default function DashboardView({ meds, apts, tasks, careTeam, milestones,
         <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
-        <CareCard careTeam={careTeam} onClick={() => onNavigate('care-team')} />
         <div className="dash-card-timeline-wrap">
           <DiseaseTimelineCard
             milestones={milestones}

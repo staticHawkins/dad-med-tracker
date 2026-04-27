@@ -79,7 +79,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
   white-space:nowrap;flex-shrink:0;
 }
 .btn-ghost:hover{background:var(--panel2);color:var(--text)}
-.topbar-user-btn{font-family:var(--ffm);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.topbar-user-btn{font-family:var(--ffm);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;background:transparent;border:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px;}
 .topbar-menu-wrap{position:relative}
 .topbar-menu{
   position:absolute;top:calc(100% + 8px);right:0;min-width:160px;
