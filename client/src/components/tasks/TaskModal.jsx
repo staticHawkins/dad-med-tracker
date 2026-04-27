@@ -5,9 +5,12 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' }
 
+const CATEGORIES = ['house', 'medical', 'finances']
+const CATEGORY_LABELS = { house: 'House', medical: 'Medical', finances: 'Finances' }
+
 const EMPTY = {
   title: '', description: '', doctorIds: [], assigneeUids: [],
-  dueDate: '', status: 'todo', priority: 'medium'
+  dueDate: '', status: 'todo', priority: 'medium', category: 'medical'
 }
 
 function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
@@ -120,7 +123,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       assigneeUids: task.assigneeUids || [],
       dueDate: task.dueDate || '',
       status: task.status || (task.done ? 'done' : 'todo'),
-      priority: task.priority || 'medium'
+      priority: task.priority || 'medium',
+      category: task.category || 'medical'
     })
   }, [editId])
 
@@ -195,6 +199,11 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   function setStatus(s) {
     setForm(f => ({ ...f, status: s }))
     saveFields({ status: s, done: s === 'done' })
+  }
+
+  function setCategory(c) {
+    setForm(f => ({ ...f, category: c }))
+    saveFields({ category: c })
   }
 
   function setAssignee(uid) {
@@ -451,6 +460,23 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
             }
           </div>
 
+          {/* Category */}
+          <div className="fr">
+            <label>Category</label>
+            <div className="status-selector">
+              {CATEGORIES.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`cat-sel-btn task-cat-btn-${c}${form.category === c ? ' active' : ''}`}
+                  onClick={() => setCategory(c)}
+                >
+                  {CATEGORY_LABELS[c]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Description */}
           <div className="fr">
             <label>Description</label>
@@ -481,6 +507,21 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       <div className="fr">
         <label>Due date <span className="req">*</span></label>
         <input type="date" value={form.dueDate} onChange={set('dueDate')} />
+      </div>
+      <div className="fr">
+        <label>Category</label>
+        <div className="status-selector">
+          {CATEGORIES.map(c => (
+            <button
+              key={c}
+              type="button"
+              className={`cat-sel-btn task-cat-btn-${c}${form.category === c ? ' active' : ''}`}
+              onClick={() => setForm(f => ({ ...f, category: c }))}
+            >
+              {CATEGORY_LABELS[c]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="sheet-section">Optional</div>

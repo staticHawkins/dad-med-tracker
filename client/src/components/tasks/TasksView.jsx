@@ -6,6 +6,13 @@ const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
 const STATUS_CLASSES = { todo: 'status-todo', 'in-progress': 'status-inprog', done: 'status-done' }
 
+const CATEGORY_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'house', label: 'House' },
+  { key: 'medical', label: 'Medical' },
+  { key: 'finances', label: 'Finances' },
+]
+
 function getStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
 }
@@ -26,6 +33,7 @@ function isOverdue(dueDate) {
 
 export default function TasksView({ tasks, careTeam, users, user }) {
   const [filter, setFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [editId, setEditId] = useState(undefined)
   const [assignPopupId, setAssignPopupId] = useState(null)
   const assignPopupRef = useRef(null)
@@ -44,7 +52,8 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   const userMap = Object.fromEntries(users.map(u => [u.uid, u]))
 
   const filtered = tasks.filter(t => {
-    if (filter === 'mine') return t.assigneeUids?.includes(user.uid)
+    if (filter === 'mine' && !t.assigneeUids?.includes(user.uid)) return false
+    if (categoryFilter !== 'all' && (t.category || 'medical') !== categoryFilter) return false
     return true
   }).sort((a, b) => {
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
@@ -98,6 +107,11 @@ async function handleDelete(id) {
 <div className="task-body">
           <div className="task-title">{task.title}</div>
           <div className="task-meta">
+            {task.category && task.category !== 'medical' && (
+              <span className={`task-cat-badge task-cat-${task.category}`}>
+                {task.category.charAt(0).toUpperCase() + task.category.slice(1)}
+              </span>
+            )}
             {doctors.map(dr => (
               <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
             ))}
@@ -166,7 +180,7 @@ async function handleDelete(id) {
 
   return (
     <div className="page">
-      <div className="tbl-tools" style={{ marginBottom: 16 }}>
+      <div className="tbl-tools" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {filters.map(f => (
             <button
@@ -179,6 +193,17 @@ async function handleDelete(id) {
           ))}
         </div>
         <button className="btn-add" onClick={() => setEditId(null)}>+ Add Task</button>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+        {CATEGORY_FILTERS.map(f => (
+          <button
+            key={f.key}
+            className={`ftab ftab-cat ftab-cat-${f.key}${categoryFilter === f.key ? ' active' : ''}`}
+            onClick={() => setCategoryFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {!hasAny ? (

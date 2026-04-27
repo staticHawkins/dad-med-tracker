@@ -666,6 +666,34 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   color:var(--green);border-color:var(--green-border);
 }
 .task-comment-count{font-size:11px;color:var(--text3)}
+
+/* ── Task categories ─────────────────────────────────────────────────────── */
+.task-cat-badge{
+  font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;
+  white-space:nowrap;letter-spacing:.02em;
+}
+.task-cat-badge.task-cat-house{
+  background:var(--amber-dim);color:var(--amber);
+}
+.task-cat-badge.task-cat-finances{
+  background:var(--green-dim);color:var(--green);
+}
+
+/* category filter tabs */
+.ftab-cat-house.active{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border)}
+.ftab-cat-finances.active{background:var(--green-dim);color:var(--green);border-color:var(--green-border)}
+.ftab-cat-medical.active,.ftab-cat-all.active{background:var(--panel2)}
+
+/* category picker buttons in modal */
+.cat-sel-btn{
+  flex:1;padding:8px 10px;border-radius:7px;border:1.5px solid var(--border);
+  background:transparent;color:var(--text2);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.cat-sel-btn:hover:not(.active){border-color:var(--border2);background:var(--panel2)}
+.cat-sel-btn.task-cat-btn-house.active{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border)}
+.cat-sel-btn.task-cat-btn-medical.active{background:var(--blue-dim);color:var(--blue);border-color:var(--blue-border)}
+.cat-sel-btn.task-cat-btn-finances.active{background:var(--green-dim);color:var(--green);border-color:var(--green-border)}
 .task-quick-assign{position:relative;flex-shrink:0}
 .quick-assign-btn{
   display:flex;align-items:center;gap:6px;

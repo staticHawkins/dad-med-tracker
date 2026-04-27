@@ -247,6 +247,7 @@ export async function saveTask(fields, editId) {
     assigneeUids: fields.assigneeUids || [],
     dueDate: fields.dueDate || '',
     priority: fields.priority || 'medium',
+    category: fields.category || 'medical',
     status,
     done: status === 'done',
     updatedAt: new Date().toISOString()
