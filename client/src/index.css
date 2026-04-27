@@ -1739,7 +1739,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   .bottom-nav{
     display:flex;
     position:fixed;bottom:0;left:0;right:0;
-    height:56px;
+    height:calc(56px + env(safe-area-inset-bottom,0px));
     background:var(--panel);
     border-top:1px solid var(--border2);
     z-index:20;
