@@ -145,8 +145,8 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     const isExpanded = expandedTaskIds.has(task.id)
 
     return (
-      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer', display: 'block', padding: 0, border: 'none' }}>
-        <div className="task-row-inner">
+      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} style={{ display: 'block', padding: 0, border: 'none' }}>
+        <div className="task-row-inner" onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
           <div className="task-body">
             <div className="task-title">{task.title}</div>
             <div className="task-meta">
