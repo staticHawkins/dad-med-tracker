@@ -24,10 +24,9 @@ test.describe('tasks', () => {
     await goToTasks(page);
   });
 
-  test('tasks view renders toolbar and filter tabs', async ({ page }) => {
+  test('tasks view renders toolbar and add button', async ({ page }) => {
     await expect(page.locator('.tbl-tools')).toBeVisible();
     await expect(page.getByRole('button', { name: '+ Add Task' })).toBeVisible();
-    await expect(page.locator('.ftab').first()).toBeVisible();
   });
 
   test('add task creates a row in the list', async ({ page }) => {
@@ -52,14 +51,11 @@ test.describe('tasks', () => {
     }
   });
 
-  test('filter "To Do" tab shows only To Do tasks', async ({ page }) => {
-    await page.locator('.ftab', { hasText: 'To Do' }).click();
-    await expect(page.locator('.ftab.active', { hasText: 'To Do' })).toBeVisible();
-  });
-
-  test('filter "Done" tab shows only Done tasks', async ({ page }) => {
-    await page.locator('.ftab', { hasText: 'Done' }).click();
-    await expect(page.locator('.ftab.active', { hasText: 'Done' })).toBeVisible();
+  test('tasks are grouped by category section headers', async ({ page }) => {
+    const title = `[e2e] CatTask ${Date.now()}`;
+    await createTask(page, title);
+    // After creating a task the category sections should render
+    await expect(page.locator('.task-cat-sections')).toBeVisible();
   });
 
   test('clicking task row opens edit modal', async ({ page }) => {

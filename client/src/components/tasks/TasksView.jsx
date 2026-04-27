@@ -2,15 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { updateTaskAssignees, delTask } from '../../lib/firestore'
 import TaskModal from './TaskModal'
 
-const STATUSES = ['todo', 'in-progress', 'done']
 const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
-const STATUS_CLASSES = { todo: 'status-todo', 'in-progress': 'status-inprog', done: 'status-done' }
 
-const CATEGORY_FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'house', label: 'House' },
-  { key: 'medical', label: 'Medical' },
-  { key: 'finances', label: 'Finances' },
+const CATEGORIES = [
+  { key: 'medical',  label: 'Medical',  icon: '💊', colorClass: 'medical' },
+  { key: 'house',    label: 'House',    icon: '🏠', colorClass: 'house' },
+  { key: 'finances', label: 'Finances', icon: '💰', colorClass: 'finances' },
 ]
 
 function getStatus(task) {
@@ -32,8 +29,6 @@ function isOverdue(dueDate) {
 }
 
 export default function TasksView({ tasks, careTeam, users, user }) {
-  const [filter, setFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
   const [editId, setEditId] = useState(undefined)
   const [assignPopupId, setAssignPopupId] = useState(null)
   const assignPopupRef = useRef(null)
@@ -51,27 +46,26 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   const doctorMap = Object.fromEntries(careTeam.map(dr => [dr.id, dr]))
   const userMap = Object.fromEntries(users.map(u => [u.uid, u]))
 
-  const filtered = tasks.filter(t => {
-    if (filter === 'mine' && !t.assigneeUids?.includes(user.uid)) return false
-    if (categoryFilter !== 'all' && t.category !== categoryFilter) return false
-    return true
-  }).sort((a, b) => {
+  const sorted = [...tasks].sort((a, b) => {
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
     if (a.dueDate) return -1
     if (b.dueDate) return 1
     return b.updatedAt?.localeCompare(a.updatedAt || '') || 0
   })
 
-  // Group by status
-  const visibleStatuses = filter === 'all' || filter === 'mine'
-    ? STATUSES
-    : [filter]
+  // Build category sections — each has status sub-groups
+  const catSections = CATEGORIES.map(cat => {
+    const catTasks = sorted.filter(t => (t.category || '') === cat.key)
+    const byStatus = {
+      todo:         catTasks.filter(t => getStatus(t) === 'todo'),
+      'in-progress':catTasks.filter(t => getStatus(t) === 'in-progress'),
+      done:         catTasks.filter(t => getStatus(t) === 'done'),
+    }
+    return { ...cat, catTasks, byStatus }
+  })
 
-  const groups = visibleStatuses.map(status => ({
-    status,
-    label: STATUS_LABELS[status],
-    tasks: filtered.filter(t => getStatus(t) === status)
-  }))
+  // Tasks with no category
+  const uncategorized = sorted.filter(t => !t.category)
 
   async function handleSetAssignee(e, task, uid) {
     e.stopPropagation()
@@ -80,19 +74,10 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     try { await updateTaskAssignees(task, next) } catch { alert('Failed to update.') }
   }
 
-async function handleDelete(id) {
+  async function handleDelete(id) {
     if (!confirm('Delete this task?')) return
     try { await delTask(id) } catch { alert('Failed to delete.') }
   }
-
-  const filters = [
-    { key: 'all', label: 'All' },
-    { key: 'mine', label: 'Mine' },
-    { key: 'todo', label: 'To Do' },
-    { key: 'in-progress', label: 'In Progress' },
-    { key: 'done', label: 'Done' },
-  ]
-
 
   function renderTask(task) {
     const taskDoctorIds = Array.isArray(task.doctorIds)
@@ -104,14 +89,9 @@ async function handleDelete(id) {
 
     return (
       <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
-<div className="task-body">
+        <div className="task-body">
           <div className="task-title">{task.title}</div>
           <div className="task-meta">
-            {task.category && (
-              <span className={`task-cat-badge task-cat-${task.category}`}>
-                {task.category.charAt(0).toUpperCase() + task.category.slice(1)}
-              </span>
-            )}
             {doctors.map(dr => (
               <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
             ))}
@@ -176,59 +156,61 @@ async function handleDelete(id) {
     )
   }
 
-  const hasAny = filtered.length > 0
+  function renderStatusGroup(statusKey, statusTasks) {
+    if (statusTasks.length === 0) return null
+    return (
+      <div key={statusKey} className="task-cat-status-group">
+        <div className="task-cat-status-label">
+          <span className={`task-cat-status-dot dot-${statusKey.replace('-', '')}`} />
+          {STATUS_LABELS[statusKey]}
+        </div>
+        <ul className="task-list">
+          {statusTasks.map(renderTask)}
+        </ul>
+      </div>
+    )
+  }
 
   return (
     <div className="page">
-      <div className="tbl-tools" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {filters.map(f => (
-            <button
-              key={f.key}
-              className={`ftab${filter === f.key ? ' active' : ''}`}
-              onClick={() => setFilter(f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+      <div className="tbl-tools" style={{ marginBottom: 16 }}>
+        <div />
         <button className="btn-add" onClick={() => setEditId(null)}>+ Add Task</button>
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-        {CATEGORY_FILTERS.map(f => (
-          <button
-            key={f.key}
-            className={`ftab ftab-cat ftab-cat-${f.key}${categoryFilter === f.key ? ' active' : ''}`}
-            onClick={() => setCategoryFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
 
-      {!hasAny ? (
-        <div className="task-empty">
-          {filter === 'mine' ? 'No tasks assigned to you.'
-            : filter === 'done' ? 'No completed tasks.'
-            : filter === 'todo' ? 'No to-do tasks.'
-            : filter === 'in-progress' ? 'No tasks in progress.'
-            : 'No tasks yet. Click "+ Add Task" to get started.'}
-        </div>
+      {tasks.length === 0 ? (
+        <div className="task-empty">No tasks yet. Click "+ Add Task" to get started.</div>
       ) : (
-        <div className="task-groups">
-          {groups.map(g => (
-            <div key={g.status} className="task-group">
-              <div className="task-group-header">
-                <span className={`task-status-badge ${STATUS_CLASSES[g.status]}`}>{g.label}</span>
-                <span className="task-group-count">{g.tasks.length}</span>
+        <div className="task-cat-sections">
+          {catSections.map(({ key, label, icon, colorClass, catTasks, byStatus }) => (
+            catTasks.length === 0 ? null : (
+              <div key={key} className="task-cat-section">
+                <div className={`task-cat-header task-cat-header-${colorClass}`}>
+                  <span className="task-cat-header-icon">{icon}</span>
+                  <span className={`task-cat-header-label label-${colorClass}`}>{label}</span>
+                  <span className={`task-cat-header-count count-${colorClass}`}>{catTasks.length}</span>
+                </div>
+                <div className="task-cat-body">
+                  {renderStatusGroup('todo', byStatus['todo'])}
+                  {renderStatusGroup('in-progress', byStatus['in-progress'])}
+                  {renderStatusGroup('done', byStatus['done'])}
+                </div>
               </div>
-              {g.tasks.length > 0 && (
-                <ul className="task-list">
-                  {g.tasks.map(renderTask)}
-                </ul>
-              )}
-            </div>
+            )
           ))}
+          {uncategorized.length > 0 && (
+            <div className="task-cat-section">
+              <div className="task-cat-header task-cat-header-none">
+                <span className="task-cat-header-label label-none">Uncategorized</span>
+                <span className="task-cat-header-count count-none">{uncategorized.length}</span>
+              </div>
+              <div className="task-cat-body">
+                {['todo', 'in-progress', 'done'].map(s =>
+                  renderStatusGroup(s, uncategorized.filter(t => getStatus(t) === s))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

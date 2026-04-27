@@ -340,12 +340,13 @@ function AptsCard({ apts, onClick }) {
   )
 }
 
-function TasksCard({ tasks, onClick }) {
-  const todoCt = tasks.filter(t => getTaskStatus(t) === 'todo').length
-  const inProgCt = tasks.filter(t => getTaskStatus(t) === 'in-progress').length
-  const doneCt = tasks.filter(t => getTaskStatus(t) === 'done').length
-  const overdueCt = tasks.filter(t => getTaskStatus(t) !== 'done' && isOverdue(t.dueDate)).length
+const DASH_CATS = [
+  { key: 'medical',  label: 'Medical',  icon: '💊', num: 'blue',  dim: 'var(--blue-dim)',  border: 'var(--blue-border)',  color: 'var(--blue)'  },
+  { key: 'house',    label: 'House',    icon: '🏠', num: 'amber', dim: 'var(--amber-dim)', border: 'var(--amber-border)', color: 'var(--amber)' },
+  { key: 'finances', label: 'Finances', icon: '💰', num: 'green', dim: 'var(--green-dim)', border: 'var(--green-border)', color: 'var(--green)' },
+]
 
+function TasksCard({ tasks, onClick }) {
   const activeTasks = tasks
     .filter(t => getTaskStatus(t) !== 'done')
     .sort((a, b) => {
@@ -367,31 +368,24 @@ function TasksCard({ tasks, onClick }) {
           <div className="dash-empty"><span className="dash-empty-icon">✓</span><span className="dash-empty-text">No tasks yet</span></div>
         ) : (
           <>
-            <div className="dash-task-stats">
-              <div className="dash-task-stat">
-                <div className="dash-task-num">{todoCt}</div>
-                <div className="dash-task-lbl">To Do</div>
-              </div>
-              <div className="dash-task-stat">
-                <div className="dash-task-num">{inProgCt}</div>
-                <div className="dash-task-lbl">In Progress</div>
-              </div>
-              <div className="dash-task-stat">
-                <div className="dash-task-num">{doneCt}</div>
-                <div className="dash-task-lbl">Done</div>
-              </div>
-              <div className="dash-task-stat">
-                <div className={`dash-task-num${overdueCt > 0 ? ' overdue-num' : ''}`}>{overdueCt}</div>
-                <div className="dash-task-lbl">Overdue</div>
-              </div>
+            <div className="dash-task-stats dash-cat-stats">
+              {DASH_CATS.map(({ key, label, icon, dim, border, color }) => {
+                const activeCt = tasks.filter(t => (t.category || '') === key && getTaskStatus(t) !== 'done').length
+                return (
+                  <div key={key} className="dash-task-stat" style={{ background: dim, borderColor: border }}>
+                    <div className="dash-task-num" style={{ color: activeCt > 0 ? color : 'var(--text3)' }}>{activeCt}</div>
+                    <div className="dash-task-lbl">{icon} {label}</div>
+                  </div>
+                )
+              })}
             </div>
             {activeTasks.length > 0 && (
               <div className="dash-desktop">
                 <ul className="dash-item-list">
                   {activeTasks.map(t => {
                     const ov = isOverdue(t.dueDate)
-                    const s = getTaskStatus(t)
                     const due = fmtShortDate(t.dueDate)
+                    const cat = DASH_CATS.find(c => c.key === t.category)
                     return (
                       <li key={t.id} className="dash-task-row">
                         <div className="dash-task-row-main">
@@ -402,9 +396,11 @@ function TasksCard({ tasks, onClick }) {
                             </span>
                           )}
                         </div>
-                        <span className={`dash-status-chip dash-chip-${ov ? 'urgent' : s === 'in-progress' ? 'inprog' : 'todo'}`}>
-                          {ov ? 'Overdue' : s === 'in-progress' ? 'In progress' : 'To do'}
-                        </span>
+                        {cat && (
+                          <span className="dash-status-chip" style={{ background: cat.dim, color: cat.color, borderColor: cat.border }}>
+                            {cat.icon}
+                          </span>
+                        )}
                       </li>
                     )
                   })}
