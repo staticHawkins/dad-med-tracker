@@ -20,6 +20,25 @@ function fmtShortDate(dueDate) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function getWeekRange() {
+  const now = new Date()
+  const diff = now.getDay() === 0 ? -6 : 1 - now.getDay()
+  const start = new Date(now)
+  start.setDate(now.getDate() + diff)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+function fmtWeekRange(start, end) {
+  const opts = { month: 'short', day: 'numeric' }
+  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
+}
+
 // ── Summary alert bar (desktop only) ────────────────────────────────────────
 
 function SummaryBar({ meds, apts, tasks }) {
@@ -66,6 +85,109 @@ function SummaryBar({ meds, apts, tasks }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── This Week card ───────────────────────────────────────────────────────────
+
+function WeekCard({ meds, apts, tasks }) {
+  const { start, end } = getWeekRange()
+
+  const weekApts = [...apts]
+    .filter(a => { const d = new Date(a.dateTime); return d >= start && d <= end })
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+
+  const weekTasks = tasks.filter(t => {
+    if (getTaskStatus(t) === 'done') return false
+    if (!t.dueDate) return false
+    const [y, m, d] = t.dueDate.split('-').map(Number)
+    return new Date(y, m - 1, d) <= end
+  })
+  const overdueTasksCt = weekTasks.filter(t => isOverdue(t.dueDate)).length
+  const inProgTasksCt  = weekTasks.filter(t => !isOverdue(t.dueDate) && getTaskStatus(t) === 'in-progress').length
+  const todoTasksCt    = weekTasks.filter(t => !isOverdue(t.dueDate) && getTaskStatus(t) === 'todo').length
+
+  const urgentMeds = meds.filter(m => supplyStatus(m) === 'urgent')
+  const soonMeds   = meds.filter(m => supplyStatus(m) === 'soon')
+  const weekMeds   = urgentMeds.length + soonMeds.length
+
+  const aptChips = weekApts.slice(0, 3).map(a => {
+    const d = new Date(a.dateTime)
+    return `${DAY_ABBR[d.getDay()]} ${d.getDate()}`
+  })
+
+  return (
+    <div className="dash-card dash-card-week">
+      <div className="dash-card-header">
+        <span className="dash-card-icon">🗓</span>
+        <span className="dash-card-title">This Week</span>
+        <span className="dash-week-range">{fmtWeekRange(start, end)}</span>
+      </div>
+      <div className="dash-week-body">
+
+        <div className="dash-week-section">
+          <div className="dash-week-sec-label" style={{color:'var(--amber)'}}>
+            <span className="dash-week-dot" style={{background:'var(--amber)'}} />
+            Appointments
+          </div>
+          <div className={`dash-week-num${weekApts.length === 0 ? ' dash-week-num-zero' : ''}`}
+               style={weekApts.length > 0 ? {color:'var(--amber)'} : undefined}>
+            {weekApts.length}
+          </div>
+          <div className={`dash-week-sub${weekApts.length === 0 ? ' dash-week-sub-zero' : ''}`}>
+            {weekApts.length === 0 ? 'nothing scheduled' : 'this week'}
+          </div>
+          {aptChips.length > 0 && (
+            <div className="dash-week-chips">
+              {aptChips.map(c => <span key={c} className="dash-status-chip dash-chip-soon">{c}</span>)}
+              {weekApts.length > 3 && <span className="dash-status-chip dash-chip-todo">+{weekApts.length - 3} more</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="dash-week-section">
+          <div className="dash-week-sec-label" style={{color:'var(--violet)'}}>
+            <span className="dash-week-dot" style={{background:'var(--violet)'}} />
+            Tasks Due
+          </div>
+          <div className={`dash-week-num${weekTasks.length === 0 ? ' dash-week-num-zero' : ''}`}
+               style={weekTasks.length > 0 ? {color:'var(--violet)'} : undefined}>
+            {weekTasks.length}
+          </div>
+          <div className={`dash-week-sub${weekTasks.length === 0 ? ' dash-week-sub-zero' : ''}`}>
+            {weekTasks.length === 0 ? 'all caught up' : 'due this week'}
+          </div>
+          {weekTasks.length > 0 && (
+            <div className="dash-week-chips">
+              {overdueTasksCt > 0 && <span className="dash-status-chip dash-chip-urgent">{overdueTasksCt} overdue</span>}
+              {inProgTasksCt  > 0 && <span className="dash-status-chip dash-chip-inprog">{inProgTasksCt} in progress</span>}
+              {todoTasksCt    > 0 && <span className="dash-status-chip dash-chip-todo">{todoTasksCt} to do</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="dash-week-section">
+          <div className="dash-week-sec-label" style={{color:'var(--blue)'}}>
+            <span className="dash-week-dot" style={{background:'var(--blue)'}} />
+            Meds to Refill
+          </div>
+          <div className={`dash-week-num${weekMeds === 0 ? ' dash-week-num-zero' : ''}`}
+               style={weekMeds === 0 ? undefined : {color: urgentMeds.length > 0 ? 'var(--red)' : 'var(--blue)'}}>
+            {weekMeds}
+          </div>
+          <div className={`dash-week-sub${weekMeds === 0 ? ' dash-week-sub-zero' : ''}`}>
+            {weekMeds === 0 ? 'supply looks good' : 'need attention'}
+          </div>
+          {weekMeds > 0 && (
+            <div className="dash-week-chips">
+              {urgentMeds.length > 0 && <span className="dash-status-chip dash-chip-urgent">{urgentMeds.length} urgent</span>}
+              {soonMeds.length   > 0 && <span className="dash-status-chip dash-chip-soon">{soonMeds.length} soon</span>}
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   )
 }
@@ -312,6 +434,9 @@ export default function DashboardView({ meds, apts, tasks, milestones, phases, o
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
+        <div className="dash-card-week-wrap">
+          <WeekCard meds={meds} apts={apts} tasks={tasks} />
+        </div>
         <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />

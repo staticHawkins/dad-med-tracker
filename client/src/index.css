@@ -1142,6 +1142,35 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .dash-card-apts::before{background:var(--amber)}
 .dash-card-tasks::before{background:var(--violet)}
 .dash-card-care::before{background:var(--teal)}
+.dash-card-week{cursor:default}
+.dash-card-week:hover{transform:none;box-shadow:none;background:var(--panel);border-color:var(--border)}
+.dash-card-week::before{background:linear-gradient(to right,var(--amber) 0%,var(--violet) 50%,var(--blue) 100%)}
+.dash-card-week-wrap{grid-column:1/-1}
+.dash-week-range{
+  font-size:11px;font-family:var(--ffm);color:var(--text3);
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:6px;padding:3px 9px;white-space:nowrap;
+}
+.dash-week-body{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border:1px solid var(--border2);border-radius:10px;overflow:hidden;
+}
+.dash-week-section{padding:16px 20px;display:flex;flex-direction:column;gap:6px}
+.dash-week-section+.dash-week-section{border-left:1px solid var(--border2)}
+.dash-week-sec-label{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px}
+.dash-week-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dash-week-num{font-size:42px;font-weight:700;letter-spacing:-1px;line-height:1;font-family:var(--ffm)}
+.dash-week-num-zero{color:var(--text3) !important}
+.dash-week-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.dash-week-sub-zero{font-style:italic}
+.dash-week-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+@media(max-width:640px){
+  .dash-week-section{padding:11px 10px;gap:4px}
+  .dash-week-num{font-size:30px;letter-spacing:-.5px}
+  .dash-week-sub{font-size:10px;margin-top:1px}
+  .dash-week-chips{display:none}
+  .dash-week-sec-label{font-size:9px}
+}
 
 .dash-card-header{display:flex;align-items:center;gap:8px}
 .dash-card-icon{font-size:16px;line-height:1;flex-shrink:0}
