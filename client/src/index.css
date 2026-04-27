@@ -745,19 +745,8 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .subtask-row:hover{background:var(--panel2)}
 .subtask-row.subtask-done{opacity:.55}
 .subtask-row.subtask-done .subtask-title{text-decoration:line-through;color:var(--text2)}
-.subtask-check{
-  flex-shrink:0;width:22px;height:22px;border-radius:50%;
-  border:2px solid var(--border2);background:transparent;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:12px;color:var(--green);
-  transition:all .12s;
-}
-.subtask-check:hover{border-color:var(--green);background:var(--green-dim)}
-.subtask-check.subtask-check-done{background:var(--green-dim);border-color:var(--green-border)}
-.subtask-check.subtask-check-inprog{border-color:var(--violet)}
-.subtask-check.subtask-check-inprog:hover{border-color:var(--green);background:var(--green-dim)}
-.subtask-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);cursor:pointer}
-.subtask-title:hover{color:var(--blue)}
+.subtask-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.subtask-row:hover .subtask-title{color:var(--blue)}
 .subtask-due{font-size:11px;color:var(--text3);flex-shrink:0}
 .subtask-due.overdue{color:var(--red);font-weight:600}
 
