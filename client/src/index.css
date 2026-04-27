@@ -840,14 +840,28 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .parent-picker-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
 .parent-picker-empty{padding:10px 12px;font-size:12px;color:var(--text3)}
 
-/* ── Parent breadcrumb in task edit modal ───────────────────────────────── */
+/* ── Parent breadcrumb + change parent in task edit modal ───────────────── */
+.task-parent-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .task-parent-crumb{
   background:none;border:none;padding:0;
   font-size:12px;color:var(--text3);cursor:pointer;
-  margin-bottom:8px;display:inline-flex;align-items:center;gap:4px;
-  transition:color .12s;
+  display:inline-flex;align-items:center;gap:4px;flex:1;min-width:0;
+  transition:color .12s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .task-parent-crumb:hover{color:var(--blue)}
+.task-parent-change-btn{
+  background:none;border:1px solid var(--border2);border-radius:6px;
+  padding:3px 8px;font-size:11px;font-weight:600;color:var(--text3);
+  cursor:pointer;flex-shrink:0;transition:all .12s;white-space:nowrap;
+}
+.task-parent-change-btn:hover,.task-parent-change-btn.active{
+  border-color:var(--blue);color:var(--blue);background:var(--blue-dim);
+}
+.link-picker-item.link-picker-item-selected{background:var(--blue-dim)}
+.link-picker-item.link-picker-remove{
+  color:var(--red);border-top:1px solid var(--border);margin-top:2px;
+}
+.link-picker-item.link-picker-remove:hover{background:color-mix(in srgb,var(--red) 10%,transparent)}
 
 /* ── Task categories ─────────────────────────────────────────────────────── */
 .task-cat-badge{

@@ -111,10 +111,15 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
   const [showLinkPicker, setShowLinkPicker] = useState(false)
   const [linkSearch, setLinkSearch] = useState('')
 
+  // Edit mode: change parent picker (only for subtasks)
+  const [showParentPicker, setShowParentPicker] = useState(false)
+  const [parentPickerEditSearch, setParentPickerEditSearch] = useState('')
+
   const doctorDropRef = useRef(null)
   const commentsEndRef = useRef(null)
   const parentPickerRef = useRef(null)
   const linkPickerRef = useRef(null)
+  const parentPickerEditRef = useRef(null)
   const saveTimer  = useRef(null)
   const savedTimer = useRef(null)
   const isDirty    = useRef(false)
@@ -145,6 +150,12 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     ? linkableTasks.filter(t => t.title.toLowerCase().includes(linkSearch.toLowerCase()))
     : linkableTasks
 
+  // Root tasks available to be chosen as a new parent (edit mode, for subtasks)
+  const changeableParents = tasks.filter(t => !t.parentId && t.id !== editId)
+  const filteredChangeableParents = parentPickerEditSearch
+    ? changeableParents.filter(t => t.title.toLowerCase().includes(parentPickerEditSearch.toLowerCase()))
+    : changeableParents
+
   useEffect(() => {
     isDirty.current = false
     if (!editId) {
@@ -158,6 +169,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     }
     setShowLinkPicker(false)
     setLinkSearch('')
+    setShowParentPicker(false)
+    setParentPickerEditSearch('')
     if (task) setForm({
       title: task.title || '',
       description: task.description || '',
@@ -176,12 +189,13 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
         if (editingField) { cancelEdit(); return }
         if (parentPickerOpen) { setParentPickerOpen(false); return }
         if (showLinkPicker) { setShowLinkPicker(false); return }
+        if (showParentPicker) { setShowParentPicker(false); return }
         onClose()
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, editingField, parentPickerOpen, showLinkPicker])
+  }, [onClose, editingField, parentPickerOpen, showLinkPicker, showParentPicker])
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -212,6 +226,16 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showLinkPicker])
+
+  useEffect(() => {
+    if (!showParentPicker) return
+    function handleClick(e) {
+      if (parentPickerEditRef.current && !parentPickerEditRef.current.contains(e.target))
+        setShowParentPicker(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showParentPicker])
 
   useEffect(() => {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -296,6 +320,22 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     try {
       await updateTaskFields(linkedTask.id, { parentId: editId })
     } catch { alert('Failed to link task.') }
+  }
+
+  async function handleChangeParent(newParentId) {
+    setShowParentPicker(false)
+    setParentPickerEditSearch('')
+    try {
+      await updateTaskFields(editId, { parentId: newParentId })
+    } catch { alert('Failed to update parent task.') }
+  }
+
+  async function handleRemoveParent() {
+    setShowParentPicker(false)
+    setParentPickerEditSearch('')
+    try {
+      await updateTaskFields(editId, { parentId: null })
+    } catch { alert('Failed to remove parent task.') }
   }
 
   async function handlePostComment() {
@@ -412,7 +452,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     </div>
   )
 
-  const subtasksSection = isEditing && (
+  const subtasksSection = isEditing && !task?.parentId && (
     <div className="task-subtasks-section">
       <div className="sheet-section" style={{ marginTop: 20 }}>
         Subtasks
@@ -528,15 +568,53 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
   if (isEditing) {
     const editContent = (
       <>
-          {/* Parent breadcrumb */}
+          {/* Parent breadcrumb + change parent picker */}
           {parentTask && (
-            <button
-              type="button"
-              className="task-parent-crumb"
-              onClick={() => onNavigate?.(parentTask.id)}
-            >
-              ← Part of: {parentTask.title}
-            </button>
+            <>
+              <div className="task-parent-row">
+                <button type="button" className="task-parent-crumb" onClick={() => onNavigate?.(parentTask.id)}>
+                  ← Part of: {parentTask.title}
+                </button>
+                <button
+                  type="button"
+                  className={`task-parent-change-btn${showParentPicker ? ' active' : ''}`}
+                  onClick={() => { setShowParentPicker(o => !o); setParentPickerEditSearch('') }}
+                >
+                  Change parent
+                </button>
+              </div>
+              {showParentPicker && (
+                <div className="link-picker-wrap" ref={parentPickerEditRef} style={{ marginBottom: 8 }}>
+                  <input
+                    className="link-picker-search"
+                    placeholder="Search tasks…"
+                    value={parentPickerEditSearch}
+                    onChange={e => setParentPickerEditSearch(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="link-picker-list">
+                    {filteredChangeableParents.map(t => (
+                      <div
+                        key={t.id}
+                        className={`link-picker-item${task?.parentId === t.id ? ' link-picker-item-selected' : ''}`}
+                        onClick={() => handleChangeParent(t.id)}
+                      >
+                        <span className="link-picker-title">{t.title}</span>
+                        {t.category && (
+                          <span className={`task-cat-badge task-cat-${t.category}`}>{CATEGORY_LABELS[t.category]}</span>
+                        )}
+                      </div>
+                    ))}
+                    {filteredChangeableParents.length === 0 && (
+                      <div className="link-picker-empty">No tasks found</div>
+                    )}
+                    <div className="link-picker-item link-picker-remove" onClick={handleRemoveParent}>
+                      Remove parent (make root task)
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Title + date — mobile shows inline rows; desktop shows full header */}
