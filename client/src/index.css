@@ -738,21 +738,24 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   display:flex;flex-direction:column;gap:0;
 }
 .subtask-row{
-  display:flex;align-items:center;gap:7px;
-  padding:6px 10px;border-radius:7px;cursor:pointer;
-  font-size:12px;color:var(--text2);transition:background .1s;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;min-height:44px;border-radius:8px;cursor:default;
+  font-size:13px;transition:background .1s;
 }
 .subtask-row:hover{background:var(--panel2)}
-.subtask-row.subtask-done{opacity:.5}
-.subtask-row.subtask-done .subtask-title{text-decoration:line-through}
-.subtask-status-dot{
-  width:14px;height:14px;border-radius:50%;flex-shrink:0;
-  border:none;padding:0;cursor:pointer;transition:transform .1s,opacity .1s;
+.subtask-row.subtask-done{opacity:.55}
+.subtask-row.subtask-done .subtask-title{text-decoration:line-through;color:var(--text2)}
+.subtask-check{
+  flex-shrink:0;width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--border2);background:transparent;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;color:var(--green);
+  transition:all .12s;
 }
-.subtask-status-dot:hover{transform:scale(1.25);opacity:.8}
-.subtask-dot-todo{background:rgba(139,143,168,.45);border:1.5px solid rgba(139,143,168,.6)}
-.subtask-dot-inprogress{background:var(--violet)}
-.subtask-dot-done{background:var(--green)}
+.subtask-check:hover{border-color:var(--green);background:var(--green-dim)}
+.subtask-check.subtask-check-done{background:var(--green-dim);border-color:var(--green-border)}
+.subtask-check.subtask-check-inprog{border-color:var(--violet)}
+.subtask-check.subtask-check-inprog:hover{border-color:var(--green);background:var(--green-dim)}
 .subtask-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);cursor:pointer}
 .subtask-title:hover{color:var(--blue)}
 .subtask-due{font-size:11px;color:var(--text3);flex-shrink:0}

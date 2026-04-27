@@ -118,9 +118,9 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     const status = getStatus(child)
     const overdue = status !== 'done' && isOverdue(child.dueDate)
 
-    function cycleStatus(e) {
+    function toggleDone(e) {
       e.stopPropagation()
-      const next = status === 'done' ? 'todo' : status === 'in-progress' ? 'done' : 'in-progress'
+      const next = status === 'done' ? 'todo' : 'done'
       updateTaskStatus(child, next).catch(() => alert('Failed to update.'))
     }
 
@@ -131,10 +131,12 @@ export default function TasksView({ tasks, careTeam, users, user }) {
       >
         <button
           type="button"
-          className={`subtask-status-dot subtask-dot-${status.replace('-', '')}`}
-          title={`Status: ${STATUS_LABELS[status]} — click to advance`}
-          onClick={cycleStatus}
-        />
+          className={`subtask-check${status === 'done' ? ' subtask-check-done' : status === 'in-progress' ? ' subtask-check-inprog' : ''}`}
+          onClick={toggleDone}
+          aria-label={status === 'done' ? 'Mark incomplete' : 'Mark complete'}
+        >
+          {status === 'done' && '✓'}
+        </button>
         <span className="subtask-title" onClick={() => setEditId(child.id)}>{child.title}</span>
         {child.dueDate && (
           <span className={`subtask-due${overdue ? ' overdue' : ''}`}>
