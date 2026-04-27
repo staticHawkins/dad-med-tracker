@@ -64,7 +64,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--text);min-height:100
 .topbar-user{font-size:12px;color:var(--text3);font-family:var(--ffm)}
 .btn-add{
   font-family:var(--ff);font-size:13px;font-weight:600;
-  background:var(--green);color:#071a0e;
+  background:var(--blue);color:#fff;
   border:none;border-radius:7px;padding:7px 16px;cursor:pointer;
   display:flex;align-items:center;gap:5px;transition:opacity .15s,transform .1s;
   white-space:nowrap;flex-shrink:0;
@@ -299,7 +299,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .mf{display:flex;justify-content:flex-end;gap:8px;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)}
 .btn-cx{font-family:var(--ff);font-size:13px;font-weight:500;padding:8px 15px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .btn-cx:hover{background:var(--panel2)}
-.btn-sv{font-family:var(--ff);font-size:13px;font-weight:600;padding:8px 20px;border-radius:7px;border:none;background:var(--green);color:#071a0e;cursor:pointer;transition:opacity .15s}
+.btn-sv{font-family:var(--ff);font-size:13px;font-weight:600;padding:8px 20px;border-radius:7px;border:none;background:var(--blue);color:#fff;cursor:pointer;transition:opacity .15s}
 .btn-sv:hover{opacity:.87}
 
 /* section divider for modal */
@@ -316,7 +316,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .ptab.active{color:var(--text)}
 .ptab.active::after{
   content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;
-  background:var(--green);border-radius:2px 2px 0 0;
+  background:var(--blue);border-radius:2px 2px 0 0;
 }
 
 /* ── HERO CARD ── */
@@ -937,7 +937,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .btn-call{
   flex:1;font-family:var(--ff);font-size:13px;font-weight:600;
   padding:10px 16px;border-radius:7px;
-  background:var(--green);color:#071a0e;
+  background:var(--blue);color:#fff;
   border:none;cursor:pointer;text-decoration:none;
   display:flex;align-items:center;justify-content:center;
   transition:opacity .15s;
