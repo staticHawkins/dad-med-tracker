@@ -632,9 +632,8 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 /* ── TASKS ── */
 .task-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
 .task-row{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:12px;border:1px solid var(--border);border-radius:10px;
-  background:var(--panel);transition:background .1s;
+  border:1px solid var(--border);border-radius:10px;
+  background:var(--panel);transition:background .1s;overflow:hidden;
 }
 .task-row:hover{background:var(--panel2)}
 .task-row.task-done{opacity:.55}
@@ -720,6 +719,135 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 }
 .task-done-toggle:hover{color:var(--text2)}
 .task-done-caret{font-size:8px;margin-left:2px}
+
+/* ── Task row inner layout (wraps body+actions so subtasks can sit below) ── */
+.task-row-inner{display:flex;align-items:flex-start;gap:10px;padding:12px}
+
+/* ── Subtask toggle button in task meta ─────────────────────────────────── */
+.subtask-toggle-btn{
+  background:none;border:none;padding:0 2px;cursor:pointer;
+  font-size:11px;font-weight:600;color:var(--blue);
+  transition:color .12s;white-space:nowrap;
+}
+.subtask-toggle-btn:hover{color:var(--text)}
+
+/* ── Subtask rows (inline under parent in task list) ────────────────────── */
+.subtask-rows{
+  list-style:none;margin:0;padding:0 0 6px 20px;
+  border-left:2px solid var(--border2);margin-left:20px;margin-right:4px;
+  display:flex;flex-direction:column;gap:0;
+}
+.subtask-row{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 10px;border-radius:7px;cursor:pointer;
+  font-size:12px;color:var(--text2);transition:background .1s;
+}
+.subtask-row:hover{background:var(--panel2)}
+.subtask-row.subtask-done{opacity:.5}
+.subtask-row.subtask-done .subtask-title{text-decoration:line-through}
+.subtask-status-dot{
+  width:7px;height:7px;border-radius:50%;flex-shrink:0;
+}
+.subtask-dot-todo{background:rgba(139,143,168,.45);border:1.5px solid rgba(139,143,168,.6)}
+.subtask-dot-inprogress{background:var(--violet)}
+.subtask-dot-done{background:var(--green)}
+.subtask-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.subtask-due{font-size:11px;color:var(--text3);flex-shrink:0}
+.subtask-due.overdue{color:var(--red);font-weight:600}
+
+/* ── Subtasks section inside TaskModal ──────────────────────────────────── */
+.subtasks-count-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;border-radius:20px;
+  font-size:10px;font-weight:700;margin-left:6px;
+  background:var(--panel2);color:var(--text2);border:1px solid var(--border);
+}
+.task-subtask-list{list-style:none;margin:6px 0 8px;padding:0;display:flex;flex-direction:column;gap:2px}
+.task-subtask-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);transition:background .1s;
+}
+.task-subtask-item:hover{background:var(--panel2)}
+.task-subtask-item.subtask-item-done{opacity:.5}
+.task-subtask-item.subtask-item-done .task-subtask-title{text-decoration:line-through}
+.subtask-modal-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.subtask-modal-dot-todo{background:rgba(139,143,168,.45);border:1.5px solid rgba(139,143,168,.6)}
+.subtask-modal-dot-inprogress{background:var(--violet)}
+.subtask-modal-dot-done{background:var(--green)}
+.task-subtask-title{flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-subtask-due{font-size:11px;color:var(--text3);flex-shrink:0}
+.subtask-add-row{display:flex;gap:6px;margin-top:2px}
+.subtask-add-btn{
+  background:none;border:1.5px dashed var(--border2);border-radius:7px;
+  padding:6px 12px;font-size:12px;font-weight:600;color:var(--text3);
+  cursor:pointer;flex:1;text-align:left;transition:all .12s;
+}
+.subtask-add-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
+.subtask-link-btn{
+  background:none;border:1.5px solid var(--border2);border-radius:7px;
+  padding:6px 12px;font-size:12px;font-weight:600;color:var(--text3);
+  cursor:pointer;flex:1;text-align:center;transition:all .12s;white-space:nowrap;
+}
+.subtask-link-btn:hover,.subtask-link-btn.active{border-color:var(--violet);color:var(--violet);background:color-mix(in srgb,var(--violet) 10%,transparent)}
+
+/* ── Link-existing picker (edit mode subtasks section) ──────────────────── */
+.link-picker-wrap{
+  margin-top:6px;border:1px solid var(--border);border-radius:9px;
+  overflow:hidden;background:var(--panel);
+}
+.link-picker-search{
+  width:100%;box-sizing:border-box;padding:8px 12px;border:none;border-bottom:1px solid var(--border);
+  background:transparent;color:var(--text);font-size:13px;outline:none;
+}
+.link-picker-list{max-height:180px;overflow-y:auto}
+.link-picker-item{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;
+  font-size:13px;transition:background .1s;
+}
+.link-picker-item:hover{background:var(--panel2)}
+.link-picker-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.link-picker-empty{padding:10px 12px;font-size:12px;color:var(--text3)}
+
+/* ── Parent picker (add mode, subtask type) ─────────────────────────────── */
+.parent-picker-wrap{position:relative}
+.parent-picker-trigger{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:6px;
+  padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;
+  background:transparent;color:var(--text2);font-size:13px;cursor:pointer;
+  transition:border-color .12s;text-align:left;
+}
+.parent-picker-trigger:hover,.parent-picker-trigger:focus{border-color:var(--blue);outline:none}
+.parent-picker-trigger.has-value{color:var(--text)}
+.parent-picker-value{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.parent-picker-caret{font-size:9px;flex-shrink:0;color:var(--text3)}
+.parent-picker-dropdown{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;
+  border:1px solid var(--border);border-radius:9px;overflow:hidden;
+  background:var(--panel);box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
+.parent-picker-search{
+  width:100%;box-sizing:border-box;padding:8px 12px;border:none;border-bottom:1px solid var(--border);
+  background:transparent;color:var(--text);font-size:13px;outline:none;
+}
+.parent-picker-list{max-height:200px;overflow-y:auto}
+.parent-picker-item{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;
+  font-size:13px;transition:background .1s;
+}
+.parent-picker-item:hover{background:var(--panel2)}
+.parent-picker-item.selected{background:var(--blue-dim)}
+.parent-picker-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.parent-picker-empty{padding:10px 12px;font-size:12px;color:var(--text3)}
+
+/* ── Parent breadcrumb in task edit modal ───────────────────────────────── */
+.task-parent-crumb{
+  background:none;border:none;padding:0;
+  font-size:12px;color:var(--text3);cursor:pointer;
+  margin-bottom:8px;display:inline-flex;align-items:center;gap:4px;
+  transition:color .12s;
+}
+.task-parent-crumb:hover{color:var(--blue)}
 
 /* ── Task categories ─────────────────────────────────────────────────────── */
 .task-cat-badge{

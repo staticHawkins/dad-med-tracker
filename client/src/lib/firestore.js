@@ -252,6 +252,7 @@ export async function saveTask(fields, editId) {
     done: status === 'done',
     updatedAt: new Date().toISOString()
   }
+  if (fields.parentId) task.parentId = fields.parentId
   await setDoc(doc(db, 'tasks', task.id), task)
 }
 
@@ -262,8 +263,12 @@ export async function updateTaskFields(taskId, fields) {
   })
 }
 
-export async function delTask(id) {
-  await deleteDoc(doc(db, 'tasks', id))
+export async function delTask(id, allTasks = []) {
+  const childIds = allTasks.filter(t => t.parentId === id).map(t => t.id)
+  await Promise.all([
+    deleteDoc(doc(db, 'tasks', id)),
+    ...childIds.map(cid => deleteDoc(doc(db, 'tasks', cid)))
+  ])
 }
 
 export async function updateTaskAssignees(task, assigneeUids) {

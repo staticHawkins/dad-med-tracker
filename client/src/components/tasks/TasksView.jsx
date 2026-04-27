@@ -30,8 +30,10 @@ function isOverdue(dueDate) {
 
 export default function TasksView({ tasks, careTeam, users, user }) {
   const [editId, setEditId] = useState(undefined)
+  const [defaultParentId, setDefaultParentId] = useState(null)
   const [assignPopupId, setAssignPopupId] = useState(null)
   const [showDone, setShowDone] = useState({})
+  const [expandedTaskIds, setExpandedTaskIds] = useState(new Set())
   const assignPopupRef = useRef(null)
 
   useEffect(() => {
@@ -54,9 +56,19 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     return b.updatedAt?.localeCompare(a.updatedAt || '') || 0
   })
 
-  // Build category sections — each has status sub-groups
+  // Build children map and filter to root tasks only
+  const childrenByParentId = {}
+  sorted.forEach(t => {
+    if (t.parentId) {
+      if (!childrenByParentId[t.parentId]) childrenByParentId[t.parentId] = []
+      childrenByParentId[t.parentId].push(t)
+    }
+  })
+  const rootTasks = sorted.filter(t => !t.parentId)
+
+  // Build category sections from root tasks only
   const catSections = CATEGORIES.map(cat => {
-    const catTasks = sorted.filter(t => (t.category || '') === cat.key)
+    const catTasks = rootTasks.filter(t => (t.category || '') === cat.key)
     const byStatus = {
       todo:         catTasks.filter(t => getStatus(t) === 'todo'),
       'in-progress':catTasks.filter(t => getStatus(t) === 'in-progress'),
@@ -65,8 +77,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     return { ...cat, catTasks, byStatus }
   })
 
-  // Tasks with no category
-  const uncategorized = sorted.filter(t => !t.category)
+  const uncategorized = rootTasks.filter(t => !t.category)
 
   async function handleSetAssignee(e, task, uid) {
     e.stopPropagation()
@@ -76,8 +87,51 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this task?')) return
-    try { await delTask(id) } catch { alert('Failed to delete.') }
+    const children = childrenByParentId[id] || []
+    const msg = children.length > 0
+      ? `Delete this task and its ${children.length} subtask${children.length > 1 ? 's' : ''}?`
+      : 'Delete this task?'
+    if (!confirm(msg)) return
+    try { await delTask(id, tasks) } catch { alert('Failed to delete.') }
+  }
+
+  function handleNavigate(taskId) {
+    setEditId(taskId)
+  }
+
+  function handleAddSubtask(parentId) {
+    setDefaultParentId(parentId)
+    setEditId(null)
+  }
+
+  function toggleExpanded(taskId, e) {
+    e.stopPropagation()
+    setExpandedTaskIds(prev => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }
+
+  function renderSubtaskRow(child, isLast) {
+    const status = getStatus(child)
+    const overdue = status !== 'done' && isOverdue(child.dueDate)
+    return (
+      <li
+        key={child.id}
+        className={`subtask-row${status === 'done' ? ' subtask-done' : ''}${isLast ? ' subtask-last' : ''}`}
+        onClick={() => setEditId(child.id)}
+      >
+        <span className={`subtask-status-dot subtask-dot-${status.replace('-', '')}`} />
+        <span className="subtask-title">{child.title}</span>
+        {child.dueDate && (
+          <span className={`subtask-due${overdue ? ' overdue' : ''}`}>
+            {overdue ? '⚠ ' : ''}{formatDue(child.dueDate)}
+          </span>
+        )}
+      </li>
+    )
   }
 
   function renderTask(task) {
@@ -87,72 +141,89 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     const doctors = taskDoctorIds.map(id => doctorMap[id]).filter(Boolean)
     const overdue = getStatus(task) !== 'done' && isOverdue(task.dueDate)
     const status = getStatus(task)
+    const children = childrenByParentId[task.id] || []
+    const isExpanded = expandedTaskIds.has(task.id)
 
     return (
-      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
-        <div className="task-body">
-          <div className="task-title">{task.title}</div>
-          <div className="task-meta">
-            {doctors.map(dr => (
-              <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
-            ))}
-            {task.dueDate && (
-              <span className={`task-due${overdue ? ' overdue' : ''}`}>
-                {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}
-              </span>
-            )}
-            {(task.comments?.length > 0) && (
-              <span className="task-comment-count">💬 {task.comments.length}</span>
+      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} onClick={() => setEditId(task.id)} style={{ cursor: 'pointer', display: 'block', padding: 0, border: 'none' }}>
+        <div className="task-row-inner">
+          <div className="task-body">
+            <div className="task-title">{task.title}</div>
+            <div className="task-meta">
+              {doctors.map(dr => (
+                <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
+              ))}
+              {task.dueDate && (
+                <span className={`task-due${overdue ? ' overdue' : ''}`}>
+                  {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}
+                </span>
+              )}
+              {(task.comments?.length > 0) && (
+                <span className="task-comment-count">💬 {task.comments.length}</span>
+              )}
+              {children.length > 0 && (
+                <button
+                  className="subtask-toggle-btn"
+                  onClick={e => toggleExpanded(task.id, e)}
+                >
+                  {isExpanded ? '▼' : '▶'} {children.length} subtask{children.length > 1 ? 's' : ''}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="task-actions">
+            {users.length > 0 && (
+              <div
+                className="task-quick-assign"
+                ref={assignPopupId === task.id ? assignPopupRef : null}
+              >
+                {(() => {
+                  const assigneeUid = task.assigneeUids?.[0]
+                  const assignee = assigneeUid ? userMap[assigneeUid] : null
+                  const initial = assignee ? (assignee.displayName || assignee.email)[0].toUpperCase() : null
+                  return (
+                    <>
+                      <button
+                        className={`quick-assign-btn${assignee ? ' assigned' : ''}`}
+                        onClick={e => { e.stopPropagation(); setAssignPopupId(assignPopupId === task.id ? null : task.id) }}
+                      >
+                        <span className="quick-assign-avatar">{initial ?? '+'}</span>
+                        {assignee ? (assignee.displayName || assignee.email).split(' ')[0] : 'Assign'}
+                      </button>
+                      {assignPopupId === task.id && (
+                        <div className="assign-popup">
+                          {users.map(u => (
+                            <div
+                              key={u.uid}
+                              className={`assign-popup-item${task.assigneeUids?.[0] === u.uid ? ' active' : ''}`}
+                              onClick={e => handleSetAssignee(e, task, u.uid)}
+                            >
+                              <span className="assign-popup-avatar">{(u.displayName || u.email)[0].toUpperCase()}</span>
+                              {(u.displayName || u.email).split(' ')[0]}
+                              {task.assigneeUids?.[0] === u.uid && <span className="assign-popup-check">✓</span>}
+                            </div>
+                          ))}
+                          <div
+                            className={`assign-popup-item assign-popup-none${!task.assigneeUids?.[0] ? ' active' : ''}`}
+                            onClick={e => handleSetAssignee(e, task, null)}
+                          >
+                            No one
+                            {!task.assigneeUids?.[0] && <span className="assign-popup-check">✓</span>}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
             )}
           </div>
         </div>
-        <div className="task-actions">
-          {users.length > 0 && (
-            <div
-              className="task-quick-assign"
-              ref={assignPopupId === task.id ? assignPopupRef : null}
-            >
-              {(() => {
-                const assigneeUid = task.assigneeUids?.[0]
-                const assignee = assigneeUid ? userMap[assigneeUid] : null
-                const initial = assignee ? (assignee.displayName || assignee.email)[0].toUpperCase() : null
-                return (
-                  <>
-                    <button
-                      className={`quick-assign-btn${assignee ? ' assigned' : ''}`}
-                      onClick={e => { e.stopPropagation(); setAssignPopupId(assignPopupId === task.id ? null : task.id) }}
-                    >
-                      <span className="quick-assign-avatar">{initial ?? '+'}</span>
-                      {assignee ? (assignee.displayName || assignee.email).split(' ')[0] : 'Assign'}
-                    </button>
-                    {assignPopupId === task.id && (
-                      <div className="assign-popup">
-                        {users.map(u => (
-                          <div
-                            key={u.uid}
-                            className={`assign-popup-item${assigneeUid === u.uid ? ' active' : ''}`}
-                            onClick={e => handleSetAssignee(e, task, u.uid)}
-                          >
-                            <span className="assign-popup-avatar">{(u.displayName || u.email)[0].toUpperCase()}</span>
-                            {(u.displayName || u.email).split(' ')[0]}
-                            {assigneeUid === u.uid && <span className="assign-popup-check">✓</span>}
-                          </div>
-                        ))}
-                        <div
-                          className={`assign-popup-item assign-popup-none${!assigneeUid ? ' active' : ''}`}
-                          onClick={e => handleSetAssignee(e, task, null)}
-                        >
-                          No one
-                          {!assigneeUid && <span className="assign-popup-check">✓</span>}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
-            </div>
-          )}
-        </div>
+        {isExpanded && children.length > 0 && (
+          <ul className="subtask-rows">
+            {children.map((child, i) => renderSubtaskRow(child, i === children.length - 1))}
+          </ul>
+        )}
       </li>
     )
   }
@@ -196,10 +267,10 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     <div className="page">
       <div className="tbl-tools" style={{ marginBottom: 16 }}>
         <div />
-        <button className="btn-add" onClick={() => setEditId(null)}>+ Add Task</button>
+        <button className="btn-add" onClick={() => { setDefaultParentId(null); setEditId(null) }}>+ Add Task</button>
       </div>
 
-      {tasks.length === 0 ? (
+      {rootTasks.length === 0 && tasks.length === 0 ? (
         <div className="task-empty">No tasks yet. Click "+ Add Task" to get started.</div>
       ) : (
         <div className="task-cat-sections">
@@ -242,7 +313,11 @@ export default function TasksView({ tasks, careTeam, users, user }) {
           users={users}
           user={user}
           editId={editId}
-          onClose={() => setEditId(undefined)}
+          defaultParentId={defaultParentId}
+          onClose={() => { setEditId(undefined); setDefaultParentId(null) }}
+          onNavigate={handleNavigate}
+          onAddSubtask={handleAddSubtask}
+          onDelete={handleDelete}
         />
       )}
     </div>

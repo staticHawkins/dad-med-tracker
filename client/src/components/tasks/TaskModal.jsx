@@ -88,7 +88,7 @@ function InlineTextarea({ field, value, placeholder = '', editCtx }) {
   )
 }
 
-export default function TaskModal({ tasks, careTeam, users, editId, onClose, user }) {
+export default function TaskModal({ tasks, careTeam, users, editId, defaultParentId, onClose, onNavigate, onAddSubtask, onDelete, user }) {
   const isMobile = useIsMobile()
   const [form, setForm] = useState(EMPTY)
   const [saveStatus, setSaveStatus] = useState('idle')
@@ -101,8 +101,20 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   const [editingField, setEditingField] = useState(null)
   const [draftValue, setDraftValue] = useState('')
 
+  // Add mode: parent task picker
+  const [taskType, setTaskType] = useState('root')
+  const [selectedParentId, setSelectedParentId] = useState(null)
+  const [parentSearch, setParentSearch] = useState('')
+  const [parentPickerOpen, setParentPickerOpen] = useState(false)
+
+  // Edit mode: link existing task picker
+  const [showLinkPicker, setShowLinkPicker] = useState(false)
+  const [linkSearch, setLinkSearch] = useState('')
+
   const doctorDropRef = useRef(null)
   const commentsEndRef = useRef(null)
+  const parentPickerRef = useRef(null)
+  const linkPickerRef = useRef(null)
   const saveTimer  = useRef(null)
   const savedTimer = useRef(null)
   const isDirty    = useRef(false)
@@ -112,10 +124,40 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   const comments = task?.comments || []
   const isEditing = !!editId
 
+  const parentTask = task?.parentId ? tasks.find(x => x.id === task.parentId) : null
+  const subtasks = isEditing ? tasks.filter(t => t.parentId === editId) : []
+
+  // Root tasks available for parent picker (add mode)
+  const availableParents = tasks.filter(t => !t.parentId)
+  const filteredParents = parentSearch
+    ? availableParents.filter(t => t.title.toLowerCase().includes(parentSearch.toLowerCase()))
+    : availableParents
+  const selectedParent = selectedParentId ? tasks.find(t => t.id === selectedParentId) : null
+
+  // Root tasks available to link as subtasks (edit mode) — exclude tasks that already have subtasks
+  const tasksWithChildren = new Set(tasks.filter(t => t.parentId).map(t => t.parentId))
+  const linkableTasks = tasks.filter(t =>
+    !t.parentId &&
+    t.id !== editId &&
+    !tasksWithChildren.has(t.id)
+  )
+  const filteredLinkable = linkSearch
+    ? linkableTasks.filter(t => t.title.toLowerCase().includes(linkSearch.toLowerCase()))
+    : linkableTasks
 
   useEffect(() => {
     isDirty.current = false
-    if (!editId) { setForm(EMPTY); return }
+    if (!editId) {
+      const parent = defaultParentId ? tasks.find(x => x.id === defaultParentId) : null
+      setForm({ ...EMPTY, category: parent?.category || '' })
+      setTaskType(defaultParentId ? 'subtask' : 'root')
+      setSelectedParentId(defaultParentId || null)
+      setParentSearch('')
+      setParentPickerOpen(false)
+      return
+    }
+    setShowLinkPicker(false)
+    setLinkSearch('')
     if (task) setForm({
       title: task.title || '',
       description: task.description || '',
@@ -126,18 +168,20 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       priority: task.priority || 'medium',
       category: task.category || ''
     })
-  }, [editId])
+  }, [editId, defaultParentId])
 
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') {
         if (editingField) { cancelEdit(); return }
+        if (parentPickerOpen) { setParentPickerOpen(false); return }
+        if (showLinkPicker) { setShowLinkPicker(false); return }
         onClose()
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, editingField])
+  }, [onClose, editingField, parentPickerOpen, showLinkPicker])
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -148,6 +192,26 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [dropdownOpen])
+
+  useEffect(() => {
+    if (!parentPickerOpen) return
+    function handleClick(e) {
+      if (parentPickerRef.current && !parentPickerRef.current.contains(e.target))
+        setParentPickerOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [parentPickerOpen])
+
+  useEffect(() => {
+    if (!showLinkPicker) return
+    function handleClick(e) {
+      if (linkPickerRef.current && !linkPickerRef.current.contains(e.target))
+        setShowLinkPicker(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showLinkPicker])
 
   useEffect(() => {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -216,12 +280,22 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     if (!form.title.trim()) { alert('Please enter a task title.'); return }
     if (!form.dueDate)      { alert('Please enter a due date.'); return }
     if (!form.category)     { alert('Please select a category.'); return }
+    if (taskType === 'subtask' && !selectedParentId) { alert('Please select a parent task.'); return }
     setCreating(true)
     try {
-      await saveTask(form, null)
+      const parentId = taskType === 'subtask' ? selectedParentId : null
+      await saveTask({ ...form, ...(parentId ? { parentId } : {}) }, null)
       onClose()
     } catch { alert('Failed to save. Check your connection.') }
     setCreating(false)
+  }
+
+  async function handleLinkTask(linkedTask) {
+    setShowLinkPicker(false)
+    setLinkSearch('')
+    try {
+      await updateTaskFields(linkedTask.id, { parentId: editId })
+    } catch { alert('Failed to link task.') }
   }
 
   async function handlePostComment() {
@@ -245,6 +319,12 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     const d = new Date(iso)
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  function formatDue(dueDate) {
+    if (!dueDate) return null
+    const [y, m, d] = dueDate.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   // ── Inline edit helpers (edit mode only) ───────────────────────────────────
@@ -332,6 +412,71 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
     </div>
   )
 
+  const subtasksSection = isEditing && (
+    <div className="task-subtasks-section">
+      <div className="sheet-section" style={{ marginTop: 20 }}>
+        Subtasks
+        {subtasks.length > 0 && <span className="subtasks-count-badge">{subtasks.length}</span>}
+      </div>
+      {subtasks.length > 0 && (
+        <ul className="task-subtask-list">
+          {subtasks.map(child => {
+            const childStatus = child.status || (child.done ? 'done' : 'todo')
+            return (
+              <li
+                key={child.id}
+                className={`task-subtask-item${childStatus === 'done' ? ' subtask-item-done' : ''}`}
+                onClick={() => onNavigate?.(child.id)}
+              >
+                <span className={`subtask-modal-dot subtask-modal-dot-${childStatus.replace('-', '')}`} />
+                <span className="task-subtask-title">{child.title}</span>
+                {child.dueDate && (
+                  <span className="task-subtask-due">{formatDue(child.dueDate)}</span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <div className="subtask-add-row">
+        <button type="button" className="subtask-add-btn" onClick={() => onAddSubtask?.(editId)}>
+          + New subtask
+        </button>
+        <button
+          type="button"
+          className={`subtask-link-btn${showLinkPicker ? ' active' : ''}`}
+          onClick={() => { setShowLinkPicker(o => !o); setLinkSearch('') }}
+        >
+          Link existing
+        </button>
+      </div>
+      {showLinkPicker && (
+        <div className="link-picker-wrap" ref={linkPickerRef}>
+          <input
+            className="link-picker-search"
+            placeholder="Search tasks to link…"
+            value={linkSearch}
+            onChange={e => setLinkSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="link-picker-list">
+            {filteredLinkable.length === 0
+              ? <div className="link-picker-empty">No tasks available to link</div>
+              : filteredLinkable.map(t => (
+                <div key={t.id} className="link-picker-item" onClick={() => handleLinkTask(t)}>
+                  <span className="link-picker-title">{t.title}</span>
+                  {t.category && (
+                    <span className={`task-cat-badge task-cat-${t.category}`}>{CATEGORY_LABELS[t.category]}</span>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   const commentsSection = (
     <div className="task-comments">
       <div className="sheet-section" style={{ marginTop: 20 }}>Comments</div>
@@ -383,6 +528,17 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   if (isEditing) {
     const editContent = (
       <>
+          {/* Parent breadcrumb */}
+          {parentTask && (
+            <button
+              type="button"
+              className="task-parent-crumb"
+              onClick={() => onNavigate?.(parentTask.id)}
+            >
+              ← Part of: {parentTask.title}
+            </button>
+          )}
+
           {/* Title + date — mobile shows inline rows; desktop shows full header */}
           {isMobile && (
             <>
@@ -498,6 +654,9 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
           {doctorsSection}
           {assigneeSection}
 
+          {/* Subtasks */}
+          {subtasksSection}
+
           {/* Comments */}
           {commentsSection}
       </>
@@ -539,6 +698,59 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
 
   // ── Add mode: responsive bottom sheet (mobile) / centered popup (desktop) ──
 
+  const addTitle = taskType === 'subtask' ? 'Add subtask' : 'Add task'
+
+  const parentPickerSection = (
+    <div className="fr">
+      <label>Parent task <span className="req">*</span></label>
+      <div className="parent-picker-wrap" ref={parentPickerRef}>
+        <button
+          type="button"
+          className={`parent-picker-trigger${selectedParent ? ' has-value' : ''}`}
+          onClick={() => setParentPickerOpen(o => !o)}
+        >
+          <span className="parent-picker-value">
+            {selectedParent ? selectedParent.title : 'Select parent task…'}
+          </span>
+          <span className="parent-picker-caret">{parentPickerOpen ? '▴' : '▾'}</span>
+        </button>
+        {parentPickerOpen && (
+          <div className="parent-picker-dropdown">
+            <input
+              className="parent-picker-search"
+              placeholder="Search tasks…"
+              value={parentSearch}
+              onChange={e => setParentSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="parent-picker-list">
+              {filteredParents.length === 0
+                ? <div className="parent-picker-empty">No tasks found</div>
+                : filteredParents.map(t => (
+                  <div
+                    key={t.id}
+                    className={`parent-picker-item${selectedParentId === t.id ? ' selected' : ''}`}
+                    onClick={() => {
+                      setSelectedParentId(t.id)
+                      setForm(f => ({ ...f, category: t.category || f.category }))
+                      setParentPickerOpen(false)
+                      setParentSearch('')
+                    }}
+                  >
+                    <span className="parent-picker-title">{t.title}</span>
+                    {t.category && (
+                      <span className={`task-cat-badge task-cat-${t.category}`}>{CATEGORY_LABELS[t.category]}</span>
+                    )}
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   const addFormContent = (
     <>
       <div className="sheet-section">Required</div>
@@ -550,8 +762,33 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
         <label>Due date <span className="req">*</span></label>
         <input type="date" value={form.dueDate} onChange={set('dueDate')} />
       </div>
+
+      {/* Task type selector */}
       <div className="fr">
-        <label>Category</label>
+        <label>Type</label>
+        <div className="status-selector">
+          <button
+            type="button"
+            className={`status-sel-btn status-sel-todo${taskType === 'root' ? ' active' : ''}`}
+            onClick={() => { setTaskType('root'); setSelectedParentId(null) }}
+          >
+            Root task
+          </button>
+          <button
+            type="button"
+            className={`status-sel-btn status-sel-inprog${taskType === 'subtask' ? ' active' : ''}`}
+            onClick={() => setTaskType('subtask')}
+          >
+            Subtask
+          </button>
+        </div>
+      </div>
+
+      {/* Parent picker (only when subtask is selected) */}
+      {taskType === 'subtask' && parentPickerSection}
+
+      <div className="fr">
+        <label>Category {taskType === 'root' && <span className="req">*</span>}</label>
         <div className="status-selector">
           {CATEGORIES.map(c => (
             <button
@@ -606,7 +843,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       <div className="mf" style={{ marginTop: 20 }}>
         <button className="btn-cx" onClick={onClose}>Cancel</button>
         <button className="btn-sv" onClick={handleCreate} disabled={creating}>
-          {creating ? 'Creating…' : 'Create task'}
+          {creating ? 'Creating…' : `Create ${taskType === 'subtask' ? 'subtask' : 'task'}`}
         </button>
       </div>
     </>
@@ -617,7 +854,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
       <div className="modal-bg" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
         <div className="modal modal-task" role="dialog" aria-modal="true">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span className="sheet-title">Add task</span>
+            <span className="sheet-title">{addTitle}</span>
             <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
           </div>
           {addFormContent}
@@ -629,7 +866,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, onClose, use
   return (
     <div className="fs-overlay" role="dialog" aria-modal="true">
       <div className="fs-header">
-        <span className="fs-title">Add task</span>
+        <span className="fs-title">{addTitle}</span>
         <button className="note-close-btn" onClick={onClose} aria-label="Close">✕</button>
       </div>
       <div className="fs-body">{addFormContent}</div>
