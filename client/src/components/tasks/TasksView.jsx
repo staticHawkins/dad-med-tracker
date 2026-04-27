@@ -74,7 +74,8 @@ export default function TasksView({ tasks, careTeam, users, user }) {
       'in-progress':catTasks.filter(t => getStatus(t) === 'in-progress'),
       done:         catTasks.filter(t => getStatus(t) === 'done'),
     }
-    return { ...cat, catTasks, byStatus }
+    const activeCount = byStatus['todo'].length + byStatus['in-progress'].length
+    return { ...cat, catTasks, byStatus, activeCount }
   })
 
   const uncategorized = rootTasks.filter(t => !t.category)
@@ -280,7 +281,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
                 <div className={`task-cat-header task-cat-header-${colorClass}`}>
                   <span className="task-cat-header-icon">{icon}</span>
                   <span className={`task-cat-header-label label-${colorClass}`}>{label}</span>
-                  <span className={`task-cat-header-count count-${colorClass}`}>{catTasks.length}</span>
+                  {activeCount > 0 && <span className={`task-cat-header-count count-${colorClass}`}>{activeCount}</span>}
                 </div>
                 <div className="task-cat-body">
                   {renderStatusGroup('todo', byStatus['todo'], key)}
@@ -294,7 +295,7 @@ export default function TasksView({ tasks, careTeam, users, user }) {
             <div className="task-cat-section">
               <div className="task-cat-header task-cat-header-none">
                 <span className="task-cat-header-label label-none">Uncategorized</span>
-                <span className="task-cat-header-count count-none">{uncategorized.length}</span>
+                {(() => { const n = uncategorized.filter(t => getStatus(t) !== 'done').length; return n > 0 && <span className="task-cat-header-count count-none">{n}</span> })()}
               </div>
               <div className="task-cat-body">
                 {['todo', 'in-progress', 'done'].map(s =>
