@@ -116,7 +116,7 @@ client/src/
 
 ### lib/notifications.js
 
-Push notification helpers for med supply alerts.
+FCM token registration (with device metadata) and foreground message handling.
 
 ### Firebase Config
 
