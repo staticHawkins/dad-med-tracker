@@ -5,7 +5,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 
 const EMPTY = {
   title: '', dateTime: '', doctor: '', location: '', covering: '',
-  prep: '', postNotes: ''
+  prep: '', postNotes: '', person: 'dad'
 }
 
 // Add-new only. Editing existing appointments is handled inline in AptDetailModal.
@@ -40,6 +40,19 @@ export default function AptModal({ careTeam = [], onClose }) {
   const formContent = (
     <>
       <div className="sheet-section">Required</div>
+      <div className="fr">
+        <label>Person</label>
+        <div className="person-radio-group">
+          {['dad', 'mom'].map(p => (
+            <button key={p} type="button"
+              className={`person-radio-opt${form.person === p ? ` selected-${p}` : ''}`}
+              onClick={() => setForm(f => ({ ...f, person: p }))}
+            >
+              {p === 'dad' ? 'Dad' : 'Mom'}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="fr">
         <label>Title <span className="req">*</span></label>
         <input value={form.title} onChange={set('title')} placeholder="e.g. Cardiology follow-up" />

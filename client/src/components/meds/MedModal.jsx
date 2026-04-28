@@ -6,7 +6,7 @@ const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
   frequencyCustomCount: '1', frequencyCustomEvery: '1', frequencyCustomUnit: 'days',
   filledDate: '', supply: '', refillDate: '', pharmacy: '', rxNum: '',
-  doctor: '', instructions: ''
+  doctor: '', instructions: '', person: 'dad'
 }
 
 const PRESETS = [
@@ -48,6 +48,19 @@ export default function MedModal({ careTeam = [], onClose }) {
   const formContent = (
     <>
       <div className="sheet-section">Required</div>
+      <div className="fr">
+        <label>Person</label>
+        <div className="person-radio-group">
+          {['dad', 'mom'].map(p => (
+            <button key={p} type="button"
+              className={`person-radio-opt${form.person === p ? ` selected-${p}` : ''}`}
+              onClick={() => setForm(f => ({ ...f, person: p }))}
+            >
+              {p === 'dad' ? 'Dad' : 'Mom'}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="fr">
         <label>Name <span className="req">*</span></label>
         <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />

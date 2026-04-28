@@ -6,7 +6,7 @@ export function useMeds() {
   const [meds, setMeds] = useState([])
   useEffect(() => {
     return onSnapshot(collection(db, 'medications'), snap => {
-      setMeds(snap.docs.map(d => d.data()))
+      setMeds(snap.docs.map(d => { const data = d.data(); return { ...data, person: data.person || 'dad' } }))
     }, err => console.error('Firestore meds error:', err))
   }, [])
   return meds

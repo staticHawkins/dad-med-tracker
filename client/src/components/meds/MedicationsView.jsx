@@ -5,9 +5,22 @@ import MedModal from './MedModal'
 import MedGroupHeader from './MedGroupHeader'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
 import { supplyStatus, pillsNow } from '../../lib/medUtils'
+import { filterByPerson } from '../MainApp'
+import PersonChip from '../PersonChip'
 
-export default function MedicationsView({ meds, careTeam }) {
-  const [activeFilter, setActiveFilter] = useState('all')
+function PersonFilter({ value, onChange }) {
+  return (
+    <div className="person-filter">
+      {['all', 'dad', 'mom'].map(p => (
+        <button key={p} className={`pfill pfill-${p}${value === p ? ' on' : ''}`} onClick={() => onChange(p)}>
+          {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export default function MedicationsView({ meds, careTeam, personFilter, onPersonFilter }) {
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
@@ -27,33 +40,20 @@ export default function MedicationsView({ meds, careTeam }) {
     e.target.value = ''
   }
 
-  function handleFilter(f) {
-    setActiveFilter(f)
-    if (f === 'all') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-    const ref = f === 'urgent' ? urgentRef : f === 'soon' ? soonRef : okRef
-    if (!ref.current) return
-    ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    ref.current.classList.add('highlighted')
-    setTimeout(() => ref.current?.classList.remove('highlighted'), 1400)
-  }
-
   const q = search.toLowerCase()
 
   const activeMeds   = useMemo(() => meds.filter(m => m.active !== false), [meds])
   const inactiveMeds = useMemo(() => meds.filter(m => m.active === false), [meds])
 
   const filtered = useMemo(() => {
-    let rows = [...activeMeds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+    let rows = [...filterByPerson(activeMeds, personFilter)].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
     if (q) rows = rows.filter(m =>
       m.name.toLowerCase().includes(q) ||
       (m.pharmacy || '').toLowerCase().includes(q) ||
       (m.doctor || '').toLowerCase().includes(q)
     )
     return rows
-  }, [activeMeds, q])
+  }, [activeMeds, personFilter, q])
 
   const grouped = useMemo(() => ({
     urgent: filtered.filter(m => supplyStatus(m) === 'urgent'),
@@ -63,25 +63,10 @@ export default function MedicationsView({ meds, careTeam }) {
 
   return (
     <div className="page">
+      <div className="mobile-person-filter">
+        <PersonFilter value={personFilter} onChange={onPersonFilter} />
+      </div>
       <div className="tbl-hdr">
-        <div className="tbl-left">
-          <div className="filter-tabs">
-            {[
-              ['all',    'All'],
-              ['urgent', '≤ 7d'],
-              ['soon',   '8–14d'],
-              ['ok',     'Stocked'],
-            ].map(([f, label]) => (
-              <button
-                key={f}
-                className={`ftab${activeFilter === f ? ' active' : ''}`}
-                onClick={() => handleFilter(f)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="tbl-tools">
           <div className="search-wrap">
             <span className="search-ico">🔍</span>

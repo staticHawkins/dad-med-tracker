@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { updateTaskAssignees, delTask } from '../../lib/firestore'
 import TaskModal from './TaskModal'
+import { filterByPerson } from '../MainApp'
+import PersonChip from '../PersonChip'
+
+function PersonFilter({ value, onChange }) {
+  return (
+    <div className="person-filter">
+      {['all', 'dad', 'mom'].map(p => (
+        <button key={p} className={`pfill pfill-${p}${value === p ? ' on' : ''}`} onClick={() => onChange(p)}>
+          {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 const STATUS_LABELS = { todo: 'To Do', 'in-progress': 'In Progress', done: 'Done' }
 
@@ -28,7 +42,7 @@ function isOverdue(dueDate) {
   return new Date(y, m - 1, d) < today
 }
 
-export default function TasksView({ tasks, careTeam, users, user }) {
+export default function TasksView({ tasks, careTeam, users, user, personFilter, onPersonFilter }) {
   const [editId, setEditId] = useState(undefined)
   const [defaultParentId, setDefaultParentId] = useState(null)
   const [assignPopupId, setAssignPopupId] = useState(null)
@@ -49,7 +63,9 @@ export default function TasksView({ tasks, careTeam, users, user }) {
   const doctorMap = Object.fromEntries(careTeam.map(dr => [dr.id, dr]))
   const userMap = Object.fromEntries(users.map(u => [u.uid, u]))
 
-  const sorted = [...tasks].sort((a, b) => {
+  const filteredTasks = filterByPerson(tasks, personFilter)
+
+  const sorted = [...filteredTasks].sort((a, b) => {
     if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
     if (a.dueDate) return -1
     if (b.dueDate) return 1
@@ -146,10 +162,13 @@ export default function TasksView({ tasks, careTeam, users, user }) {
     const isExpanded = expandedTaskIds.has(task.id)
 
     return (
-      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} style={{ display: 'block', padding: 0, border: 'none' }}>
+      <li key={task.id} className={`task-row${status === 'done' ? ' task-done' : ''}`} style={{ display: 'block', padding: 0, border: 'none', borderLeft: `3px solid var(--${task.person || 'dad'})` }}>
         <div className="task-row-inner" onClick={() => setEditId(task.id)} style={{ cursor: 'pointer' }}>
           <div className="task-body">
-            <div className="task-title">{task.title}</div>
+            <div className="task-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <PersonChip person={task.person} />
+              {task.title}
+            </div>
             <div className="task-meta">
               {doctors.map(dr => (
                 <span key={dr.id} className="task-doctor">👨‍⚕️ {dr.name}</span>
@@ -266,12 +285,15 @@ export default function TasksView({ tasks, careTeam, users, user }) {
 
   return (
     <div className="page">
+      <div className="mobile-person-filter">
+        <PersonFilter value={personFilter} onChange={onPersonFilter} />
+      </div>
       <div className="tbl-tools" style={{ marginBottom: 16 }}>
         <div />
         <button className="btn-add" onClick={() => { setDefaultParentId(null); setEditId(null) }}>+ Add Task</button>
       </div>
 
-      {rootTasks.length === 0 && tasks.length === 0 ? (
+      {rootTasks.length === 0 && filteredTasks.length === 0 ? (
         <div className="task-empty">No tasks yet. Click "+ Add Task" to get started.</div>
       ) : (
         <div className="task-cat-sections">
@@ -282,6 +304,17 @@ export default function TasksView({ tasks, careTeam, users, user }) {
                   <span className="task-cat-header-icon">{icon}</span>
                   <span className={`task-cat-header-label label-${colorClass}`}>{label}</span>
                   {activeCount > 0 && <span className={`task-cat-header-count count-${colorClass}`}>{activeCount}</span>}
+                  {(() => {
+                    const momCt = catTasks.filter(t => getStatus(t) !== 'done' && (t.person||'dad') === 'mom').length
+                    const dadCt = catTasks.filter(t => getStatus(t) !== 'done' && (t.person||'dad') === 'dad').length
+                    return momCt > 0 && (
+                      <span className="dash-week-breakdown" style={{ marginLeft: 6 }}>
+                        <span style={{ color: 'var(--dad)' }}>D:{dadCt}</span>
+                        {' · '}
+                        <span style={{ color: 'var(--mom)' }}>M:{momCt}</span>
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="task-cat-body">
                   {renderStatusGroup('todo', byStatus['todo'], key)}

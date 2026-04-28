@@ -10,7 +10,7 @@ const CATEGORY_LABELS = { house: 'House', medical: 'Medical', finances: 'Finance
 
 const EMPTY = {
   title: '', description: '', doctorIds: [], assigneeUids: [],
-  dueDate: '', status: 'todo', priority: 'medium', category: ''
+  dueDate: '', status: 'todo', priority: 'medium', category: '', person: 'dad'
 }
 
 function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
@@ -179,7 +179,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
       dueDate: task.dueDate || '',
       status: task.status || (task.done ? 'done' : 'todo'),
       priority: task.priority || 'medium',
-      category: task.category || ''
+      category: task.category || '',
+      person: task.person || 'dad'
     })
   }, [editId, defaultParentId])
 
@@ -846,6 +847,19 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
   const addFormContent = (
     <>
       <div className="sheet-section">Required</div>
+      <div className="fr">
+        <label>Person</label>
+        <div className="person-radio-group">
+          {['dad', 'mom'].map(p => (
+            <button key={p} type="button"
+              className={`person-radio-opt${form.person === p ? ` selected-${p}` : ''}`}
+              onClick={() => setForm(f => ({ ...f, person: p }))}
+            >
+              {p === 'dad' ? 'Dad' : 'Mom'}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="fr">
         <label>Title <span className="req">*</span></label>
         <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />

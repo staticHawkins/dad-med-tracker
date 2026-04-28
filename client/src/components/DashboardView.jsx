@@ -1,6 +1,7 @@
 import { supplyStatus } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
 import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
+import PersonChip from './PersonChip'
 
 function getTaskStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
@@ -62,7 +63,9 @@ function SummaryBar({ meds, apts, tasks }) {
         <div className="dash-pill dash-pill-red">
           <span className="dash-pill-icon">+</span>
           <div className="dash-pill-text">
-            <span className="dash-pill-label">Urgent medication</span>
+            <span className="dash-pill-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              Urgent medication <PersonChip person={urgentMed.person || 'dad'} />
+            </span>
             <span className="dash-pill-value">{urgentMed.name} — refill due</span>
           </div>
         </div>
@@ -71,7 +74,9 @@ function SummaryBar({ meds, apts, tasks }) {
         <div className="dash-pill dash-pill-amber">
           <span className="dash-pill-icon">📅</span>
           <div className="dash-pill-text">
-            <span className="dash-pill-label">Next appointment</span>
+            <span className="dash-pill-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              Next appointment <PersonChip person={nextApt.person || 'dad'} />
+            </span>
             <span className="dash-pill-value">{aptLabel}</span>
           </div>
         </div>
@@ -144,6 +149,13 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
               {weekApts.length > 3 && <span className="dash-status-chip dash-chip-todo">+{weekApts.length - 3} more</span>}
             </div>
           )}
+          {weekApts.filter(a => (a.person||'dad') === 'mom').length > 0 && (
+            <div className="dash-week-breakdown">
+              <span style={{color:'var(--dad)'}}>D:{weekApts.filter(a => (a.person||'dad')==='dad').length}</span>
+              {' · '}
+              <span style={{color:'var(--mom)'}}>M:{weekApts.filter(a => (a.person||'dad')==='mom').length}</span>
+            </div>
+          )}
         </button>
 
         <button className="dash-week-section" onClick={() => onNavigate('tasks')} aria-label="This week: tasks">
@@ -163,6 +175,13 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
               {overdueTasksCt > 0 && <span className="dash-status-chip dash-chip-urgent">{overdueTasksCt} overdue</span>}
               {inProgTasksCt  > 0 && <span className="dash-status-chip dash-chip-inprog">{inProgTasksCt} in progress</span>}
               {todoTasksCt    > 0 && <span className="dash-status-chip dash-chip-todo">{todoTasksCt} to do</span>}
+            </div>
+          )}
+          {weekTasks.filter(t => (t.person||'dad') === 'mom').length > 0 && (
+            <div className="dash-week-breakdown">
+              <span style={{color:'var(--dad)'}}>D:{weekTasks.filter(t => (t.person||'dad')==='dad').length}</span>
+              {' · '}
+              <span style={{color:'var(--mom)'}}>M:{weekTasks.filter(t => (t.person||'dad')==='mom').length}</span>
             </div>
           )}
         </button>
@@ -185,6 +204,13 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
               {soonMeds.length   > 0 && <span className="dash-status-chip dash-chip-soon">{soonMeds.length} soon</span>}
             </div>
           )}
+          {[...urgentMeds, ...soonMeds].filter(m => (m.person||'dad') === 'mom').length > 0 && (
+            <div className="dash-week-breakdown">
+              <span style={{color:'var(--dad)'}}>D:{[...urgentMeds, ...soonMeds].filter(m => (m.person||'dad')==='dad').length}</span>
+              {' · '}
+              <span style={{color:'var(--mom)'}}>M:{[...urgentMeds, ...soonMeds].filter(m => (m.person||'dad')==='mom').length}</span>
+            </div>
+          )}
         </button>
 
       </div>
@@ -194,9 +220,9 @@ function WeekCard({ meds, apts, tasks, onNavigate }) {
 
 // ── Card components ──────────────────────────────────────────────────────────
 
-function MedsCard({ meds, onClick }) {
-  const urgent = meds.filter(m => supplyStatus(m) === 'urgent')
-  const soon = meds.filter(m => supplyStatus(m) === 'soon')
+function MedsCard({ meds, allMeds, onClick }) {
+  const urgent = allMeds.filter(m => supplyStatus(m) === 'urgent')
+  const soon = allMeds.filter(m => supplyStatus(m) === 'soon')
   const shownPills = urgent.slice(0, 2)
   const extraPills = urgent.length - shownPills.length
 
@@ -213,13 +239,13 @@ function MedsCard({ meds, onClick }) {
         <span className="dash-card-arrow">›</span>
       </div>
       <div className="dash-card-body">
-        {meds.length === 0 ? (
+        {allMeds.length === 0 ? (
           <div className="dash-empty"><span className="dash-empty-icon">💊</span><span className="dash-empty-text">No medications added yet</span></div>
         ) : (
           <>
             <div className="dash-med-stats">
               <div className="dash-task-stat">
-                <div className="dash-task-num">{meds.length}</div>
+                <div className="dash-task-num">{allMeds.length}</div>
                 <div className="dash-task-lbl">Total</div>
               </div>
               <div className="dash-task-stat">
@@ -248,7 +274,8 @@ function MedsCard({ meds, onClick }) {
                 {listMeds.map(m => {
                   const s = supplyStatus(m)
                   return (
-                    <li key={m.id} className="dash-med-row">
+                    <li key={m.id} className="dash-med-row" style={{ borderLeft: `2px solid var(--${m.person || 'dad'})` }}>
+                      <PersonChip person={m.person} />
                       <span className="dash-med-name">{m.name}{m.dose ? ` ${m.dose}` : ''}</span>
                       {s !== 'ok' && (
                         <span className={`dash-status-chip dash-chip-${s}`}>
@@ -268,7 +295,7 @@ function MedsCard({ meds, onClick }) {
   )
 }
 
-function AptsCard({ apts, onClick }) {
+function AptsCard({ apts, allApts, onClick }) {
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const upcoming = sorted.filter(a => aptStatus(a) !== 'past')
   const nextApt = upcoming[0] || null
@@ -281,8 +308,8 @@ function AptsCard({ apts, onClick }) {
     aptTime = fmtAptTime(nextApt.dateTime)
   }
 
-  const todayCount = apts.filter(a => aptStatus(a) === 'today').length
-  const weekCount = apts.filter(a => ['today', 'soon'].includes(aptStatus(a))).length
+  const todayCount = allApts.filter(a => aptStatus(a) === 'today').length
+  const weekCount = allApts.filter(a => ['today', 'soon'].includes(aptStatus(a))).length
 
   return (
     <button className="dash-card dash-card-apts" onClick={onClick} aria-label="Go to Appointments">
@@ -296,13 +323,15 @@ function AptsCard({ apts, onClick }) {
           <div className="dash-empty"><span className="dash-empty-icon">📅</span><span className="dash-empty-text">No upcoming appointments</span></div>
         ) : (
           <>
-            <div className="dash-apt-block">
+            <div className="dash-apt-block" style={{ borderLeft: `2px solid var(--${nextApt.person || 'dad'})`, paddingLeft: 8 }}>
               <div className="dash-apt-date">
                 <span className="dash-apt-month">{dateBlock.month}</span>
                 <span className="dash-apt-day">{dateBlock.day}</span>
               </div>
               <div className="dash-apt-info">
-                <div className="dash-apt-title">{nextApt.title}</div>
+                <div className="dash-apt-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {nextApt.title} <PersonChip person={nextApt.person} />
+                </div>
                 <div className="dash-apt-meta">
                   {nextApt.doctor && <span>{nextApt.doctor}</span>}
                   {aptTime && <span>{aptTime}</span>}
@@ -324,7 +353,8 @@ function AptsCard({ apts, onClick }) {
                   {comingUp.map(a => {
                     const db = fmtAptDateBlock(a.dateTime)
                     return (
-                      <li key={a.id} className="dash-apt-row">
+                      <li key={a.id} className="dash-apt-row" style={{ borderLeft: `2px solid var(--${a.person || 'dad'})`, paddingLeft: 6 }}>
+                        <PersonChip person={a.person} />
                         <span className="dash-apt-row-name">{a.title}{a.doctor ? ` · ${a.doctor}` : ''}</span>
                         <span className="dash-apt-row-date">{db.month} {db.day}</span>
                       </li>
@@ -346,7 +376,7 @@ const DASH_CATS = [
   { key: 'finances', label: 'Finances', icon: '💰', num: 'green', dim: 'var(--green-dim)', border: 'var(--green-border)', color: 'var(--green)' },
 ]
 
-function TasksCard({ tasks, onClick }) {
+function TasksCard({ tasks, allTasks, onClick }) {
   const activeTasks = tasks
     .filter(t => getTaskStatus(t) !== 'done')
     .sort((a, b) => {
@@ -364,17 +394,27 @@ function TasksCard({ tasks, onClick }) {
         <span className="dash-card-arrow">›</span>
       </div>
       <div className="dash-card-body">
-        {tasks.length === 0 ? (
+        {allTasks.length === 0 ? (
           <div className="dash-empty"><span className="dash-empty-icon">✓</span><span className="dash-empty-text">No tasks yet</span></div>
         ) : (
           <>
             <div className="dash-task-stats dash-cat-stats">
               {DASH_CATS.map(({ key, label, icon, dim, border, color }) => {
-                const activeCt = tasks.filter(t => (t.category || '') === key && getTaskStatus(t) !== 'done').length
+                const catActive = allTasks.filter(t => (t.category || '') === key && getTaskStatus(t) !== 'done')
+                const activeCt = catActive.length
+                const momCt = catActive.filter(t => (t.person||'dad') === 'mom').length
+                const dadCt = catActive.length - momCt
                 return (
                   <div key={key} className="dash-task-stat" style={{ background: dim, borderColor: border }}>
                     <div className="dash-task-num" style={{ color: activeCt > 0 ? color : 'var(--text3)' }}>{activeCt}</div>
                     <div className="dash-task-lbl">{icon} {label}</div>
+                    {momCt > 0 && (
+                      <div className="dash-week-breakdown" style={{ marginTop: 2 }}>
+                        <span style={{ color: 'var(--dad)' }}>D:{dadCt}</span>
+                        {' · '}
+                        <span style={{ color: 'var(--mom)' }}>M:{momCt}</span>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -387,8 +427,9 @@ function TasksCard({ tasks, onClick }) {
                     const due = fmtShortDate(t.dueDate)
                     const cat = DASH_CATS.find(c => c.key === t.category)
                     return (
-                      <li key={t.id} className="dash-task-row">
+                      <li key={t.id} className="dash-task-row" style={{ borderLeft: `2px solid var(--${t.person || 'dad'})`, paddingLeft: 6 }}>
                         <div className="dash-task-row-main">
+                          <PersonChip person={t.person} />
                           <span className="dash-task-row-title">{t.title}</span>
                           {due && (
                             <span className={`dash-task-row-due${ov ? ' due-overdue' : ''}`}>
@@ -425,7 +466,7 @@ export function BackBar({ label, onBack }) {
   )
 }
 
-export default function DashboardView({ meds, apts, tasks, milestones, phases, onNavigate }) {
+export default function DashboardView({ meds, filteredMeds, apts, filteredApts, tasks, filteredTasks, milestones, phases, onNavigate }) {
   return (
     <div className="page dashboard-page">
       <SummaryBar meds={meds} apts={apts} tasks={tasks} />
@@ -433,9 +474,9 @@ export default function DashboardView({ meds, apts, tasks, milestones, phases, o
         <div className="dash-card-week-wrap">
           <WeekCard meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />
         </div>
-        <MedsCard meds={meds} onClick={() => onNavigate('meds')} />
-        <AptsCard apts={apts} onClick={() => onNavigate('apts')} />
-        <TasksCard tasks={tasks} onClick={() => onNavigate('tasks')} />
+        <MedsCard meds={filteredMeds} allMeds={meds} onClick={() => onNavigate('meds')} />
+        <AptsCard apts={filteredApts} allApts={apts} onClick={() => onNavigate('apts')} />
+        <TasksCard tasks={filteredTasks} allTasks={tasks} onClick={() => onNavigate('tasks')} />
         <div className="dash-card-timeline-wrap">
           <DiseaseTimelineCard
             milestones={milestones}

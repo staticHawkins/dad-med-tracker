@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { fmtAptDateBlock, fmtAptTime, coveringLabel, aptStatus } from '../../lib/aptUtils'
+import PersonChip from '../PersonChip'
 
 export default function HeroCard({ apt }) {
   const [open, setOpen] = useState(false)
@@ -21,7 +22,9 @@ export default function HeroCard({ apt }) {
           <div className="hero-date-day">{db.day}</div>
         </div>
         <div className="hero-body">
-          <div className="hero-card-label">Next appointment</div>
+          <div className="hero-card-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Next appointment <PersonChip person={apt.person} />
+          </div>
           <div className="hero-card-title">{apt.title}</div>
           {dayLabel && <div className="hero-card-time">{dayLabel}</div>}
           {meta && <div className="hero-card-meta">{meta}</div>}
