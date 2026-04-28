@@ -274,9 +274,9 @@ function MedsCard({ meds, allMeds, onClick }) {
                 {listMeds.map(m => {
                   const s = supplyStatus(m)
                   return (
-                    <li key={m.id} className="dash-med-row" style={{ borderLeft: `2px solid var(--${m.person || 'dad'})` }}>
-                      <PersonChip person={m.person} />
+                    <li key={m.id} className="dash-med-row" style={{ borderLeft: `2px solid var(--${m.person || 'dad'})`, paddingLeft: 6 }}>
                       <span className="dash-med-name">{m.name}{m.dose ? ` ${m.dose}` : ''}</span>
+                      <PersonChip person={m.person} />
                       {s !== 'ok' && (
                         <span className={`dash-status-chip dash-chip-${s}`}>
                           {s}
