@@ -70,13 +70,14 @@ exports.checkMedSupply = onSchedule(
         : `${soonMeds.length} med${soonMeds.length > 1 ? "s need" : " needs"} refill soon`;
     }
 
-    // Collect all tokens across all users, tracking which user each token belongs to
-    const tokenEntries = []; // { token, userDoc }
+    // Collect all tokens across all users, handling both legacy strings and object entries
+    const tokenEntries = []; // { token, entry, userDoc }
     for (const userDoc of usersSnap.docs) {
       const data = userDoc.data();
-      const tokens = Array.isArray(data.fcmTokens) ? data.fcmTokens : (data.fcmToken ? [data.fcmToken] : []);
-      for (const token of tokens) {
-        if (token) tokenEntries.push({ token, userDoc });
+      const raw = Array.isArray(data.fcmTokens) ? data.fcmTokens : (data.fcmToken ? [data.fcmToken] : []);
+      for (const entry of raw) {
+        const token = typeof entry === 'string' ? entry : entry?.token;
+        if (token) tokenEntries.push({ token, entry, userDoc });
       }
     }
 
@@ -104,8 +105,22 @@ exports.checkMedSupply = onSchedule(
     });
 
     if (staleEntries.length > 0) {
+      const staleTokens = new Set(staleEntries.map((e) => e.token));
+      // Group stale removals by user doc to do one write per user
+      const byUser = new Map();
+      for (const e of staleEntries) {
+        if (!byUser.has(e.userDoc.id)) byUser.set(e.userDoc.id, e.userDoc);
+      }
       await Promise.all(
-        staleEntries.map((e) => e.userDoc.ref.update({ fcmTokens: FieldValue.arrayRemove(e.token) }))
+        [...byUser.values()].map((userDoc) => {
+          const data = userDoc.data();
+          const raw = Array.isArray(data.fcmTokens) ? data.fcmTokens : [];
+          const kept = raw.filter((entry) => {
+            const t = typeof entry === 'string' ? entry : entry?.token;
+            return !staleTokens.has(t);
+          });
+          return userDoc.ref.update({ fcmTokens: kept });
+        })
       );
       console.log(`checkMedSupply: removed ${staleEntries.length} stale token(s)`);
     }

@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch, deleteField } from 'firebase/firestore'
+import { collection, doc, setDoc, getDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today, todayStr } from './medUtils'
 
@@ -299,9 +299,17 @@ export async function deleteComment(task, commentId) {
   await updateDoc(doc(db, 'tasks', task.id), { comments, updatedAt: new Date().toISOString() })
 }
 
-export async function saveFcmToken(uid, token) {
-  await setDoc(doc(db, 'users', uid), {
-    fcmTokens: arrayUnion(token),
+export async function saveFcmToken(uid, token, deviceInfo = {}) {
+  const userRef = doc(db, 'users', uid)
+  const snap = await getDoc(userRef)
+  const existing = snap.exists() ? (snap.data().fcmTokens || []) : []
+
+  // Replace entry for this token if it exists, otherwise append
+  const filtered = existing.filter(e => (typeof e === 'string' ? e : e.token) !== token)
+  const entry = { token, ...deviceInfo, updatedAt: new Date().toISOString() }
+
+  await setDoc(userRef, {
+    fcmTokens: [...filtered, entry],
     fcmTokenUpdatedAt: new Date().toISOString(),
   }, { merge: true })
 }

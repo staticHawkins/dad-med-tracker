@@ -11,6 +11,26 @@ async function getSwRegistration() {
   return navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
 }
 
+function getDeviceInfo() {
+  const ua = navigator.userAgent
+  let browser = 'Unknown'
+  if (/CriOS/i.test(ua))        browser = 'Chrome iOS'
+  else if (/FxiOS/i.test(ua))   browser = 'Firefox iOS'
+  else if (/EdgA?/i.test(ua))   browser = 'Edge'
+  else if (/Chrome/i.test(ua))  browser = 'Chrome'
+  else if (/Firefox/i.test(ua)) browser = 'Firefox'
+  else if (/Safari/i.test(ua))  browser = 'Safari'
+
+  let os = 'Unknown'
+  if (/iPhone|iPad|iPod/.test(ua))    os = 'iOS'
+  else if (/Android/.test(ua))        os = 'Android'
+  else if (/Windows/.test(ua))        os = 'Windows'
+  else if (/Mac OS X/.test(ua))       os = 'macOS'
+  else if (/Linux/.test(ua))          os = 'Linux'
+
+  return { browser, os }
+}
+
 export async function requestNotificationPermission(uid) {
   if (!('Notification' in window) || !messaging) return null
   try {
@@ -20,7 +40,7 @@ export async function requestNotificationPermission(uid) {
     const swReg = await getSwRegistration()
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
 
-    if (token && uid) await saveFcmToken(uid, token)
+    if (token && uid) await saveFcmToken(uid, token, getDeviceInfo())
     return token
   } catch (err) {
     console.warn('FCM token registration failed:', err)
