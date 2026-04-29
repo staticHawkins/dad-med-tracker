@@ -10,7 +10,7 @@ const CATEGORY_LABELS = { house: 'House', medical: 'Medical', finances: 'Finance
 
 const EMPTY = {
   title: '', description: '', doctorIds: [], assigneeUids: [],
-  dueDate: '', status: 'todo', priority: 'medium', category: ''
+  dueDate: '', status: 'todo', priority: 'medium', category: '', person: 'dad'
 }
 
 function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
@@ -160,7 +160,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     isDirty.current = false
     if (!editId) {
       const parent = defaultParentId ? tasks.find(x => x.id === defaultParentId) : null
-      setForm({ ...EMPTY, category: parent?.category || '' })
+      setForm({ ...EMPTY, category: parent?.category || '', person: parent?.person || EMPTY.person })
       setTaskType(defaultParentId ? 'subtask' : 'root')
       setSelectedParentId(defaultParentId || null)
       setParentSearch('')
@@ -179,7 +179,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
       dueDate: task.dueDate || '',
       status: task.status || (task.done ? 'done' : 'todo'),
       priority: task.priority || 'medium',
-      category: task.category || ''
+      category: task.category || '',
+      person: task.person || 'dad'
     })
   }, [editId, defaultParentId])
 
@@ -315,6 +316,12 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
   }
 
   async function handleLinkTask(linkedTask) {
+    const parentPerson = task?.person || 'dad'
+    const childPerson = linkedTask.person || 'dad'
+    if (childPerson !== parentPerson) {
+      alert(`Cannot link: "${linkedTask.title}" is assigned to ${childPerson === 'mom' ? 'Mom' : 'Dad'} but this task belongs to ${parentPerson === 'mom' ? 'Mom' : 'Dad'}.`)
+      return
+    }
     setShowLinkPicker(false)
     setLinkSearch('')
     try {
@@ -326,7 +333,8 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
     setShowParentPicker(false)
     setParentPickerEditSearch('')
     try {
-      await updateTaskFields(editId, { parentId: newParentId })
+      const newParent = tasks.find(t => t.id === newParentId)
+      await updateTaskFields(editId, { parentId: newParentId, person: newParent?.person || 'dad' })
     } catch { alert('Failed to update parent task.') }
   }
 
@@ -824,7 +832,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
                     className={`parent-picker-item${selectedParentId === t.id ? ' selected' : ''}`}
                     onClick={() => {
                       setSelectedParentId(t.id)
-                      setForm(f => ({ ...f, category: t.category || f.category }))
+                      setForm(f => ({ ...f, category: t.category || f.category, person: t.person || 'dad' }))
                       setParentPickerOpen(false)
                       setParentSearch('')
                     }}
@@ -846,6 +854,21 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
   const addFormContent = (
     <>
       <div className="sheet-section">Required</div>
+      {taskType === 'root' && (
+        <div className="fr">
+          <label>Person</label>
+          <div className="person-radio-group">
+            {['dad', 'mom'].map(p => (
+              <button key={p} type="button"
+                className={`person-radio-opt${form.person === p ? ` selected-${p}` : ''}`}
+                onClick={() => setForm(f => ({ ...f, person: p }))}
+              >
+                {p === 'dad' ? 'Dad' : 'Mom'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="fr">
         <label>Title <span className="req">*</span></label>
         <input value={form.title} onChange={set('title')} placeholder="e.g. Call cardiology to schedule follow-up" />

@@ -1,5 +1,6 @@
 import { fmtAptDateBlock, fmtAptTime, coveringLabel } from '../../lib/aptUtils'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
+import PersonChip from '../PersonChip'
 
 export default function AptCard({ apt, status, onView, hasNote, careTeam = [] }) {
   const db = fmtAptDateBlock(apt.dateTime)
@@ -11,7 +12,7 @@ export default function AptCard({ apt, status, onView, hasNote, careTeam = [] })
   const specialty = doctor?.specialty ? specialtyLabel(specialties, doctor.specialty) : null
 
   return (
-    <div className={`apt-card ${status}`} data-apt-id={apt.id} onClick={() => onView(apt.id)} style={{ cursor: 'pointer' }}>
+    <div className={`apt-card ${status}`} data-apt-id={apt.id} onClick={() => onView(apt.id)} style={{ cursor: 'pointer', borderLeft: `3px solid var(--${apt.person || 'dad'})` }}>
       <div className="apt-card-top">
         <div className="apt-date">
           <div className="apt-date-month">{db.month}</div>
@@ -19,7 +20,9 @@ export default function AptCard({ apt, status, onView, hasNote, careTeam = [] })
         </div>
         <div className="apt-divider" />
         <div className="apt-body">
-          <div className="apt-title">{apt.title}</div>
+          <div className="apt-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {apt.title} <PersonChip person={apt.person} />
+          </div>
           {time && <div className="apt-time">{time}</div>}
           <div className="apt-meta">
             {specialty && <span className="apt-doctor">{specialty}</span>}

@@ -6,15 +6,29 @@ import HeroCard from './HeroCard'
 import AgendaGroups from './AgendaGroups'
 import AptModal from './AptModal'
 import AptDetailModal from './AptDetailModal'
+import { filterByPerson } from '../MainApp'
 
-export default function AppointmentsView({ apts, careTeam }) {
+function PersonFilter({ value, onChange }) {
+  return (
+    <div className="person-filter">
+      {['all', 'dad', 'mom'].map(p => (
+        <button key={p} className={`pfill pfill-${p}${value === p ? ' on' : ''}`} onClick={() => onChange(p)}>
+          {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export default function AppointmentsView({ apts, careTeam, personFilter, onPersonFilter }) {
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [detailId, setDetailId] = useState(null)
   const [pastExpanded, setPastExpanded] = useState(false)
   const noteById = useNotes()
 
-  const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+  const filteredApts = filterByPerson(apts, personFilter)
+  const sorted = [...filteredApts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const nextApt = sorted.find(a => aptStatus(a) !== 'past') || null
 
   const detailApt = detailId ? apts.find(a => a.id === detailId) : null
@@ -33,6 +47,9 @@ export default function AppointmentsView({ apts, careTeam }) {
           <div id="apt-hero">
             <HeroCard apt={nextApt} />
           </div>
+          <div className="mobile-person-filter">
+            <PersonFilter value={personFilter} onChange={onPersonFilter} />
+          </div>
           <div className="agenda-controls">
             <div className="search-wrap">
               <span className="search-ico">🔍</span>
@@ -47,7 +64,7 @@ export default function AppointmentsView({ apts, careTeam }) {
           </div>
           <div id="apt-agenda">
             <AgendaGroups
-              apts={apts}
+              apts={filteredApts}
               search={search}
               noteById={noteById}
               onView={id => setDetailId(id)}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel } from '../../lib/medUtils'
 import { saveMed, markRefilled, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
+import PersonChip from '../PersonChip'
 
 const PRESETS = [
   { value: 'once-daily',      label: 'Once daily' },
@@ -204,13 +205,16 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
   ]
 
   return (
-    <div className={`med-row${isExpanded ? ' row-open' : ''}${isInactive ? ' med-row-inactive' : ''}`}>
+    <div className={`med-row${isExpanded ? ' row-open' : ''}${isInactive ? ' med-row-inactive' : ''}`} style={{ borderLeft: `3px solid var(--${m.person || 'dad'})` }}>
       {/* ── Main row ── */}
       <div className="med-row-main" onClick={onToggleExpand}>
 
         {/* Col 1: Name + subtitle */}
         <div className="med-col-name">
-          <div className="med-name">{m.name}</div>
+          <div className="med-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <PersonChip person={m.person} />
+            {m.name}
+          </div>
           <div className="med-sub">
             {sub}
             {m.pharmacy && <span className="med-pharm-in-sub"> · {m.pharmacy}</span>}

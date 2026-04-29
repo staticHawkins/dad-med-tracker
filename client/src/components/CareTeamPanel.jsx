@@ -3,7 +3,7 @@ import { saveDoctor, delDoctor, newId, saveSpecialty } from '../lib/firestore'
 import { uploadDoctorPhoto } from '../lib/storageUtils'
 import { useSpecialties, specialtyLabel, specialtyColor } from '../hooks/useSpecialties'
 
-const EMPTY_FORM = { name: '', specialty: '', affiliation: '', notes: '', imageUrl: '' }
+const EMPTY_FORM = { name: '', specialty: '', affiliation: '', notes: '', imageUrl: '', person: 'dad' }
 
 function initials(name) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -38,7 +38,7 @@ export default function CareTeamPanel({ careTeam }) {
 
   function openEdit(dr) {
     setEditDr(dr)
-    setForm({ name: dr.name || '', specialty: dr.specialty || '', affiliation: dr.affiliation || '', notes: dr.notes || '', imageUrl: dr.imageUrl || '' })
+    setForm({ name: dr.name || '', specialty: dr.specialty || '', affiliation: dr.affiliation || '', notes: dr.notes || '', imageUrl: dr.imageUrl || '', person: dr.person || 'dad' })
     setNewPhotoFile(null)
     setPhotoPreview(null)
     setView('form')
@@ -98,28 +98,46 @@ export default function CareTeamPanel({ careTeam }) {
             {careTeam.length === 0 ? (
               <p className="ct-empty">No doctors added yet. Click &ldquo;+ Add Doctor&rdquo; to get started.</p>
             ) : (
-              <ul className="dr-list">
-                {careTeam.map(dr => (
-                  <li key={dr.id} className="dr-card" onClick={() => openEdit(dr)} style={{ cursor: 'pointer' }}>
-                    <div className="dr-avatar">
-                      {dr.imageUrl
-                        ? <img src={dr.imageUrl} alt={dr.name} />
-                        : <span>{initials(dr.name)}</span>}
+              <>
+                {[
+                  { person: 'dad', label: "Dad's Care Team", color: 'var(--dad)' },
+                  { person: 'mom', label: "Mom's Care Team", color: 'var(--mom)' },
+                ].map(({ person, label, color }) => {
+                  const group = careTeam.filter(dr => (dr.person || 'dad') === person)
+                  if (group.length === 0) return null
+                  return (
+                    <div key={person} className="ct-person-group">
+                      <div className="ct-person-group-hdr" style={{ color }}>
+                        <span className="ct-person-initial" style={{ background: color }}>{person[0].toUpperCase()}</span>
+                        {label}
+                        <span className="ct-person-count">{group.length}</span>
+                      </div>
+                      <ul className="dr-list">
+                        {group.map(dr => (
+                          <li key={dr.id} className="dr-card" onClick={() => openEdit(dr)} style={{ cursor: 'pointer', borderTop: `2px solid ${color}` }}>
+                            <div className="dr-avatar">
+                              {dr.imageUrl
+                                ? <img src={dr.imageUrl} alt={dr.name} />
+                                : <span>{initials(dr.name)}</span>}
+                            </div>
+                            <div className="dr-info">
+                              <div className="dr-name">{dr.name}</div>
+                              {dr.specialty && (
+                                <span className="specialty-chip" style={specialtyColor(specialties, dr.specialty)}>{specialtyLabel(specialties, dr.specialty)}</span>
+                              )}
+                              {dr.affiliation && <div className="dr-affil">{dr.affiliation}</div>}
+                              {dr.notes && <div className="dr-notes">{dr.notes}</div>}
+                            </div>
+                            <div className="dr-actions">
+                              <button className="btn-ghost" title="Remove" onClick={e => { e.stopPropagation(); handleDelete(dr.id) }}>✕</button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="dr-info">
-                      <div className="dr-name">{dr.name}</div>
-                      {dr.specialty && (
-                        <span className="specialty-chip" style={specialtyColor(specialties, dr.specialty)}>{specialtyLabel(specialties, dr.specialty)}</span>
-                      )}
-                      {dr.affiliation && <div className="dr-affil">{dr.affiliation}</div>}
-                      {dr.notes && <div className="dr-notes">{dr.notes}</div>}
-                    </div>
-                    <div className="dr-actions">
-                      <button className="btn-ghost" title="Remove" onClick={e => { e.stopPropagation(); handleDelete(dr.id) }}>✕</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                  )
+                })}
+              </>
             )}
 
           </>
@@ -140,6 +158,19 @@ export default function CareTeamPanel({ careTeam }) {
               <span className="dr-photo-hint">Click to upload a photo</span>
             </div>
 
+            <div className="fr">
+              <label>Person</label>
+              <div className="person-radio-group">
+                {['dad', 'mom'].map(p => (
+                  <button key={p} type="button"
+                    className={`person-radio-opt${form.person === p ? ` selected-${p}` : ''}`}
+                    onClick={() => setForm(f => ({ ...f, person: p }))}
+                  >
+                    {p === 'dad' ? 'Dad' : 'Mom'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="fr">
               <label>Name <span className="req">*</span></label>
               <input value={form.name} onChange={set('name')} placeholder="e.g. Dr. Patel" />

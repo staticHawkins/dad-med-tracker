@@ -6,7 +6,7 @@ export function useCareTeam() {
   const [careTeam, setCareTeam] = useState([])
   useEffect(() => {
     return onSnapshot(collection(db, 'careTeam'), snap => {
-      setCareTeam(snap.docs.map(d => d.data()))
+      setCareTeam(snap.docs.map(d => { const data = d.data(); return { ...data, person: data.person || 'dad' } }))
     }, err => console.error('Firestore careTeam error:', err))
   }, [])
   return careTeam

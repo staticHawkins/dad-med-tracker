@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { requestNotificationPermission } from '../lib/notifications'
@@ -12,6 +12,7 @@ import { usePhases } from '../hooks/usePhases'
 import { upsertUser } from '../lib/firestore'
 import { useNotifications } from '../hooks/useNotifications'
 import MedicationsView from './meds/MedicationsView'
+import PersonChip from './PersonChip'
 import AppointmentsView from './apts/AppointmentsView'
 import TasksView from './tasks/TasksView'
 import CareTeamPanel from './CareTeamPanel'
@@ -20,6 +21,27 @@ import TimelineView from './timeline/TimelineView'
 import AskAiSheet from './chat/AskAiSheet'
 import NotificationBanner from './NotificationBanner'
 import BottomNav from './BottomNav'
+
+export function filterByPerson(items, personFilter) {
+  if (personFilter === 'all') return items
+  return items.filter(item => (item.person || 'dad') === personFilter)
+}
+
+function PersonFilter({ value, onChange }) {
+  return (
+    <div className="person-filter">
+      {['all', 'dad', 'mom'].map(p => (
+        <button
+          key={p}
+          className={`pfill pfill-${p}${value === p ? ' on' : ''}`}
+          onClick={() => onChange(p)}
+        >
+          {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 const SIDEBAR_ITEMS = [
   { id: 'dashboard', label: 'Dashboard',    icon: '⊞' },
@@ -61,6 +83,7 @@ function Sidebar({ activeTab, onNavigate, onAskAi }) {
 
 export default function MainApp({ user }) {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [personFilter, setPersonFilter] = useState('all')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [askAiOpen, setAskAiOpen] = useState(false)
   const userMenuRef = useRef(null)
@@ -102,7 +125,9 @@ export default function MainApp({ user }) {
   const milestones = useMilestones()
   const phases = usePhases()
 
-  const isDashboard = activeTab === 'dashboard'
+  const filteredMeds  = useMemo(() => filterByPerson(activeMeds, personFilter),  [activeMeds,  personFilter])
+  const filteredApts  = useMemo(() => filterByPerson(apts,       personFilter),  [apts,        personFilter])
+  const filteredTasks = useMemo(() => filterByPerson(tasks,      personFilter),  [tasks,       personFilter])
 
   return (
     <>
@@ -115,6 +140,11 @@ export default function MainApp({ user }) {
               <span className="brand-dot" />
               Family Care Hub
             </div>
+            {activeTab !== 'dashboard' && (
+              <div className="topbar-person-filter">
+                <PersonFilter value={personFilter} onChange={setPersonFilter} />
+              </div>
+            )}
             <div className="topbar-right">
               <button className="btn-ask-ai" onClick={() => setAskAiOpen(true)}>
                 <span className="ask-ai-icon-sm">✦</span> Ask AI
@@ -159,30 +189,35 @@ export default function MainApp({ user }) {
           {activeTab === 'dashboard' && (
             <DashboardView
               meds={activeMeds}
+              filteredMeds={filteredMeds}
               apts={apts}
+              filteredApts={filteredApts}
               tasks={tasks}
+              filteredTasks={filteredTasks}
               milestones={milestones}
               phases={phases}
               onNavigate={setActiveTab}
+              personFilter={personFilter}
+              onPersonFilter={setPersonFilter}
             />
           )}
 
           {activeTab === 'meds' && (
             <>
               <BackBar label="Medications" onBack={() => setActiveTab('dashboard')} />
-              <MedicationsView meds={meds} careTeam={careTeam} />
+              <MedicationsView meds={meds} careTeam={careTeam} personFilter={personFilter} onPersonFilter={setPersonFilter} />
             </>
           )}
           {activeTab === 'apts' && (
             <>
               <BackBar label="Appointments" onBack={() => setActiveTab('dashboard')} />
-              <AppointmentsView apts={apts} careTeam={careTeam} />
+              <AppointmentsView apts={apts} careTeam={careTeam} personFilter={personFilter} onPersonFilter={setPersonFilter} />
             </>
           )}
           {activeTab === 'tasks' && (
             <>
               <BackBar label="Tasks" onBack={() => setActiveTab('dashboard')} />
-              <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} />
+              <TasksView tasks={tasks} careTeam={careTeam} users={users} user={user} personFilter={personFilter} onPersonFilter={setPersonFilter} />
             </>
           )}
           {activeTab === 'care-team' && (

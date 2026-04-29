@@ -46,6 +46,7 @@ export async function saveMed(fields, editId) {
     doctor: fields.doctor,
     instructions: fields.instructions,
     active: fields.active ?? true,
+    person: fields.person || 'dad',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'medications', med.id), med)
@@ -91,6 +92,7 @@ export async function saveApt(fields, editId) {
     postNotes: fields.postNotes,
     specialty: fields.specialty || '',
     clinicalNoteId: fields.clinicalNoteId || '',
+    person: fields.person || 'dad',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'appointments', apt.id), apt)
@@ -112,6 +114,7 @@ export async function saveDoctor(fields, editId) {
     affiliation: fields.affiliation || '',
     notes: fields.notes || '',
     imageUrl: fields.imageUrl || '',
+    person: fields.person || 'dad',
     updatedAt: new Date().toISOString()
   }
   await setDoc(doc(db, 'careTeam', dr.id), dr)
@@ -250,6 +253,7 @@ export async function saveTask(fields, editId) {
     category: fields.category || '',
     status,
     done: status === 'done',
+    person: fields.person || 'dad',
     updatedAt: new Date().toISOString()
   }
   if (fields.parentId) task.parentId = fields.parentId
@@ -324,9 +328,9 @@ export async function upsertUser(firebaseUser) {
 }
 
 export function exportCSV(meds) {
-  const rows = [['Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions']]
-  meds.forEach(m => rows.push([m.name, m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions]))
-  dl('familycarehub-medications.csv', rows.map(r => r.map(c => '"' + (c || '').replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv')
+  const rows = [['Person', 'Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions']]
+  meds.forEach(m => rows.push([m.person || 'dad', m.name, m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions]))
+  dl('familycarehub-medications.csv', rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv')
 }
 
 export function exportJSON(meds) {
