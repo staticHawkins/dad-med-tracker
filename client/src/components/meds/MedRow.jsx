@@ -130,7 +130,7 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
   const pillSt = p.rem <= 0 ? 'empty' : s
   const fl = freqLabel(m)
   const sub = [m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
-  const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) + ' *' : '—')
+  const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) : '—')
   const rs = m.refillStatus || null
 
   useEffect(() => {
@@ -221,11 +221,13 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
           </div>
         </div>
 
-        {/* Col 2: Pills + bar  (hidden on mobile) */}
+        {/* Col 2: Days remaining + bar  (hidden on mobile) */}
         <div className="med-col-pills">
           <div className="pills-top">
-            <span className={`pill-count ${pc}`}>{p.rem}</span>
-            <span className="pill-of">/ {p.tot}</span>
+            <span className={`pill-count ${pc}`}>
+              {p.daysToZero === 999 ? p.rem : p.daysToZero}
+            </span>
+            <span className="pill-of">{p.daysToZero === 999 ? 'pills' : 'd'}</span>
           </div>
           <div className="bar-row">
             <div className="bar-bg">
@@ -241,7 +243,8 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
           {rsl && <span className="refill-status-badge">{rsl}</span>}
           <div className="med-mobile-pills">
             <span className={`med-mobile-count ${pc}`}>
-              {p.rem}<span className="med-mobile-of">/{p.tot}</span>
+              {p.daysToZero === 999 ? p.rem : p.daysToZero}
+              <span className="med-mobile-of">{p.daysToZero === 999 ? 'p' : 'd'}</span>
             </span>
             <div className="med-bar-mini">
               <div className="med-bar-mini-fill" style={{ width: pct + '%', background: bc }} />
@@ -385,10 +388,10 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
               <InlineField field="supply" value={m.supply} type="number" placeholder="e.g. 30" editCtx={editCtx} />
             </div>
 
-            {/* Refill date + Pharmacy */}
+            {/* Run-out date (calculated) + Pharmacy */}
             <div className="med-drawer-item">
-              <span className="med-drawer-lbl">Next refill</span>
-              <InlineField field="refillDate" value={m.refillDate} type="date" editCtx={editCtx} />
+              <span className="med-drawer-lbl">Runs out</span>
+              <span style={{ color: 'var(--text2)' }}>{rd}</span>
             </div>
             <div className="med-drawer-item">
               <span className="med-drawer-lbl">Pharmacy</span>

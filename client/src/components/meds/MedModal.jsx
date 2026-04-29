@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { saveMed } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { freqPerDay } from '../../lib/medUtils'
 
 const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
   frequencyCustomCount: '1', frequencyCustomEvery: '1', frequencyCustomUnit: 'days',
-  filledDate: '', supply: '', refillDate: '', pharmacy: '', rxNum: '',
+  filledDate: '', supply: '', pharmacy: '', rxNum: '',
   doctor: '', instructions: '', person: 'dad'
 }
 
@@ -100,14 +101,23 @@ export default function MedModal({ careTeam = [], onClose }) {
         </div>
       )}
 
+      {form.filledDate && form.supply && form.frequencyPreset !== 'as-needed' && (() => {
+        const freq = freqPerDay(form)
+        const days = freq > 0 ? Math.ceil(parseInt(form.supply) / freq) : null
+        if (!days) return null
+        const d = new Date(form.filledDate + 'T00:00:00')
+        d.setDate(d.getDate() + days)
+        return (
+          <div className="fr-hint" style={{ marginBottom: 4 }}>
+            Runs out approx. {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        )
+      })()}
+
       <div className="sheet-section">Optional</div>
       <div className="fr">
         <label>Dose / strength</label>
         <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
-      </div>
-      <div className="fr">
-        <label>Next refill <span className="fr-hint" style={{ textTransform: 'none', letterSpacing: 0 }}>overrides calculated date</span></label>
-        <input type="date" value={form.refillDate} onChange={set('refillDate')} />
       </div>
       <div className="f2-pharmacy">
         <div className="fr">
