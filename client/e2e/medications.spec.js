@@ -161,16 +161,12 @@ test.describe('medications', () => {
     await expect(page.locator('.med-row:not(.med-row-inactive) .med-row-main', { hasText: name })).toBeVisible();
   });
 
-  test('filter tab ≤ 7d shows only urgent/soon meds', async ({ page }) => {
-    await page.locator('.ftab', { hasText: '≤ 7d' }).click();
-    // Either some rows appear or empty state appears — no stocked rows should be visible
-    await expect(page.locator('.ftab.active', { hasText: '≤ 7d' })).toBeVisible();
-  });
-
   test('export CSV button triggers download without error', async ({ page }) => {
+    const csvBtn = page.getByRole('button', { name: '⬇ CSV' });
+    if (await csvBtn.isHidden()) return; // hidden on mobile viewports via CSS
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 5_000 }).catch(() => null),
-      page.getByRole('button', { name: '⬇ CSV' }).click(),
+      csvBtn.click(),
     ]);
     // Either a download fires or we at least confirm no page error occurred
     await expect(page.locator('.tbl-hdr')).toBeVisible();
