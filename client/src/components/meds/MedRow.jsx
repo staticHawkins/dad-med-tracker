@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel } from '../../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel, getRefillDate } from '../../lib/medUtils'
 import { saveMed, markRefilled, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
 import PersonChip from '../PersonChip'
 
@@ -130,7 +130,8 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
   const pillSt = p.rem <= 0 ? 'empty' : s
   const fl = freqLabel(m)
   const sub = [m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
-  const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) : '—')
+  const rdDate = getRefillDate(m)
+  const rd = rdDate ? fmtDate(rdDate) : '—'
   const rs = m.refillStatus || null
 
   useEffect(() => {

@@ -70,7 +70,6 @@ export function pillsNow(m) {
 }
 
 export function getRefillDate(m) {
-  if (m.refillDate) return new Date(m.refillDate + 'T00:00:00')
   return pillsNow(m).runOutDate
 }
 

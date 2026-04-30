@@ -73,7 +73,8 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
             const pillSt = p.rem <= 0 ? 'empty' : s
             const fl = freqLabel(m)
             const sub = [m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
-            const rd = m.refillDate ? fmtDate(m.refillDate) : (p.runOutDate ? fmtDate(p.runOutDate) + ' *' : '—')
+            const rdDate = getRefillDate(m)
+            const rd = rdDate ? fmtDate(rdDate) : '—'
 
             return (
               <tr key={m.id} onClick={() => onEdit(m.id)} style={{ cursor: 'pointer' }}>
