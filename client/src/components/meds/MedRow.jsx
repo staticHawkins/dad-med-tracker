@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel, getRefillDate } from '../../lib/medUtils'
-import { saveMed, markRefilled, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
+import { saveMed, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
 import PersonChip from '../PersonChip'
+import RefillModal from './RefillModal'
 
 const PRESETS = [
   { value: 'once-daily',      label: 'Once daily' },
@@ -110,6 +111,7 @@ function InlineSelect({ field, value, options, placeholder = '', editCtx }) {
 export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [refillOpen, setRefillOpen] = useState(false)
   const menuRef = useRef()
 
   // Inline edit state
@@ -144,10 +146,10 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [menuOpen])
 
-  async function handleRefill(e) {
+  function handleRefill(e) {
     e.stopPropagation()
-    try { await markRefilled(m) } catch { alert('Failed to update. Check your connection.') }
     setMenuOpen(false)
+    setRefillOpen(true)
   }
 
   async function handleRefillStatus(e, status) {
@@ -419,6 +421,8 @@ export default function MedRow({ m, careTeam = [], isExpanded, onToggleExpand })
           </div>
         </div>
       </div>
+
+      {refillOpen && <RefillModal med={m} onClose={() => setRefillOpen(false)} />}
     </div>
   )
 }

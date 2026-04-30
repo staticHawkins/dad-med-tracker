@@ -60,10 +60,20 @@ export async function reactivateMed(id) {
   await updateDoc(doc(db, 'medications', id), { active: true })
 }
 
-export async function markRefilled(med) {
+export async function markRefilled(med, overrides = {}) {
+  const hasFreq = overrides.frequencyPreset !== undefined
   const updated = {
     ...med,
-    filledDate: todayStr(),
+    filledDate: overrides.filledDate || todayStr(),
+    supply: overrides.supply ?? med.supply,
+    dose: overrides.dose ?? med.dose,
+    ...(hasFreq && {
+      frequency: computeFrequency(overrides),
+      frequencyPreset: overrides.frequencyPreset,
+      frequencyCustomCount: overrides.frequencyCustomCount || '1',
+      frequencyCustomEvery: overrides.frequencyCustomEvery || '1',
+      frequencyCustomUnit: overrides.frequencyCustomUnit || 'days',
+    }),
     refillDate: '',
     refillStatus: null,
     updatedAt: new Date().toISOString()
