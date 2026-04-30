@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel } from '../../lib/medUtils'
-import { markRefilled, delMed } from '../../lib/firestore'
+import { delMed } from '../../lib/firestore'
+import RefillModal from './RefillModal'
 
 export default function MedsTable({ meds, filter, search, onEdit }) {
+  const [refillMed, setRefillMed] = useState(null)
   const q = search.toLowerCase()
 
   let rows = [...meds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
@@ -15,10 +18,6 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
   async function handleDelete(m) {
     if (!confirm(`Remove ${m.name}?`)) return
     try { await delMed(m.id) } catch { alert('Failed to delete. Check your connection.') }
-  }
-
-  async function handleRefill(m) {
-    try { await markRefilled(m) } catch { alert('Failed to update. Check your connection.') }
   }
 
   if (!rows.length) {
@@ -100,7 +99,7 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
                 <td className="td-dt">{rd}</td>
                 <td className="td-ph">{m.pharmacy || '—'}</td>
                 <td className="td-act">
-                  <button className="act green" title="Mark refilled" onClick={e => { e.stopPropagation(); handleRefill(m) }}>✓</button>
+                  <button className="act green" title="Mark refilled" onClick={e => { e.stopPropagation(); setRefillMed(m) }}>✓</button>
                   <button className="act red" title="Remove" onClick={e => { e.stopPropagation(); handleDelete(m) }}>✕</button>
                 </td>
               </tr>
@@ -108,6 +107,7 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
           })}
         </tbody>
       </table>
+      {refillMed && <RefillModal med={refillMed} onClose={() => setRefillMed(null)} />}
     </div>
   )
 }

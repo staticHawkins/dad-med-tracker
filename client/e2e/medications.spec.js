@@ -61,11 +61,18 @@ test.describe('medications', () => {
     await expect(page.locator('.med-row-main').first()).toBeVisible();
   });
 
-  test('expand drawer shows inline fields', async ({ page }) => {
-    const name = `[e2e] ExpandMed ${Date.now()}`;
+  // Detail modal locator scoped to detail (excludes the Refill modal whose title starts with "Refill ")
+  function detailModal(page, name) {
+    return page.locator('[role="dialog"]', { hasText: name })
+      .filter({ has: page.locator('.med-drawer-details') });
+  }
+
+  test('open med detail modal shows inline fields', async ({ page }) => {
+    const name = `[e2e] DetailMed ${Date.now()}`;
     await addMed(page, name);
     await page.locator('.med-row-main', { hasText: name }).click();
-    await expect(page.locator('.med-drawer.open')).toBeVisible();
+    await expect(detailModal(page, name)).toBeVisible();
+    await expect(detailModal(page, name).locator('.med-drawer-details')).toBeVisible();
   });
 
   test('inline edit name autosaves', async ({ page }) => {
@@ -73,10 +80,11 @@ test.describe('medications', () => {
     const newName = `[e2e] InlineEdited ${Date.now()}`;
     await addMed(page, name);
     await page.locator('.med-row-main', { hasText: name }).click();
-    await page.waitForSelector('.med-drawer.open', { timeout: 5_000 });
-    await page.locator('.med-drawer.open .inline-val').first().click();
-    await page.locator('.med-drawer.open .inline-input').first().fill(newName);
-    await page.locator('.med-drawer.open .inline-input').first().press('Enter');
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    await modal.locator('.inline-val').first().click();
+    await modal.locator('.inline-input').first().fill(newName);
+    await modal.locator('.inline-input').first().press('Enter');
     await page.waitForSelector('.autosave-pill.saved', { timeout: 15_000 });
     await expect(page.locator('.autosave-pill.saved')).toBeVisible();
   });
@@ -84,61 +92,59 @@ test.describe('medications', () => {
   test('refill request updates badge', async ({ page }) => {
     const name = `[e2e] RefillMed ${Date.now()}`;
     await addMed(page, name);
-    const row = page.locator('.med-row', { hasText: name });
-    await row.locator('.med-row-main').click();
-    await row.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
+    await page.locator('.med-row-main', { hasText: name }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
     // Wait for next workflow button — proves write succeeded and listener updated UI
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
-    await expect(row.locator('.med-row-main')).toContainText(/Requested/);
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
+    // Close modal and check the row badge
+    await modal.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('.med-row-main', { hasText: name })).toContainText(/Requested/);
   });
 
   test('mark refilled clears refill badge', async ({ page }) => {
     const name = `[e2e] MarkRefill ${Date.now()}`;
     await addMed(page, name);
-    const row = page.locator('.med-row', { hasText: name });
-    await row.locator('.med-row-main').click();
-    await row.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
+    await page.locator('.med-row-main', { hasText: name }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
     // Step through workflow: request → ready-pickup → picked-up → mark refilled
-    // Wait for each next-step button to confirm the write succeeded before proceeding
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).click();
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).waitFor({ timeout: 15_000 });
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).click();
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).waitFor({ timeout: 15_000 });
-    await row.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).click();
-    // After marking refilled the med moves to the collapsed stocked group — expand it first
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).click();
+    // Refill confirmation modal opens — confirm with current values
+    const refillModal = page.locator('[role="dialog"]', { hasText: `Refill ${name}` });
+    await refillModal.waitFor({ timeout: 5_000 });
+    await refillModal.getByRole('button', { name: /Confirm refill/ }).click();
+    // After confirming, both modals close and the med moves to the collapsed stocked group
     await page.locator('.med-group-ok').waitFor({ timeout: 15_000 });
     await page.locator('.med-group-ok .stk-show-btn').click();
     const stockedRow = page.locator('.med-group-ok .med-row', { hasText: name });
     await stockedRow.locator('.med-row-main').click();
-    await stockedRow.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
-    await expect(stockedRow.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' })).toBeVisible();
+    const reopened = detailModal(page, name);
+    await reopened.waitFor({ timeout: 5_000 });
+    await expect(reopened.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' })).toBeVisible();
     await expect(stockedRow.locator('.med-row-main')).not.toContainText(/Requested/);
   });
 
-  async function deactivateRow(row) {
-    // ⋯ menu is hidden on mobile — use drawer button instead
-    if (await row.locator('.med-menu-btn').isVisible()) {
-      await row.locator('.med-menu-btn').click();
-      await row.locator('.med-menu-pop').waitFor({ timeout: 3_000 });
-      await row.locator('.med-menu-pop').getByRole('button', { name: 'Deactivate' }).click();
-      await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).waitFor({ timeout: 5_000 });
-      await row.locator('.med-menu-pop').getByRole('button', { name: 'Confirm deactivate?' }).click();
-    } else {
-      await row.locator('.med-row-main').click();
-      await row.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
-      await row.locator('.drawer-deactivate').click();
-      await row.locator('.drawer-deactivate.danger').waitFor({ timeout: 3_000 });
-      await row.locator('.drawer-deactivate.danger').click();
-    }
+  async function deactivateMed(page, name) {
+    await page.locator('.med-row-main', { hasText: name }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    await modal.locator('.drawer-deactivate').click();
+    await modal.locator('.drawer-deactivate.danger').waitFor({ timeout: 3_000 });
+    await modal.locator('.drawer-deactivate.danger').click();
   }
 
   test('deactivate moves med to inactive group', async ({ page }) => {
     const name = `[e2e] DeactMed ${Date.now()}`;
     await addMed(page, name);
-    await deactivateRow(page.locator('.med-row', { hasText: name }));
+    await deactivateMed(page, name);
     // Inactive group starts collapsed — expand it first
     await page.locator('.med-group-inactive').waitFor({ timeout: 15_000 });
     await page.locator('.med-group-inactive .med-group-toggle').click();
@@ -148,15 +154,14 @@ test.describe('medications', () => {
   test('reactivate moves med back to active groups', async ({ page }) => {
     const name = `[e2e] ReactMed ${Date.now()}`;
     await addMed(page, name);
-    await deactivateRow(page.locator('.med-row', { hasText: name }));
-    // Inactive group starts collapsed — expand it first
+    await deactivateMed(page, name);
     await page.locator('.med-group-inactive').waitFor({ timeout: 15_000 });
     await page.locator('.med-group-inactive .med-group-toggle').click();
-    // Reactivate via drawer on the inactive row (Reactivate button is always in drawer)
     const inactiveRow = page.locator('.med-group-inactive .med-row', { hasText: name });
     await inactiveRow.locator('.med-row-main').click();
-    await inactiveRow.locator('.med-drawer.open').waitFor({ timeout: 5_000 });
-    await inactiveRow.locator('.med-drawer-actions').getByRole('button', { name: 'Reactivate' }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Reactivate' }).click();
     await page.waitForSelector(`.med-row:not(.med-row-inactive) .med-row-main >> text=${name}`, { timeout: 15_000 });
     await expect(page.locator('.med-row:not(.med-row-inactive) .med-row-main', { hasText: name })).toBeVisible();
   });
