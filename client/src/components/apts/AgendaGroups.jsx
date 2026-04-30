@@ -1,5 +1,5 @@
 import { aptStatus } from '../../lib/aptUtils'
-import { today } from '../../lib/medUtils'
+import { today, fmtShortDate } from '../../lib/medUtils'
 import AptCard from './AptCard'
 
 export default function AgendaGroups({ apts, search, noteById, onView, pastExpanded, onPastExpand, careTeam = [] }) {
@@ -20,8 +20,8 @@ export default function AgendaGroups({ apts, search, noteById, onView, pastExpan
   const t = today()
   const start = new Date(t); start.setDate(t.getDate() + 1)
   const end   = new Date(t); end.setDate(t.getDate() + 7)
-  const weekRange = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-  const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const weekRange = `${fmtShortDate(start)}–${fmtShortDate(end)}`
+  const todayStr = fmtShortDate(new Date())
 
   if (!rows.length) {
     return (

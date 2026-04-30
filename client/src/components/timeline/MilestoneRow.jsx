@@ -1,4 +1,5 @@
 import MilestoneTag from './MilestoneTag'
+import { fmtDate, fmtShortDate } from '../../lib/medUtils'
 
 const DOT_STYLE = {
   green:  { background: '#3cbf7a' },
@@ -8,19 +9,10 @@ const DOT_STYLE = {
   amber:  { background: '#e09340' },
 }
 
-function fmtDate(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1, d)
-  return {
-    monthDay: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    year: String(y),
-    full: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-  }
-}
-
 // Desktop layout: date left col | dot+line center | content right
 function DesktopRow({ milestone, showConnector }) {
-  const { monthDay, year } = fmtDate(milestone.date)
+  const monthDay = fmtShortDate(milestone.date)
+  const year = milestone.date.split('-')[0]
   const dotStyle = DOT_STYLE[milestone.dot] || DOT_STYLE.filled
   return (
     <div className="tl-row">
@@ -48,7 +40,7 @@ function DesktopRow({ milestone, showConnector }) {
 
 // Mobile layout: dot left | content block (date inline at top)
 function MobileRow({ milestone }) {
-  const { full } = fmtDate(milestone.date)
+  const full = fmtDate(milestone.date)
   const dotStyle = DOT_STYLE[milestone.dot] || DOT_STYLE.filled
   return (
     <div className="tl-row-mobile">

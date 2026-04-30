@@ -1,4 +1,4 @@
-import { supplyStatus } from '../lib/medUtils'
+import { supplyStatus, fmtShortDate } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
 import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
 import PersonChip from './PersonChip'
@@ -13,12 +13,6 @@ function isOverdue(dueDate) {
   today.setHours(0, 0, 0, 0)
   const [y, m, d] = dueDate.split('-').map(Number)
   return new Date(y, m - 1, d) < today
-}
-
-function fmtShortDate(dueDate) {
-  if (!dueDate) return null
-  const [y, m, d] = dueDate.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -36,8 +30,7 @@ function getWeekRange() {
 }
 
 function fmtWeekRange(start, end) {
-  const opts = { month: 'short', day: 'numeric' }
-  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
+  return `${fmtShortDate(start)} – ${fmtShortDate(end)}`
 }
 
 // ── Summary alert bar (desktop only) ────────────────────────────────────────
