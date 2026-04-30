@@ -31,6 +31,7 @@ function InlineField({ field, value, type = 'text', placeholder = '', editCtx })
       />
     )
   }
+  const display = type === 'date' && value ? fmtDate(value) : value
   return (
     <span
       className="inline-val"
@@ -38,7 +39,7 @@ function InlineField({ field, value, type = 'text', placeholder = '', editCtx })
       onClick={e => { e.stopPropagation(); startEdit(field, value) }}
       onKeyDown={e => e.key === 'Enter' && startEdit(field, value)}
     >
-      {value || <span style={{ color: 'var(--text3)' }}>—</span>}
+      {display || <span style={{ color: 'var(--text3)' }}>—</span>}
     </span>
   )
 }
