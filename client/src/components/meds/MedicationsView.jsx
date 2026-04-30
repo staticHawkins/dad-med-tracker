@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react'
 import MedGroupSection from './MedGroupSection'
 import MedRow from './MedRow'
 import MedModal from './MedModal'
+import MedDetailModal from './MedDetailModal'
 import MedGroupHeader from './MedGroupHeader'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
 import { supplyStatus, pillsNow } from '../../lib/medUtils'
@@ -24,7 +25,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
-  const [expandedInactiveId, setExpandedInactiveId] = useState(null)
+  const [viewingMedId, setViewingMedId] = useState(null)
   const fileRef = useRef()
 
   const urgentRef = useRef()
@@ -94,9 +95,9 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
       ) : (
         <div className="med-groups">
           {filtered.length > 0 && <>
-            <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} careTeam={careTeam} />
-            <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   careTeam={careTeam} />
-            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     careTeam={careTeam} />
+            <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onOpen={setViewingMedId} />
+            <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onOpen={setViewingMedId} />
+            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId} />
           </>}
           {inactiveMeds.length > 0 && (
             <div className="med-group med-group-inactive">
@@ -110,13 +111,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
               {showInactive && (
                 <div className="med-group-body">
                   {inactiveMeds.map(m => (
-                    <MedRow
-                      key={m.id}
-                      m={m}
-                      careTeam={careTeam}
-                      isExpanded={expandedInactiveId === m.id}
-                      onToggleExpand={() => setExpandedInactiveId(prev => prev === m.id ? null : m.id)}
-                    />
+                    <MedRow key={m.id} m={m} onOpen={() => setViewingMedId(m.id)} />
                   ))}
                 </div>
               )}
@@ -128,6 +123,12 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
       {addOpen && (
         <MedModal careTeam={careTeam} onClose={() => setAddOpen(false)} />
       )}
+
+      {viewingMedId && (() => {
+        const med = meds.find(x => x.id === viewingMedId)
+        if (!med) return null
+        return <MedDetailModal med={med} careTeam={careTeam} onClose={() => setViewingMedId(null)} />
+      })()}
     </div>
   )
 }

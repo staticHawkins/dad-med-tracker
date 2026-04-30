@@ -9,22 +9,16 @@ const GROUP_META = {
   ok:     { label: 'Stocked up',       variant: 'ok',     defaultOpen: false },
 }
 
-export default function MedGroupSection({ groupKey, meds, sectionRef, careTeam = [] }) {
+export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen }) {
   const meta = GROUP_META[groupKey]
   const [isOpen, setIsOpen] = useState(meta.defaultOpen)
-  const [expandedId, setExpandedId] = useState(null)
 
   if (!meds.length) return null
-
-  function toggleRow(id) {
-    setExpandedId(prev => prev === id ? null : id)
-  }
 
   const isStocked = groupKey === 'ok'
 
   return (
     <div className={`med-group med-group-${meta.variant}`} ref={sectionRef}>
-      {/* Header only shown when group is expanded (stocked) or always (urgent/soon) */}
       {(!isStocked || isOpen) && (
         <MedGroupHeader
           label={meta.label}
@@ -37,13 +31,7 @@ export default function MedGroupSection({ groupKey, meds, sectionRef, careTeam =
       <div className="med-group-body">
         {isOpen
           ? meds.map(m => (
-              <MedRow
-                key={m.id}
-                m={m}
-                careTeam={careTeam}
-                isExpanded={expandedId === m.id}
-                onToggleExpand={() => toggleRow(m.id)}
-              />
+              <MedRow key={m.id} m={m} onOpen={() => onOpen(m.id)} />
             ))
           : (
               <MedStockedCollapsed
