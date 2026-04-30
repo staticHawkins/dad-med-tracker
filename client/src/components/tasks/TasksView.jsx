@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { updateTaskAssignees, delTask } from '../../lib/firestore'
+import { fmtShortDate } from '../../lib/medUtils'
 import TaskModal from './TaskModal'
 import { filterByPerson } from '../MainApp'
 import PersonChip from '../PersonChip'
@@ -26,12 +27,6 @@ const CATEGORIES = [
 
 function getStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
-}
-
-function formatDue(dueDate) {
-  if (!dueDate) return null
-  const [y, m, d] = dueDate.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function isOverdue(dueDate) {
@@ -144,7 +139,7 @@ export default function TasksView({ tasks, careTeam, users, user, personFilter, 
         <span className="subtask-title">{child.title}</span>
         {child.dueDate && (
           <span className={`subtask-due${overdue ? ' overdue' : ''}`}>
-            {overdue ? '⚠ ' : ''}{formatDue(child.dueDate)}
+            {overdue ? '⚠ ' : ''}{fmtShortDate(child.dueDate)}
           </span>
         )}
       </li>
@@ -175,7 +170,7 @@ export default function TasksView({ tasks, careTeam, users, user, personFilter, 
               ))}
               {task.dueDate && (
                 <span className={`task-due${overdue ? ' overdue' : ''}`}>
-                  {overdue ? '⚠ ' : ''}{formatDue(task.dueDate)}
+                  {overdue ? '⚠ ' : ''}{fmtShortDate(task.dueDate)}
                 </span>
               )}
               {(task.comments?.length > 0) && (

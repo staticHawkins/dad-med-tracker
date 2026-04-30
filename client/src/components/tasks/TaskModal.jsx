@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveTask, updateTaskFields, addComment, deleteComment, newId } from '../../lib/firestore'
+import { fmtShortDate } from '../../lib/medUtils'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 const STATUSES = ['todo', 'in-progress', 'done']
@@ -369,11 +370,6 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
-  function formatDue(dueDate) {
-    if (!dueDate) return null
-    const [y, m, d] = dueDate.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
 
   // ── Inline edit helpers (edit mode only) ───────────────────────────────────
 
@@ -479,7 +475,7 @@ export default function TaskModal({ tasks, careTeam, users, editId, defaultParen
                 <span className={`subtask-modal-dot subtask-modal-dot-${childStatus.replace('-', '')}`} />
                 <span className="task-subtask-title">{child.title}</span>
                 {child.dueDate && (
-                  <span className="task-subtask-due">{formatDue(child.dueDate)}</span>
+                  <span className="task-subtask-due">{fmtShortDate(child.dueDate)}</span>
                 )}
               </li>
             )

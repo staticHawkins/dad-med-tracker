@@ -116,3 +116,9 @@ export function fmtDate(d) {
   if (typeof d === 'string') d = new Date(d + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
+
+export function fmtShortDate(d) {
+  if (!d) return null
+  if (typeof d === 'string') d = new Date(d + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { saveMed } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
-import { freqPerDay } from '../../lib/medUtils'
+import { freqPerDay, fmtDate } from '../../lib/medUtils'
 
 const EMPTY = {
   name: '', dose: '', frequencyPreset: 'once-daily',
@@ -109,7 +109,7 @@ export default function MedModal({ careTeam = [], onClose }) {
         d.setDate(d.getDate() + days)
         return (
           <div className="fr-hint" style={{ marginBottom: 4 }}>
-            Runs out approx. {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            Runs out approx. {fmtDate(d)}
           </div>
         )
       })()}
