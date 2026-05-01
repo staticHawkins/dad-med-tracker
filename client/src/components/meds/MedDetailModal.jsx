@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { fmtDate, fmtShortDate, freqLabel, getRefillDate, activeFill, queuedFill, todayStr } from '../../lib/medUtils'
+import { fmtDate, fmtShortDate, freqLabel, freqPerDay, getRefillDate, activeFill, queuedFill, todayStr } from '../../lib/medUtils'
 import { saveMed, updateRefillStatus, deactivateMed, reactivateMed, removeQueuedFill } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import PersonChip from '../PersonChip'
@@ -125,6 +125,14 @@ function FillEntry({ fill, med, today: todayS }) {
   const summary = [fill.supply ? fill.supply + ' pills' : null, fill.dose || null, freqText || null]
     .filter(Boolean).join(' · ')
 
+  const runOutDate = (() => {
+    const freq = freqPerDay(fill)
+    if (!freq || freq <= 0 || !fill.filledDate || !fill.supply) return null
+    const d = new Date(fill.filledDate + 'T00:00:00')
+    d.setDate(d.getDate() + Math.ceil(parseInt(fill.supply) / freq))
+    return d
+  })()
+
   async function handleRemove(e) {
     e.stopPropagation()
     try { await removeQueuedFill(med, fill.id) } catch { alert('Failed to remove. Check your connection.') }
@@ -164,6 +172,10 @@ function FillEntry({ fill, med, today: todayS }) {
               <div className="med-drawer-item">
                 <span className="med-drawer-lbl">Frequency</span>
                 <span className="inline-val">{freqText || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Runs out</span>
+                <span className="inline-val">{runOutDate ? fmtDate(runOutDate) : '—'}</span>
               </div>
               <div className="med-drawer-item">
                 <span className="med-drawer-lbl">Pharmacy</span>
