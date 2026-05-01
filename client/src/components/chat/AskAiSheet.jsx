@@ -36,30 +36,39 @@ function buildSystemContext(meds, apts, tasks, careTeam) {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
 
+  const personLabel = p => p === 'mom' ? 'Mom' : 'Dad'
+
   const medsSection = meds.length === 0 ? 'No medications on file.' : meds.map(m => {
     const { daysToZero, rem } = pillsNow(m)
     const status = supplyStatus(m)
     const label = freqLabel(m)
     const days = daysToZero < 999 ? `${daysToZero} days left` : 'as-needed'
-    return `- ${m.name}${m.dose ? ` ${m.dose}` : ''}${label ? `, ${label}` : ''}: ${rem} pills, ${days} [${status}]`
+    return `- [${personLabel(m.person)}] ${m.name}${m.dose ? ` ${m.dose}` : ''}${label ? `, ${label}` : ''}: ${rem} pills, ${days} [${status}]`
   }).join('\n')
 
   const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
   const upcoming = sorted.filter(a => aptStatus(a) !== 'past')
-  const aptsSection = upcoming.length === 0 ? 'No upcoming appointments.' : upcoming.slice(0, 8).map(a => {
+  const past = sorted.filter(a => aptStatus(a) === 'past').slice(-5)
+
+  const fmtApt = a => {
     const db = fmtAptDateBlock(a.dateTime)
     const time = fmtAptTime(a.dateTime)
     const when = `${db.month} ${db.day}${time ? ` at ${time}` : ''}`
     const dr = a.doctor ? ` with ${a.doctor}` : ''
     const loc = a.location ? ` at ${a.location}` : ''
-    return `- ${when}: ${a.title}${dr}${loc}`
-  }).join('\n')
+    return `- [${personLabel(a.person)}] ${when}: ${a.title}${dr}${loc}`
+  }
+
+  const upcomingSection = upcoming.length === 0 ? 'No upcoming appointments.' : upcoming.slice(0, 8).map(fmtApt).join('\n')
+  const pastSection = past.length === 0 ? 'No past appointments.' : past.map(fmtApt).join('\n')
+  const aptsSection = `Upcoming:\n${upcomingSection}\n\nRecent past (last ${past.length}):\n${pastSection}`
 
   const openTasks = tasks.filter(t => getTaskStatus(t) !== 'done')
   const tasksSection = openTasks.length === 0 ? 'No open tasks.' : openTasks.map(t => {
     const s = getTaskStatus(t)
     const due = t.dueDate ? ` — due ${t.dueDate}` : ''
-    return `- [${s}] ${t.title}${due}`
+    const who = t.person ? ` [${personLabel(t.person)}]` : ''
+    return `- [${s}]${who} ${t.title}${due}`
   }).join('\n')
 
   const careSection = careTeam.length === 0 ? 'No care team on file.' : careTeam.map(d => {
@@ -68,7 +77,7 @@ function buildSystemContext(meds, apts, tasks, careTeam) {
     return `- ${d.name}${spec}${aff}`
   }).join('\n')
 
-  return `You are a helpful assistant for a family caring for their father. Answer questions concisely and accurately based only on the data provided below. Today is ${dateStr}.
+  return `You are a helpful assistant for a family caring for their parents (Mom and Dad). Answer questions concisely and accurately based only on the data provided below. Each item is labeled [Mom] or [Dad]. Today is ${dateStr}.
 
 MEDICATIONS (${meds.length} total):
 ${medsSection}
