@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { fmtDate, getRefillDate } from '../../lib/medUtils'
-import { saveMed, updateRefillStatus, deactivateMed, reactivateMed } from '../../lib/firestore'
+import { fmtDate, fmtShortDate, freqLabel, getRefillDate, activeFill, queuedFill, todayStr } from '../../lib/medUtils'
+import { saveMed, updateRefillStatus, deactivateMed, reactivateMed, removeQueuedFill } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import PersonChip from '../PersonChip'
 import RefillModal from './RefillModal'
@@ -114,6 +114,86 @@ function InlineSelect({ field, value, options, placeholder = '', editCtx }) {
   )
 }
 
+function FillEntry({ fill, med, today: todayS }) {
+  const [open, setOpen] = useState(false)
+  const active = activeFill(med)
+  const status = fill.filledDate > todayS ? 'queued'
+    : (active && fill.filledDate === active.filledDate) ? 'current'
+    : 'past'
+
+  const freqText = freqLabel(fill)
+  const summary = [fill.supply ? fill.supply + ' pills' : null, fill.dose || null, freqText || null]
+    .filter(Boolean).join(' · ')
+
+  async function handleRemove(e) {
+    e.stopPropagation()
+    try { await removeQueuedFill(med, fill.id) } catch { alert('Failed to remove. Check your connection.') }
+  }
+
+  return (
+    <div className={`fill-entry ${status}`}>
+      <div className="fill-dot" />
+      <div className="fill-card">
+        <div className="fill-card-head" onClick={() => setOpen(o => !o)}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="fill-date">{fmtDate(fill.filledDate)}</div>
+            {summary && <div className="fill-summary">{summary}</div>}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {status === 'current' && <span className="fill-badge badge-current">Active</span>}
+            {status === 'queued'  && <span className="fill-badge badge-queued">Queued</span>}
+            {status === 'past'    && <span className="fill-badge badge-past">Past</span>}
+            <span className={`fill-chevron${open ? ' open' : ''}`}>▼</span>
+          </div>
+        </div>
+        {open && (
+          <div className="fill-card-body open">
+            <div className="med-drawer-details">
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Fill date</span>
+                <span className="inline-val">{fmtDate(fill.filledDate)}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Pills in bottle</span>
+                <span className="inline-val">{fill.supply || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Dose / strength</span>
+                <span className="inline-val">{fill.dose || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Frequency</span>
+                <span className="inline-val">{freqText || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Pharmacy</span>
+                <span className="inline-val">{fill.pharmacy || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Rx #</span>
+                <span className="inline-val">{fill.rxNum || '—'}</span>
+              </div>
+              <div className="med-drawer-item">
+                <span className="med-drawer-lbl">Doctor</span>
+                <span className="inline-val">{fill.doctor || '—'}</span>
+              </div>
+              {fill.instructions && (
+                <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>
+                  <span className="med-drawer-lbl">Instructions</span>
+                  <span className="inline-val">{fill.instructions}</span>
+                </div>
+              )}
+            </div>
+            {status === 'queued' && (
+              <button className="fill-remove" onClick={handleRemove}>Remove queued fill</button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MedDetailModal({ med, careTeam = [], onClose }) {
   const isMobile = useIsMobile()
   const [editingField, setEditingField] = useState(null)
@@ -136,6 +216,8 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
   const rs = m.refillStatus || null
   const rdDate = getRefillDate(m)
   const rd = rdDate ? fmtDate(rdDate) : '—'
+  const queued = queuedFill(m)
+  const todayS = todayStr()
 
   function startEdit(field, currentValue) {
     setEditingField(field)
@@ -199,6 +281,11 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
             {saveStatus === 'saving' && 'Saving…'}
             {saveStatus === 'saved'  && 'Saved'}
             {saveStatus === 'error'  && 'Error'}
+          </span>
+        )}
+        {queued && (
+          <span className="queued-pill">
+            ⏱ Next fill {fmtShortDate(queued.filledDate)}
           </span>
         )}
         {isInactive
@@ -302,6 +389,21 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
           <InlineTextarea field="instructions" value={m.instructions} placeholder="e.g. Take with food" editCtx={editCtx} />
         </div>
       </div>
+
+      {m.fills?.length > 0 && (
+        <>
+          <div className="fill-section-divider">
+            <span className="fill-section-lbl">Fill History</span>
+          </div>
+          <div className="fill-timeline">
+            {[...m.fills]
+              .sort((a, b) => b.filledDate.localeCompare(a.filledDate))
+              .map(fill => (
+                <FillEntry key={fill.id} fill={fill} med={m} today={todayS} />
+              ))}
+          </div>
+        </>
+      )}
     </>
   )
 

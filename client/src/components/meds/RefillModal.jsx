@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { markRefilled } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
-import { todayStr, freqPerDay, fmtDate } from '../../lib/medUtils'
+import { todayStr, today, daysBetween, freqPerDay, fmtDate, fmtShortDate } from '../../lib/medUtils'
 
 const PRESETS = [
   { value: 'once-daily',      label: 'Once daily' },
@@ -45,12 +45,27 @@ export default function RefillModal({ med, onClose }) {
     setSaving(false)
   }
 
+  const isFuture = form.filledDate && form.filledDate > todayStr()
+  const daysAway = isFuture
+    ? daysBetween(today(), new Date(form.filledDate + 'T00:00:00'))
+    : null
+
   const formContent = (
     <>
       <div className="fr">
         <label>Fill date <span className="req">*</span></label>
         <input type="date" value={form.filledDate} onChange={set('filledDate')} />
+        {isFuture && (
+          <div className="fr-hint future">In {daysAway} day{daysAway !== 1 ? 's' : ''}</div>
+        )}
       </div>
+
+      {isFuture && (
+        <div className="fr-hint-box future">
+          Queued for {fmtShortDate(form.filledDate)} — current supply stays active until then
+        </div>
+      )}
+
       <div className="f2">
         <div className="fr">
           <label>Pills in bottle <span className="req">*</span></label>
@@ -94,7 +109,10 @@ export default function RefillModal({ med, onClose }) {
         d.setDate(d.getDate() + days)
         return (
           <div className="fr-hint" style={{ marginBottom: 4 }}>
-            Runs out approx. {fmtDate(d)}
+            {isFuture
+              ? <>Runs out approx. {fmtDate(d)} ({days}d from {fmtShortDate(form.filledDate)})</>
+              : <>Runs out approx. {fmtDate(d)}</>
+            }
           </div>
         )
       })()}
@@ -102,7 +120,7 @@ export default function RefillModal({ med, onClose }) {
       <div className="mf">
         <button className="btn-cx" onClick={onClose}>Cancel</button>
         <button className="btn-sv" onClick={handleConfirm} disabled={saving}>
-          {saving ? 'Saving…' : 'Confirm refill'}
+          {saving ? 'Saving…' : isFuture ? 'Queue refill' : 'Confirm refill'}
         </button>
       </div>
     </>

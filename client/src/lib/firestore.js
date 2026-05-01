@@ -62,21 +62,80 @@ export async function reactivateMed(id) {
 
 export async function markRefilled(med, overrides = {}) {
   const hasFreq = overrides.frequencyPreset !== undefined
+  const fillDate = overrides.filledDate || todayStr()
+  const isFuture = fillDate > todayStr()
+
+  const newFill = {
+    id: newId(),
+    filledDate: fillDate,
+    supply: overrides.supply ?? med.supply,
+    dose: overrides.dose ?? med.dose ?? '',
+    frequency: hasFreq ? computeFrequency(overrides) : med.frequency,
+    frequencyPreset: hasFreq ? overrides.frequencyPreset : (med.frequencyPreset || 'once-daily'),
+    frequencyCustomCount: hasFreq ? (overrides.frequencyCustomCount || '1') : (med.frequencyCustomCount || '1'),
+    frequencyCustomEvery: hasFreq ? (overrides.frequencyCustomEvery || '1') : (med.frequencyCustomEvery || '1'),
+    frequencyCustomUnit: hasFreq ? (overrides.frequencyCustomUnit || 'days') : (med.frequencyCustomUnit || 'days'),
+    pharmacy: med.pharmacy || '',
+    rxNum: med.rxNum || '',
+    doctor: med.doctor || '',
+    instructions: med.instructions || '',
+    createdAt: new Date().toISOString(),
+  }
+
+  // Archive current top-level fill if not already in fills[]
+  const existingFills = med.fills || []
+  const alreadyArchived = existingFills.some(f => f.filledDate === med.filledDate)
+  const priorFills = alreadyArchived
+    ? existingFills
+    : med.filledDate
+      ? [...existingFills, {
+          id: newId(),
+          filledDate: med.filledDate,
+          supply: med.supply,
+          dose: med.dose || '',
+          frequency: med.frequency,
+          frequencyPreset: med.frequencyPreset || 'once-daily',
+          frequencyCustomCount: med.frequencyCustomCount || '1',
+          frequencyCustomEvery: med.frequencyCustomEvery || '1',
+          frequencyCustomUnit: med.frequencyCustomUnit || 'days',
+          pharmacy: med.pharmacy || '',
+          rxNum: med.rxNum || '',
+          doctor: med.doctor || '',
+          instructions: med.instructions || '',
+          createdAt: med.updatedAt || new Date().toISOString(),
+        }]
+      : existingFills
+
   const updated = {
     ...med,
-    filledDate: overrides.filledDate || todayStr(),
-    supply: overrides.supply ?? med.supply,
-    dose: overrides.dose ?? med.dose,
-    ...(hasFreq && {
-      frequency: computeFrequency(overrides),
-      frequencyPreset: overrides.frequencyPreset,
-      frequencyCustomCount: overrides.frequencyCustomCount || '1',
-      frequencyCustomEvery: overrides.frequencyCustomEvery || '1',
-      frequencyCustomUnit: overrides.frequencyCustomUnit || 'days',
-    }),
+    fills: [...priorFills, newFill],
     refillDate: '',
     refillStatus: null,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+  }
+
+  // Only promote top-level fields for today/past fills
+  if (!isFuture) {
+    updated.filledDate = fillDate
+    updated.supply = newFill.supply
+    updated.dose = newFill.dose
+    if (hasFreq) {
+      updated.frequency = newFill.frequency
+      updated.frequencyPreset = newFill.frequencyPreset
+      updated.frequencyCustomCount = newFill.frequencyCustomCount
+      updated.frequencyCustomEvery = newFill.frequencyCustomEvery
+      updated.frequencyCustomUnit = newFill.frequencyCustomUnit
+    }
+  }
+
+  await setDoc(doc(db, 'medications', med.id), updated)
+}
+
+export async function removeQueuedFill(med, fillId) {
+  const updated = {
+    ...med,
+    fills: (med.fills || []).filter(f => f.id !== fillId),
+    updatedAt: new Date().toISOString(),
   }
   await setDoc(doc(db, 'medications', med.id), updated)
 }
