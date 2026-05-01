@@ -51,10 +51,47 @@ export function freqLabel(m) {
   return `${f}× daily`
 }
 
+// Returns the currently active fill (most recent whose filledDate <= today).
+// Falls back to top-level fields for meds not yet migrated.
+export function activeFill(med) {
+  const t = todayStr()
+  const past = (med.fills || []).filter(f => f.filledDate <= t)
+  if (past.length) return past.sort((a, b) => b.filledDate.localeCompare(a.filledDate))[0]
+  // pre-migration fallback
+  return {
+    filledDate: med.filledDate,
+    supply: med.supply,
+    dose: med.dose,
+    frequencyPreset: med.frequencyPreset,
+    frequencyCustomCount: med.frequencyCustomCount,
+    frequencyCustomEvery: med.frequencyCustomEvery,
+    frequencyCustomUnit: med.frequencyCustomUnit,
+  }
+}
+
+// Returns the single queued (future-dated) fill, or null.
+export function queuedFill(med) {
+  const t = todayStr()
+  return (med.fills || []).find(f => f.filledDate > t) || null
+}
+
+// Total days of supply coverage: current + queued fill (if any).
+function effectiveDaysToZero(m) {
+  const p = pillsNow(m)
+  const qf = queuedFill(m)
+  if (!qf) return p.daysToZero
+  const freq = freqPerDay({ ...m, ...qf })
+  if (!freq || freq <= 0) return p.daysToZero
+  const queuedFillDate = new Date(qf.filledDate + 'T00:00:00')
+  const daysUntilQueued = Math.max(0, daysBetween(today(), queuedFillDate))
+  return daysUntilQueued + Math.ceil((parseInt(qf.supply) || 30) / freq)
+}
+
 export function pillsNow(m) {
-  const freq = freqPerDay(m)
-  const supply = parseInt(m.supply) || 30
-  const filledDate = m.filledDate ? new Date(m.filledDate + 'T00:00:00') : null
+  const fill = activeFill(m)
+  const freq = freqPerDay({ ...m, ...fill })
+  const supply = parseInt(fill.supply) || 30
+  const filledDate = fill.filledDate ? new Date(fill.filledDate + 'T00:00:00') : null
   if (!filledDate) return { rem: supply, tot: supply, runOutDate: null, daysToZero: 999 }
   if (freq === null) {
     // as-needed: track pills only, no runout math
@@ -76,17 +113,16 @@ export function getRefillDate(m) {
 const REFILL_LEAD = 14
 
 export function supplyStatus(m) {
-  const p = pillsNow(m)
-  if (p.rem <= 0) return 'urgent'
-  if (p.daysToZero <= 7) return 'urgent'
-  if (p.daysToZero <= REFILL_LEAD) return 'soon'
+  const d = effectiveDaysToZero(m)
+  if (d <= 7) return 'urgent'
+  if (d <= REFILL_LEAD) return 'soon'
   return 'ok'
 }
 
 export function supplyStatusLabel(m) {
   const p = pillsNow(m)
-  if (p.rem <= 0) return 'Out of pills'
-  const d = p.daysToZero
+  if (p.rem <= 0 && !queuedFill(m)) return 'Out of pills'
+  const d = effectiveDaysToZero(m)
   if (d <= 0) return 'Out of pills'
   if (d <= 7) return d === 1 ? 'Refill today' : 'Refill in ' + d + 'd'
   if (d <= REFILL_LEAD) return 'Refill in ' + d + 'd'

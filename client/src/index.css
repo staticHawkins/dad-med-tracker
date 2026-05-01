@@ -1221,6 +1221,38 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 }
 .stk-show-btn:hover{background:var(--green-dim)}
 
+/* ── Fill history ── */
+.queued-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--violet-dim);color:var(--violet);border:1px solid var(--violet-border);font-family:var(--ffm)}
+.fill-section-divider{display:flex;align-items:center;gap:8px;margin:20px 0 14px;padding-top:16px;border-top:1px solid var(--border)}
+.fill-section-lbl{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3)}
+.fill-timeline{position:relative;padding-left:20px}
+.fill-timeline::before{content:'';position:absolute;left:6px;top:8px;bottom:8px;width:1px;background:var(--border2)}
+.fill-entry{position:relative;margin-bottom:8px}
+.fill-dot{position:absolute;left:-17px;top:13px;width:9px;height:9px;border-radius:50%;border:2px solid var(--panel);background:var(--border2)}
+.fill-entry.current .fill-dot{background:var(--blue)}
+.fill-entry.queued .fill-dot{background:var(--violet)}
+.fill-card{border:1px solid var(--border2);border-radius:9px;overflow:hidden;background:var(--panel)}
+.fill-entry.current .fill-card{border-color:var(--blue-border)}
+.fill-entry.queued .fill-card{border-color:var(--violet-border)}
+.fill-entry.past .fill-card{opacity:.55}
+.fill-card-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px 8px;cursor:pointer;gap:8px;user-select:none}
+.fill-date{font-size:12px;font-weight:600;font-family:var(--ffm);color:var(--text)}
+.fill-entry.past .fill-date{color:var(--text2)}
+.fill-summary{font-size:11px;color:var(--text2);margin-top:2px}
+.fill-badge{font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;font-family:var(--ffm)}
+.badge-current{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border)}
+.badge-queued{background:var(--violet-dim);color:var(--violet);border:1px solid var(--violet-border)}
+.badge-past{background:var(--panel2);color:var(--text3)}
+.fill-chevron{font-size:10px;color:var(--text3);transition:transform .18s}
+.fill-chevron.open{transform:rotate(180deg)}
+.fill-card-body{padding:0 12px 12px}
+.fill-card-body .med-drawer-details{gap:8px 16px;margin-top:8px}
+.fill-remove{margin-top:10px;font-family:var(--ff);font-size:11px;font-weight:500;background:none;border:1px solid var(--red-border);color:var(--red);padding:4px 10px;border-radius:6px;cursor:pointer}
+/* RefillModal future date */
+.fr-hint.future{color:var(--violet);font-weight:600}
+.fr-hint-box{padding:8px 12px;border-radius:7px;font-size:12px;margin-bottom:4px}
+.fr-hint-box.future{background:var(--violet-dim);color:var(--violet);border:1px solid var(--violet-border)}
+
 /* ── TABLET  640–1023px ── */
 @media(min-width:640px) and (max-width:1023px){
   .lbl-full{display:none}
@@ -1249,6 +1281,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
   .med-col-pharm{display:none}
   .med-col-menu{display:none}
   .drawer-deactivate{display:block}
+  .fill-dot{border-color:var(--bg)}
   /* Status col becomes vertical: pill + mini bar */
   .med-col-status{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
   .med-mobile-pills{display:flex}

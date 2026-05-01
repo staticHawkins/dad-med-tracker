@@ -78,7 +78,7 @@ client/src/
 │   ├── CareTeamPanel.jsx
 │   ├── NotificationBanner.jsx
 │   ├── PersonChip.jsx
-│   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
+│   ├── meds/            # MedicationsView, MedsTable, MedModal, MedDetailModal, RefillModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
 │   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
 │   ├── tasks/           # TasksView, TaskModal
 │   ├── timeline/        # TimelineView, DiseaseTimelineCard, MilestoneRow, MilestoneTag, PhaseStrip
@@ -122,3 +122,14 @@ FCM token registration (with device metadata) and foreground message handling.
 ### Firebase Config
 
 API keys are in `client/src/firebase.js`. This is intentional for a client-side app — access is controlled by Firestore security rules in the Firebase console, not in this repo.
+
+## Mockups
+
+HTML mockup files live in `.mockup/` at the project root. Serve them locally with:
+
+```bash
+cd .mockup && python3 -m http.server 7777
+# visit http://localhost:7777/<file>.html
+```
+
+Playwright screenshots must be saved to `.playwright-mcp/` — always pass `filename: ".playwright-mcp/<name>.png"` in `browser_take_screenshot` calls.

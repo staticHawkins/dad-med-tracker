@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, today, freqPerDay, freqLabel } from '../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, today, freqPerDay, freqLabel, activeFill, queuedFill } from '../lib/medUtils'
 
 // Pin "today" to a fixed date for deterministic tests
 const FIXED_TODAY = new Date('2026-03-31T00:00:00')
@@ -152,6 +152,90 @@ describe('supplyStatusLabel', () => {
   it('returns "OK — Xd left" when stocked', () => {
     const med = { filledDate: '2026-03-31', supply: 30, frequency: 1 }
     expect(supplyStatusLabel(med)).toBe('OK — 30d left')
+  })
+})
+
+// ── activeFill ────────────────────────────────────────────────────────────────
+
+describe('activeFill', () => {
+  it('returns most recent past fill from fills[]', () => {
+    const med = {
+      fills: [
+        { id: 'a', filledDate: '2026-03-01', supply: 30 },
+        { id: 'b', filledDate: '2026-03-20', supply: 30 },
+      ]
+    }
+    expect(activeFill(med).id).toBe('b')
+  })
+
+  it('ignores future fills', () => {
+    const med = {
+      fills: [
+        { id: 'past', filledDate: '2026-03-01', supply: 30 },
+        { id: 'future', filledDate: '2026-04-10', supply: 30 },
+      ]
+    }
+    expect(activeFill(med).id).toBe('past')
+  })
+
+  it('falls back to top-level fields when fills[] is empty', () => {
+    const med = { filledDate: '2026-03-31', supply: 30, frequencyPreset: 'once-daily' }
+    const fill = activeFill(med)
+    expect(fill.filledDate).toBe('2026-03-31')
+    expect(fill.supply).toBe(30)
+  })
+
+  it('falls back to top-level fields when fills[] is absent', () => {
+    const med = { filledDate: '2026-03-15', supply: 60 }
+    expect(activeFill(med).filledDate).toBe('2026-03-15')
+  })
+})
+
+// ── queuedFill ────────────────────────────────────────────────────────────────
+
+describe('queuedFill', () => {
+  it('returns future fill', () => {
+    const med = {
+      fills: [
+        { id: 'past',   filledDate: '2026-03-01', supply: 30 },
+        { id: 'future', filledDate: '2026-04-10', supply: 30 },
+      ]
+    }
+    expect(queuedFill(med).id).toBe('future')
+  })
+
+  it('returns null when no future fill', () => {
+    const med = {
+      fills: [{ id: 'past', filledDate: '2026-03-01', supply: 30 }]
+    }
+    expect(queuedFill(med)).toBeNull()
+  })
+
+  it('returns null when fills[] is absent', () => {
+    expect(queuedFill({ filledDate: '2026-03-01', supply: 30 })).toBeNull()
+  })
+})
+
+// ── supplyStatus with queued fill ─────────────────────────────────────────────
+
+describe('supplyStatus with queued fill', () => {
+  it('returns ok when current supply is urgent but queued fill covers gap', () => {
+    const med = {
+      fills: [
+        { id: 'cur', filledDate: '2026-03-29', supply: 3, frequencyPreset: 'once-daily' },
+        { id: 'q',   filledDate: '2026-04-05', supply: 30, frequencyPreset: 'once-daily' },
+      ],
+      filledDate: '2026-03-29', supply: 3, frequencyPreset: 'once-daily'
+    }
+    expect(supplyStatus(med)).toBe('ok')
+  })
+
+  it('returns urgent when no queued fill and supply ≤7 days', () => {
+    const med = {
+      fills: [{ id: 'cur', filledDate: '2026-03-29', supply: 3, frequencyPreset: 'once-daily' }],
+      filledDate: '2026-03-29', supply: 3, frequencyPreset: 'once-daily'
+    }
+    expect(supplyStatus(med)).toBe('urgent')
   })
 })
 

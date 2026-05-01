@@ -121,7 +121,9 @@ test.describe('medications', () => {
     const refillModal = page.locator('[role="dialog"]', { hasText: `Refill ${name}` });
     await refillModal.waitFor({ timeout: 5_000 });
     await refillModal.getByRole('button', { name: /Confirm refill/ }).click();
-    // After confirming, both modals close and the med moves to the collapsed stocked group
+    // RefillModal closes; close MedDetailModal too, then verify med moved to stocked group
+    await refillModal.waitFor({ state: 'hidden', timeout: 10_000 });
+    await modal.getByRole('button', { name: 'Close' }).click();
     await page.locator('.med-group-ok').waitFor({ timeout: 15_000 });
     await page.locator('.med-group-ok .stk-show-btn').click();
     const stockedRow = page.locator('.med-group-ok .med-row', { hasText: name });
@@ -130,6 +132,57 @@ test.describe('medications', () => {
     await reopened.waitFor({ timeout: 5_000 });
     await expect(reopened.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' })).toBeVisible();
     await expect(stockedRow.locator('.med-row-main')).not.toContainText(/Requested/);
+  });
+
+  test('fill history appears after refill with active entry', async ({ page }) => {
+    const name = `[e2e] FillHist ${Date.now()}`;
+    await addMed(page, name);
+    await page.locator('.med-row-main', { hasText: name }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    // Step through to mark refilled
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).click();
+    const refillModal = page.locator('[role="dialog"]', { hasText: `Refill ${name}` });
+    await refillModal.waitFor({ timeout: 5_000 });
+    await refillModal.getByRole('button', { name: /Confirm refill/ }).click();
+    await refillModal.waitFor({ state: 'hidden', timeout: 10_000 });
+    // Fill History section should now be visible with an Active badge
+    await expect(modal.locator('.fill-section-lbl')).toBeVisible();
+    await expect(modal.locator('.badge-current')).toBeVisible();
+  });
+
+  test('future fill date shows queued pill in action row', async ({ page }) => {
+    const name = `[e2e] FutFill ${Date.now()}`;
+    await addMed(page, name);
+    await page.locator('.med-row-main', { hasText: name }).click();
+    const modal = detailModal(page, name);
+    await modal.waitFor({ timeout: 5_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Place request' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Ready for pickup' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Picked up' }).click();
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).waitFor({ timeout: 15_000 });
+    await modal.locator('.med-drawer-actions').getByRole('button', { name: 'Mark refilled' }).click();
+    const refillModal = page.locator('[role="dialog"]', { hasText: `Refill ${name}` });
+    await refillModal.waitFor({ timeout: 5_000 });
+    // Set a future fill date (tomorrow)
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    await refillModal.locator('input[type="date"]').fill(tomorrowStr);
+    await expect(refillModal.locator('.fr-hint.future')).toBeVisible();
+    await refillModal.getByRole('button', { name: /Queue refill/ }).click();
+    await refillModal.waitFor({ state: 'hidden', timeout: 10_000 });
+    // Queued pill badge should appear in the action row
+    await expect(modal.locator('.queued-pill')).toBeVisible();
+    // Fill History should show a Queued badge
+    await expect(modal.locator('.badge-queued')).toBeVisible();
   });
 
   async function deactivateMed(page, name) {
