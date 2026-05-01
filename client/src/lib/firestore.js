@@ -49,6 +49,34 @@ export async function saveMed(fields, editId) {
     person: fields.person || 'dad',
     updatedAt: new Date().toISOString()
   }
+
+  // Preserve fills[] and keep the active fill entry in sync with top-level field edits
+  if (fields.fills?.length) {
+    const t = todayStr()
+    const activeIdx = fields.fills.reduce((best, f, i) => {
+      if (f.filledDate > t) return best
+      if (best === -1) return i
+      return f.filledDate > fields.fills[best].filledDate ? i : best
+    }, -1)
+    med.fills = activeIdx === -1
+      ? fields.fills
+      : fields.fills.map((f, i) => i !== activeIdx ? f : {
+          ...f,
+          filledDate: med.filledDate,
+          supply: med.supply,
+          dose: med.dose,
+          frequency: med.frequency,
+          frequencyPreset: med.frequencyPreset,
+          frequencyCustomCount: med.frequencyCustomCount,
+          frequencyCustomEvery: med.frequencyCustomEvery,
+          frequencyCustomUnit: med.frequencyCustomUnit,
+          pharmacy: med.pharmacy,
+          rxNum: med.rxNum,
+          doctor: med.doctor,
+          instructions: med.instructions,
+        })
+  }
+
   await setDoc(doc(db, 'medications', med.id), med)
 }
 
