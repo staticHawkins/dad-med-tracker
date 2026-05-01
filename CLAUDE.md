@@ -78,7 +78,7 @@ client/src/
 │   ├── CareTeamPanel.jsx
 │   ├── NotificationBanner.jsx
 │   ├── PersonChip.jsx
-│   ├── meds/            # MedicationsView, MedsTable, MedModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
+│   ├── meds/            # MedicationsView, MedsTable, MedModal, MedDetailModal, RefillModal, KPIRow, MedRow, MedGroupHeader, MedGroupSection, MedStockedCollapsed
 │   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
 │   ├── tasks/           # TasksView, TaskModal
 │   ├── timeline/        # TimelineView, DiseaseTimelineCard, MilestoneRow, MilestoneTag, PhaseStrip
