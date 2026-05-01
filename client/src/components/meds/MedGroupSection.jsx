@@ -9,9 +9,9 @@ const GROUP_META = {
   ok:     { label: 'Stocked up',       variant: 'ok',     defaultOpen: false },
 }
 
-export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen }) {
+export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen, forceOpen = false }) {
   const meta = GROUP_META[groupKey]
-  const [isOpen, setIsOpen] = useState(meta.defaultOpen)
+  const [isOpen, setIsOpen] = useState(meta.defaultOpen || forceOpen)
 
   if (!meds.length) return null
 

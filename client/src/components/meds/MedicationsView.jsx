@@ -97,7 +97,8 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
           {filtered.length > 0 && <>
             <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onOpen={setViewingMedId} />
             <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onOpen={setViewingMedId} />
-            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId} />
+            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId}
+              forceOpen={!grouped.urgent.length && !grouped.soon.length} />
           </>}
           {inactiveMeds.length > 0 && (
             <div className="med-group med-group-inactive">
