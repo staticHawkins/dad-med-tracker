@@ -13,6 +13,14 @@ const PRESETS = [
   { value: 'custom',          label: 'Custom…' },
 ]
 
+const PREV_REFILL_STATUS = {
+  'requested':     null,
+  'ready-pickup':  'requested',
+  'ready-courier': 'requested',
+  'picked-up':     'ready-pickup',
+  'delivered':     'ready-courier',
+}
+
 function InlineField({ field, value, type = 'text', placeholder = '', editCtx }) {
   const { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit } = editCtx
   if (editingField === field) {
@@ -211,6 +219,15 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
               )}
               {(rs === 'picked-up' || rs === 'delivered') && (
                 <button className="btn-sv" onClick={() => setRefillOpen(true)}>Mark refilled</button>
+              )}
+              {rs && (
+                <button
+                  className="btn-cx"
+                  onClick={() => handleRefillStatus(PREV_REFILL_STATUS[rs])}
+                  title="Undo last refill status change"
+                >
+                  ← Back
+                </button>
               )}
               <button
                 className={`btn-cx drawer-deactivate${confirming ? ' danger' : ''}`}
