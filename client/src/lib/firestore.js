@@ -45,6 +45,7 @@ export async function saveMed(fields, editId) {
     rxNum: fields.rxNum,
     doctor: fields.doctor,
     instructions: fields.instructions,
+    purpose: fields.purpose || '',
     active: fields.active ?? true,
     person: fields.person || 'dad',
     updatedAt: new Date().toISOString()

@@ -4,7 +4,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 import { freqPerDay, fmtDate } from '../../lib/medUtils'
 
 const EMPTY = {
-  name: '', dose: '', frequencyPreset: 'once-daily',
+  name: '', dose: '', purpose: '', frequencyPreset: 'once-daily',
   frequencyCustomCount: '1', frequencyCustomEvery: '1', frequencyCustomUnit: 'days',
   filledDate: '', supply: '', pharmacy: '', rxNum: '',
   doctor: '', instructions: '', person: 'dad'
@@ -115,6 +115,10 @@ export default function MedModal({ careTeam = [], onClose }) {
       })()}
 
       <div className="sheet-section">Optional</div>
+      <div className="fr">
+        <label>What it&apos;s for</label>
+        <input value={form.purpose} onChange={set('purpose')} placeholder="e.g. Blood pressure" />
+      </div>
       <div className="fr">
         <label>Dose / strength</label>
         <input value={form.dose} onChange={set('dose')} placeholder="e.g. 500 mg" />
