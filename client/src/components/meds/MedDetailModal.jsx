@@ -344,6 +344,11 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
           <InlineField field="name" value={m.name} placeholder="e.g. Metformin" editCtx={editCtx} />
         </div>
 
+        <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>
+          <span className="med-drawer-lbl">What it&apos;s for</span>
+          <InlineField field="purpose" value={m.purpose} placeholder="e.g. Blood pressure" editCtx={editCtx} />
+        </div>
+
         <div className="med-drawer-item">
           <span className="med-drawer-lbl">Dose / strength</span>
           <InlineField field="dose" value={m.dose} placeholder="e.g. 500 mg" editCtx={editCtx} />
