@@ -339,9 +339,13 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
       </div>
 
       <div className="med-drawer-details">
-        <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>
-          <span className="med-drawer-lbl">Name</span>
+        <div className="med-drawer-item">
+          <span className="med-drawer-lbl">Generic name</span>
           <InlineField field="name" value={m.name} placeholder="e.g. Metformin" editCtx={editCtx} />
+        </div>
+        <div className="med-drawer-item">
+          <span className="med-drawer-lbl">Brand name</span>
+          <InlineField field="brandName" value={m.brandName} placeholder="e.g. Glucophage" editCtx={editCtx} />
         </div>
 
         <div className="med-drawer-item" style={{ gridColumn: '1 / -1' }}>

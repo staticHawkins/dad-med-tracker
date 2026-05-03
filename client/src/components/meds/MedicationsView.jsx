@@ -50,6 +50,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
     let rows = [...filterByPerson(activeMeds, personFilter)].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
     if (q) rows = rows.filter(m =>
       m.name.toLowerCase().includes(q) ||
+      (m.brandName || '').toLowerCase().includes(q) ||
       (m.pharmacy || '').toLowerCase().includes(q) ||
       (m.doctor || '').toLowerCase().includes(q)
     )

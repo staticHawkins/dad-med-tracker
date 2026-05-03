@@ -12,7 +12,7 @@ export default function MedRow({ m, onOpen }) {
   const bc = pc === 'zero' || pc === 'low' ? 'var(--red)' : s === 'soon' ? 'var(--amber)' : 'var(--green)'
   const pillSt = p.rem <= 0 ? 'empty' : s
   const fl = freqLabel(m)
-  const sub = [m.purpose, m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
+  const sub = [m.brandName || null, m.purpose, m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
   const rdDate = getRefillDate(m)
   const rd = rdDate ? fmtDate(rdDate) : '—'
 
