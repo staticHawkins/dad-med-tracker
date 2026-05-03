@@ -32,6 +32,7 @@ export async function saveMed(fields, editId) {
   const med = {
     id: editId || newId(),
     name: fields.name,
+    brandName: fields.brandName || '',
     dose: fields.dose,
     frequency: computeFrequency(fields),
     frequencyPreset: fields.frequencyPreset || 'once-daily',
@@ -426,8 +427,8 @@ export async function upsertUser(firebaseUser) {
 }
 
 export function exportCSV(meds) {
-  const rows = [['Person', 'Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions']]
-  meds.forEach(m => rows.push([m.person || 'dad', m.name, m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions]))
+  const rows = [['Person', 'Generic Name', 'Brand Name', 'Dose', 'Freq/day', 'Last Filled', 'Supply', 'Refill Date', 'Pharmacy', 'Rx #', 'Doctor', 'Instructions']]
+  meds.forEach(m => rows.push([m.person || 'dad', m.name, m.brandName || '', m.dose, m.frequency, m.filledDate, m.supply, m.refillDate, m.pharmacy, m.rxNum, m.doctor, m.instructions]))
   dl('familycarehub-medications.csv', rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n'), 'text/csv')
 }
 

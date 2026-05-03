@@ -1147,6 +1147,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .med-mobile-of{font-size:11px;font-weight:400;color:var(--text3)}
 .med-bar-mini{flex:1;max-width:64px;height:3px;background:rgba(50,20,20,.08);border-radius:2px;overflow:hidden}
 .med-bar-mini-fill{height:100%;border-radius:2px}
+.med-mobile-queued{font-family:var(--ffm);font-size:11px;font-weight:500;color:var(--green);opacity:.7}
 
 /* ⋯ menu button + popover */
 .med-menu-btn{

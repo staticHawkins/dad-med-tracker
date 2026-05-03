@@ -11,6 +11,7 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
   if (filter !== 'all') rows = rows.filter(m => supplyStatus(m) === filter)
   if (q) rows = rows.filter(m =>
     m.name.toLowerCase().includes(q) ||
+    (m.brandName || '').toLowerCase().includes(q) ||
     (m.pharmacy || '').toLowerCase().includes(q) ||
     (m.doctor || '').toLowerCase().includes(q)
   )
