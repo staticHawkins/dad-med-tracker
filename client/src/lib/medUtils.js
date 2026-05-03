@@ -120,6 +120,7 @@ export function supplyStatus(m) {
 }
 
 export function supplyStatusLabel(m) {
+  if (m.frequencyPreset === 'as-needed') return 'As needed'
   const p = pillsNow(m)
   if (p.rem <= 0 && !queuedFill(m)) return 'Out of pills'
   const d = effectiveDaysToZero(m)
