@@ -4,9 +4,10 @@ import MedRow from './MedRow'
 import MedStockedCollapsed from './MedStockedCollapsed'
 
 const GROUP_META = {
-  urgent: { label: 'Refill urgently', variant: 'urgent', defaultOpen: true },
-  soon:   { label: 'Refill in 2 weeks', variant: 'soon',   defaultOpen: true },
-  ok:     { label: 'Stocked up',       variant: 'ok',     defaultOpen: false },
+  urgent:      { label: 'Refill urgently',   variant: 'urgent',     defaultOpen: true  },
+  soon:        { label: 'Refill in 2 weeks', variant: 'soon',       defaultOpen: true  },
+  ok:          { label: 'Stocked up',        variant: 'ok',         defaultOpen: false },
+  'as-needed': { label: 'As needed',         variant: 'as-needed',  defaultOpen: true  },
 }
 
 export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen, forceOpen = false }) {

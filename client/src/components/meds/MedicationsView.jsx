@@ -28,9 +28,10 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
   const [viewingMedId, setViewingMedId] = useState(null)
   const fileRef = useRef()
 
-  const urgentRef = useRef()
-  const soonRef   = useRef()
-  const okRef     = useRef()
+  const urgentRef    = useRef()
+  const soonRef      = useRef()
+  const okRef        = useRef()
+  const asNeededRef  = useRef()
 
   async function handleImport(e) {
     const file = e.target.files[0]; if (!file) return
@@ -47,7 +48,22 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
   const inactiveMeds = useMemo(() => meds.filter(m => m.active === false), [meds])
 
   const filtered = useMemo(() => {
-    let rows = [...filterByPerson(activeMeds, personFilter)].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+    let rows = filterByPerson(activeMeds, personFilter)
+      .filter(m => m.frequencyPreset !== 'as-needed')
+      .sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+    if (q) rows = rows.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      (m.brandName || '').toLowerCase().includes(q) ||
+      (m.pharmacy || '').toLowerCase().includes(q) ||
+      (m.doctor || '').toLowerCase().includes(q)
+    )
+    return rows
+  }, [activeMeds, personFilter, q])
+
+  const asNeededMeds = useMemo(() => {
+    let rows = filterByPerson(activeMeds, personFilter)
+      .filter(m => m.frequencyPreset === 'as-needed')
+      .sort((a, b) => a.name.localeCompare(b.name))
     if (q) rows = rows.filter(m =>
       m.name.toLowerCase().includes(q) ||
       (m.brandName || '').toLowerCase().includes(q) ||
@@ -87,7 +103,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
         </div>
       </div>
 
-      {filtered.length === 0 && inactiveMeds.length === 0 ? (
+      {filtered.length === 0 && asNeededMeds.length === 0 && inactiveMeds.length === 0 ? (
         <div className="med-empty">
           {meds.length === 0
             ? 'No medications yet. Click "+ Add medication" to get started.'
@@ -101,6 +117,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
             <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId}
               forceOpen={!grouped.urgent.length && !grouped.soon.length} />
           </>}
+          <MedGroupSection groupKey="as-needed" meds={asNeededMeds} sectionRef={asNeededRef} onOpen={setViewingMedId} />
           {inactiveMeds.length > 0 && (
             <div className="med-group med-group-inactive">
               <MedGroupHeader

@@ -1112,6 +1112,8 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .med-group-ok       .med-group-body{border-left:2px solid var(--green);border-radius:0 10px 10px 0}
 .med-group-inactive .med-group-body{border-left:2px solid var(--text3);border-radius:0 10px 10px 0}
 .med-group-hdr-inactive .med-group-label{color:var(--text3)}
+.med-group-as-needed .med-group-body{border-left:2px solid var(--violet);border-radius:0 10px 10px 0}
+.med-group-hdr-as-needed .med-group-label{color:var(--violet)}
 .med-row-inactive .med-row-main{opacity:.45}
 .med-row-inactive .med-row-main:hover{opacity:.7}
 
