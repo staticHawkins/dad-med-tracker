@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { fmtDate, fmtShortDate, freqLabel, freqPerDay, getRefillDate, activeFill, queuedFill, todayStr } from '../../lib/medUtils'
+import { fmtDate, fmtShortDate, freqLabel, freqPerDay, getRefillDate, activeFill, queuedFill, todayStr, supplyStatus, supplyStatusLabel } from '../../lib/medUtils'
 import { saveMed, updateRefillStatus, deactivateMed, reactivateMed, removeQueuedFill } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import PersonChip from '../PersonChip'
@@ -295,11 +295,6 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
             {saveStatus === 'error'  && 'Error'}
           </span>
         )}
-        {queued && (
-          <span className="queued-pill">
-            ⏱ Next fill {fmtShortDate(queued.filledDate)}
-          </span>
-        )}
         {isInactive
           ? <button className="btn-sv" onClick={handleReactivate}>Reactivate</button>
           : <>
@@ -428,10 +423,15 @@ export default function MedDetailModal({ med, careTeam = [], onClose }) {
     </>
   )
 
+  const statusBadge = queued
+    ? <span className="queued-pill">⏱ Next fill {fmtShortDate(queued.filledDate)}</span>
+    : <span className={`spill sp-${supplyStatus(m)}`}>{supplyStatusLabel(m)}</span>
+
   const header = (
     <span className="sheet-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <PersonChip person={m.person} />
       {m.name}
+      {statusBadge}
     </span>
   )
 
