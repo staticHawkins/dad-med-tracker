@@ -1,4 +1,4 @@
-import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel, getRefillDate } from '../../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel, getRefillDate, queuedFill, effectiveDaysToZero } from '../../lib/medUtils'
 import PersonChip from '../PersonChip'
 
 export default function MedRow({ m, onOpen }) {
@@ -15,6 +15,8 @@ export default function MedRow({ m, onOpen }) {
   const sub = [m.brandName || null, m.purpose, m.dose, m.rxNum ? 'Rx ' + m.rxNum : '', fl].filter(Boolean).join(' · ')
   const rdDate = getRefillDate(m)
   const rd = rdDate ? fmtDate(rdDate) : '—'
+  const hasQueued = !!queuedFill(m)
+  const effDays = hasQueued ? effectiveDaysToZero(m) : null
 
   return (
     <div
@@ -58,9 +60,9 @@ export default function MedRow({ m, onOpen }) {
               {p.daysToZero === 999 ? p.rem : p.daysToZero}
               <span className="med-mobile-of">{p.daysToZero === 999 ? 'p' : 'd'}</span>
             </span>
-            <div className="med-bar-mini">
-              <div className="med-bar-mini-fill" style={{ width: pct + '%', background: bc }} />
-            </div>
+            {effDays != null && (
+              <span className="med-mobile-queued">→ {effDays}d</span>
+            )}
           </div>
         </div>
 

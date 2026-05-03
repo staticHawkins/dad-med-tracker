@@ -76,7 +76,7 @@ export function queuedFill(med) {
 }
 
 // Total days of supply coverage: current + queued fill (if any).
-function effectiveDaysToZero(m) {
+export function effectiveDaysToZero(m) {
   const p = pillsNow(m)
   const qf = queuedFill(m)
   if (!qf) return p.daysToZero
