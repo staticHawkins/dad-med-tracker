@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel } from '../../lib/medUtils'
+import { pillsNow, supplyStatus, supplyStatusLabel, pillStatusClass, fmtDate, getRefillDate, freqLabel, effectiveDaysToZero } from '../../lib/medUtils'
 import { delMed } from '../../lib/firestore'
 import RefillModal from './RefillModal'
 
@@ -7,7 +7,7 @@ export default function MedsTable({ meds, filter, search, onEdit }) {
   const [refillMed, setRefillMed] = useState(null)
   const q = search.toLowerCase()
 
-  let rows = [...meds].sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+  let rows = [...meds].sort((a, b) => effectiveDaysToZero(a) - effectiveDaysToZero(b))
   if (filter !== 'all') rows = rows.filter(m => supplyStatus(m) === filter)
   if (q) rows = rows.filter(m =>
     m.name.toLowerCase().includes(q) ||

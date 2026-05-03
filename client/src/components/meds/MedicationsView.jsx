@@ -5,7 +5,7 @@ import MedModal from './MedModal'
 import MedDetailModal from './MedDetailModal'
 import MedGroupHeader from './MedGroupHeader'
 import { exportCSV, exportJSON, importMeds } from '../../lib/firestore'
-import { supplyStatus, pillsNow } from '../../lib/medUtils'
+import { supplyStatus, effectiveDaysToZero } from '../../lib/medUtils'
 import { filterByPerson } from '../MainApp'
 import PersonChip from '../PersonChip'
 
@@ -50,7 +50,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
   const filtered = useMemo(() => {
     let rows = filterByPerson(activeMeds, personFilter)
       .filter(m => m.frequencyPreset !== 'as-needed')
-      .sort((a, b) => pillsNow(a).daysToZero - pillsNow(b).daysToZero)
+      .sort((a, b) => effectiveDaysToZero(a) - effectiveDaysToZero(b))
     if (q) rows = rows.filter(m =>
       m.name.toLowerCase().includes(q) ||
       (m.brandName || '').toLowerCase().includes(q) ||
