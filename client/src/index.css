@@ -1641,6 +1641,33 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .dash-chip-inprog{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border)}
 .dash-chip-todo{background:var(--panel2);color:var(--text3);border:1px solid var(--border)}
 
+/* ── Dashboard files card ── */
+.dash-card-files::before{background:var(--teal)}
+.dash-file-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.dash-file-row{display:flex;align-items:center;gap:8px}
+.dash-file-icon{font-size:15px;flex-shrink:0}
+.dash-file-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.dash-file-name{font-size:12px;font-weight:500;color:var(--blue);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-file-name:hover{text-decoration:underline}
+.dash-file-apt{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-file-date{font-size:11px;color:var(--text3);font-family:var(--ffm);flex-shrink:0}
+
+/* ── Appointment file upload section ── */
+.apt-files-section{margin-top:4px}
+.apt-files-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.apt-file-add-btn{font-size:12px;font-weight:500;color:var(--blue);cursor:pointer;padding:4px 10px;border-radius:6px;background:var(--blue-dim);border:1px solid var(--blue-border);transition:background .12s;user-select:none}
+.apt-file-add-btn:hover{background:var(--panel2)}
+.apt-file-empty{font-size:12px;color:var(--text3);font-style:italic}
+.apt-file-uploading{font-size:12px;color:var(--text3);font-style:italic}
+.apt-file-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.apt-file-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:var(--panel2);border:1px solid var(--border)}
+.apt-file-icon{font-size:15px;flex-shrink:0}
+.apt-file-name{flex:1;min-width:0;font-size:13px;font-weight:500;color:var(--blue);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apt-file-name:hover{text-decoration:underline}
+.apt-file-size{font-size:11px;color:var(--text3);font-family:var(--ffm);flex-shrink:0}
+.apt-file-del{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);padding:2px 4px;border-radius:4px;flex-shrink:0;transition:color .12s}
+.apt-file-del:hover{color:var(--red)}
+
 /* ── CARE TEAM AVATAR GRID ── */
 .dash-avatar-grid{
   display:grid;grid-template-columns:1fr 1fr;gap:10px;
@@ -1934,6 +1961,31 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 
 /* Dashboard card — gradient top border */
 .dash-card-timeline::before{background:linear-gradient(to right,#6b7280,#4a7fd4 20%,#1a8a66 48%,#c08030 68%,#c04040 85%)}
+
+/* ── Last Week in Review ── */
+.dash-lastweek-wrap{grid-column:1/-1;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:var(--panel)}
+.dash-lastweek-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:12px 18px;background:none;border:none;cursor:pointer;text-align:left;font-family:var(--ff);color:var(--text2);transition:background .12s}
+.dash-lastweek-toggle:hover{background:var(--panel2)}
+.dash-lastweek-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2)}
+.dash-lastweek-chevron{margin-left:auto;font-size:16px;color:var(--text3);line-height:1;transition:transform .2s;display:inline-block}
+.dash-lastweek-chevron.open{transform:rotate(90deg)}
+.dash-lastweek-body{padding:16px 18px 20px;border-top:1px solid var(--border)}
+.dash-lastweek-empty{font-size:13px;color:var(--text3);font-style:italic;text-align:center;padding:8px 0}
+.dash-lastweek-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:640px){.dash-lastweek-grid{grid-template-columns:1fr;gap:16px}}
+.dash-lastweek-section{display:flex;flex-direction:column;gap:8px}
+.dash-lastweek-sec-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;background:none;border:none;cursor:pointer;font-family:var(--ff);padding:0;width:100%;text-align:left;border-radius:4px;transition:opacity .12s}
+.dash-lastweek-sec-head:hover{opacity:.75}
+.dash-lastweek-sec-arrow{margin-left:auto;font-size:13px;color:var(--text3)}
+.dash-lastweek-count{font-size:10px;font-weight:600;color:var(--text3);font-family:var(--ffm)}
+.dash-lastweek-count-missed{color:var(--red) !important}
+.dash-lastweek-none{font-size:12px;color:var(--text3);font-style:italic}
+.dash-lastweek-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.dash-lastweek-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);background:none;border:none;cursor:pointer;font-family:var(--ff);padding:3px 4px;border-radius:5px;width:100%;text-align:left;transition:background .12s}
+.dash-lastweek-item:hover{background:var(--panel2)}
+.dash-lastweek-item-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-lastweek-item-meta{font-size:11px;color:var(--text3);font-family:var(--ffm);flex-shrink:0}
+.dash-chip-done{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
 
 /* Full-width wrapper in dashboard grid */
 .dash-card-timeline-wrap{grid-column:1/-1}

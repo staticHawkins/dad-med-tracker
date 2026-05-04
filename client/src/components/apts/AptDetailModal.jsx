@@ -1,8 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { fmtAptDateBlock, fmtAptTime, coveringLabel, exportToICS } from '../../lib/aptUtils'
-import { saveApt, delApt } from '../../lib/firestore'
+import { saveApt, delApt, addAptFile, removeAptFile } from '../../lib/firestore'
+import { uploadAptFile, deleteAptFile } from '../../lib/storageUtils'
 import { useSpecialties, specialtyLabel } from '../../hooks/useSpecialties'
 import { useIsMobile } from '../../hooks/useIsMobile'
+
+function fileIcon(type = '') {
+  if (type.startsWith('image/')) return '🖼️'
+  if (type === 'application/pdf') return '📄'
+  if (type.includes('word') || type.includes('document')) return '📝'
+  return '📎'
+}
+
+function fmtFileSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 function PhaseChip({ label }) {
   return <span className="apt-detail-chip">{label}</span>
@@ -149,6 +164,8 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
   const [editingField, setEditingField] = useState(null)
   const [draftValue, setDraftValue] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const saveTimer  = useRef(null)
   const savedTimer = useRef(null)
   const pendingData = useRef(null)
@@ -208,6 +225,28 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
         setSaveStatus('error')
       }
     }, 600)
+  }
+
+  async function handleFileUpload(e) {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setUploading(true)
+    try {
+      for (const file of files) {
+        const meta = await uploadAptFile(file, apt.id)
+        await addAptFile(apt.id, meta)
+      }
+    } catch { alert('Upload failed. Check your connection.') }
+    setUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handleFileDelete(fileMeta) {
+    if (!confirm(`Remove "${fileMeta.name}"?`)) return
+    try {
+      await deleteAptFile(fileMeta.storagePath)
+      await removeAptFile(apt.id, fileMeta)
+    } catch { alert('Failed to remove file.') }
   }
 
   const editCtx = { editingField, draftValue, setDraftValue, commitEdit, cancelEdit, startEdit }
@@ -289,6 +328,31 @@ export default function AptDetailModal({ apt, note, careTeam = [], onClose }) {
         <div className="note-key-section">
           <div className="note-key-label">Appointment Notes</div>
           <InlineTextarea field="postNotes" value={apt.postNotes} placeholder="Follow-up notes from the visit…" editCtx={editCtx} />
+        </div>
+
+        {/* Files */}
+        <div className="note-key-section apt-files-section">
+          <div className="apt-files-header">
+            <span className="note-key-label">Files</span>
+            <label className="apt-file-add-btn" title="Upload files">
+              {uploading ? 'Uploading…' : '📎 Add files'}
+              <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileUpload} disabled={uploading} />
+            </label>
+          </div>
+          {(apt.files || []).length === 0 && !uploading && (
+            <div className="apt-file-empty">No files attached — upload lab results, referrals, or scan reports</div>
+          )}
+          {uploading && <div className="apt-file-uploading">Uploading…</div>}
+          <ul className="apt-file-list">
+            {(apt.files || []).map(f => (
+              <li key={f.uploadedAt + f.name} className="apt-file-row">
+                <span className="apt-file-icon">{fileIcon(f.type)}</span>
+                <a href={f.url} target="_blank" rel="noopener noreferrer" className="apt-file-name">{f.name}</a>
+                <span className="apt-file-size">{fmtFileSize(f.size)}</span>
+                <button className="apt-file-del" onClick={() => handleFileDelete(f)} title="Remove file">✕</button>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Clinical note sections — read-only */}

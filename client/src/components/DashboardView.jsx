@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { supplyStatus, fmtShortDate } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
 import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
@@ -31,6 +32,14 @@ function getWeekRange() {
 
 function fmtWeekRange(start, end) {
   return `${fmtShortDate(start)} – ${fmtShortDate(end)}`
+}
+
+function getLastWeekRange() {
+  const { start } = getWeekRange()  // Monday of current week
+  const end = new Date()
+  end.setDate(end.getDate() - 1)    // yesterday
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
 }
 
 // ── This Week card ───────────────────────────────────────────────────────────
@@ -394,6 +403,209 @@ function TasksCard({ tasks, allTasks, onClick }) {
   )
 }
 
+// ── Files card ───────────────────────────────────────────────────────────────
+
+function aptFileIcon(type = '') {
+  if (type.startsWith('image/')) return '🖼️'
+  if (type === 'application/pdf') return '📄'
+  if (type.includes('word') || type.includes('document')) return '📝'
+  return '📎'
+}
+
+function FilesCard({ apts, onNavigate }) {
+  const recentFiles = apts
+    .flatMap(a => (a.files || []).map(f => ({ ...f, aptTitle: a.title, aptId: a.id })))
+    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))
+    .slice(0, 6)
+
+  return (
+    <button className="dash-card dash-card-files" onClick={() => onNavigate('apts')} aria-label="Go to Appointments">
+      <div className="dash-card-header">
+        <span className="dash-card-icon">📎</span>
+        <span className="dash-card-title">Appointment Files</span>
+        <span className="dash-card-arrow">›</span>
+      </div>
+      <div className="dash-card-body">
+        {recentFiles.length === 0 ? (
+          <div className="dash-empty">
+            <span className="dash-empty-icon">📎</span>
+            <span className="dash-empty-text">No files uploaded yet</span>
+          </div>
+        ) : (
+          <ul className="dash-file-list">
+            {recentFiles.map(f => (
+              <li key={f.uploadedAt + f.name} className="dash-file-row">
+                <span className="dash-file-icon">{aptFileIcon(f.type)}</span>
+                <div className="dash-file-info">
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="dash-file-name"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {f.name}
+                  </a>
+                  <span className="dash-file-apt">{f.aptTitle}</span>
+                </div>
+                <span className="dash-file-date">{fmtShortDate(f.uploadedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </button>
+  )
+}
+
+// ── Last Week in Review ──────────────────────────────────────────────────────
+
+function LastWeekReview({ meds, apts, tasks, onNavigate }) {
+  const [open, setOpen] = useState(new Date().getDay() === 0)
+
+  const { start, end } = getLastWeekRange()
+  const startStr = start.toISOString().slice(0, 10)
+  const endStr = end.toISOString().slice(0, 10)
+
+  const lastApts = [...apts]
+    .filter(a => { const d = new Date(a.dateTime); return d >= start && d <= end })
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+
+  const doneTasks = tasks.filter(t => {
+    if (getTaskStatus(t) !== 'done') return false
+    if (!t.updatedAt) return false
+    const d = new Date(t.updatedAt)
+    return d >= start && d <= end
+  })
+
+  const missedTasks = tasks.filter(t => {
+    if (getTaskStatus(t) === 'done') return false
+    if (!t.dueDate) return false
+    const [y, m, d] = t.dueDate.split('-').map(Number)
+    return new Date(y, m - 1, d) >= start && new Date(y, m - 1, d) <= end
+  })
+
+  const refilledMeds = meds.filter(m => {
+    const fills = m.fills || []
+    if (fills.some(f => f.filledDate >= startStr && f.filledDate <= endStr)) return true
+    return !!(m.filledDate && m.filledDate >= startStr && m.filledDate <= endStr)
+  })
+
+  const hasAny = lastApts.length > 0 || doneTasks.length > 0 || missedTasks.length > 0 || refilledMeds.length > 0
+
+  return (
+    <div className="dash-lastweek-wrap">
+      <button className="dash-lastweek-toggle" onClick={() => setOpen(o => !o)}>
+        <span className="dash-lastweek-label">↩ Week in Review</span>
+        <span className="dash-week-range">{fmtWeekRange(start, end)}</span>
+        <span className={`dash-lastweek-chevron${open ? ' open' : ''}`}>›</span>
+      </button>
+      {open && (
+        <div className="dash-lastweek-body">
+          {!hasAny ? (
+            <div className="dash-lastweek-empty">Nothing recorded for last week</div>
+          ) : (
+            <div className="dash-lastweek-grid">
+
+              <div className="dash-lastweek-section">
+                <button className="dash-lastweek-sec-head" style={{ color: 'var(--amber)' }} onClick={() => onNavigate('apts')}>
+                  <span className="dash-week-dot" style={{ background: 'var(--amber)' }} />
+                  Appointments
+                  <span className="dash-lastweek-count">{lastApts.length}</span>
+                  <span className="dash-lastweek-sec-arrow">›</span>
+                </button>
+                {lastApts.length === 0 ? (
+                  <div className="dash-lastweek-none">None</div>
+                ) : (
+                  <ul className="dash-lastweek-list">
+                    {lastApts.map(a => {
+                      const d = new Date(a.dateTime)
+                      return (
+                        <li key={a.id}>
+                          <button className="dash-lastweek-item" style={{ borderLeft: `2px solid var(--${a.person || 'dad'})`, paddingLeft: 6 }} onClick={() => onNavigate('apts')}>
+                            <PersonChip person={a.person} />
+                            <span className="dash-lastweek-item-title">{a.title}{a.doctor ? ` · ${a.doctor}` : ''}</span>
+                            <span className="dash-lastweek-item-meta">{DAY_ABBR[d.getDay()]} {fmtShortDate(d)}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              <div className="dash-lastweek-section">
+                <button className="dash-lastweek-sec-head" style={{ color: 'var(--violet)' }} onClick={() => onNavigate('tasks')}>
+                  <span className="dash-week-dot" style={{ background: 'var(--violet)' }} />
+                  Tasks
+                  {doneTasks.length > 0 && <span className="dash-lastweek-count">{doneTasks.length} done</span>}
+                  {missedTasks.length > 0 && <span className="dash-lastweek-count dash-lastweek-count-missed">{missedTasks.length} missed</span>}
+                  {doneTasks.length === 0 && missedTasks.length === 0 && <span className="dash-lastweek-count">0</span>}
+                  <span className="dash-lastweek-sec-arrow">›</span>
+                </button>
+                {doneTasks.length === 0 && missedTasks.length === 0 ? (
+                  <div className="dash-lastweek-none">None due</div>
+                ) : (
+                  <ul className="dash-lastweek-list">
+                    {doneTasks.map(t => (
+                      <li key={t.id}>
+                        <button className="dash-lastweek-item" style={{ borderLeft: `2px solid var(--${t.person || 'dad'})`, paddingLeft: 6 }} onClick={() => onNavigate('tasks')}>
+                          <PersonChip person={t.person} />
+                          <span className="dash-lastweek-item-title">{t.title}</span>
+                          <span className="dash-status-chip dash-chip-done">done</span>
+                        </button>
+                      </li>
+                    ))}
+                    {missedTasks.map(t => (
+                      <li key={t.id}>
+                        <button className="dash-lastweek-item" style={{ borderLeft: `2px solid var(--${t.person || 'dad'})`, paddingLeft: 6 }} onClick={() => onNavigate('tasks')}>
+                          <PersonChip person={t.person} />
+                          <span className="dash-lastweek-item-title">{t.title}</span>
+                          <span className="dash-status-chip dash-chip-urgent">missed</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="dash-lastweek-section">
+                <button className="dash-lastweek-sec-head" style={{ color: 'var(--blue)' }} onClick={() => onNavigate('meds')}>
+                  <span className="dash-week-dot" style={{ background: 'var(--blue)' }} />
+                  Refills
+                  <span className="dash-lastweek-count">{refilledMeds.length}</span>
+                  <span className="dash-lastweek-sec-arrow">›</span>
+                </button>
+                {refilledMeds.length === 0 ? (
+                  <div className="dash-lastweek-none">None</div>
+                ) : (
+                  <ul className="dash-lastweek-list">
+                    {refilledMeds.map(m => {
+                      const fills = m.fills || []
+                      const fillEntry = fills.find(f => f.filledDate >= startStr && f.filledDate <= endStr)
+                      const filledOn = fillEntry ? fillEntry.filledDate : m.filledDate
+                      return (
+                        <li key={m.id}>
+                          <button className="dash-lastweek-item" style={{ borderLeft: `2px solid var(--${m.person || 'dad'})`, paddingLeft: 6 }} onClick={() => onNavigate('meds')}>
+                            <PersonChip person={m.person} />
+                            <span className="dash-lastweek-item-title">{m.name}{m.dose ? ` ${m.dose}` : ''}</span>
+                            {filledOn && <span className="dash-lastweek-item-meta">{fmtShortDate(filledOn)}</span>}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Exports ──────────────────────────────────────────────────────────────────
 
 export function BackBar({ label, onBack }) {
@@ -412,9 +624,11 @@ export default function DashboardView({ meds, filteredMeds, apts, filteredApts, 
         <div className="dash-card-week-wrap">
           <WeekCard meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />
         </div>
+        <LastWeekReview meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />
         <MedsCard meds={filteredMeds} allMeds={meds} onClick={() => onNavigate('meds')} />
         <AptsCard apts={filteredApts} allApts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={filteredTasks} allTasks={tasks} onClick={() => onNavigate('tasks')} />
+        <FilesCard apts={apts} onNavigate={onNavigate} />
         <div className="dash-card-timeline-wrap">
           <DiseaseTimelineCard
             milestones={milestones}

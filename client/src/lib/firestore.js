@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDoc, deleteDoc, getDocs, updateDoc, arrayUnion, writeBatch, deleteField } from 'firebase/firestore'
+import { collection, doc, setDoc, getDoc, deleteDoc, getDocs, updateDoc, arrayUnion, arrayRemove, writeBatch, deleteField } from 'firebase/firestore'
 import { db } from '../firebase'
 import { today, todayStr } from './medUtils'
 
@@ -203,6 +203,20 @@ export async function saveClinicalNote(note) {
 
 export async function delApt(id) {
   await deleteDoc(doc(db, 'appointments', id))
+}
+
+export async function addAptFile(aptId, fileMeta) {
+  await updateDoc(doc(db, 'appointments', aptId), {
+    files: arrayUnion(fileMeta),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function removeAptFile(aptId, fileMeta) {
+  await updateDoc(doc(db, 'appointments', aptId), {
+    files: arrayRemove(fileMeta),
+    updatedAt: new Date().toISOString(),
+  })
 }
 
 export async function saveDoctor(fields, editId) {
