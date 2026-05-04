@@ -33,60 +33,6 @@ function fmtWeekRange(start, end) {
   return `${fmtShortDate(start)} – ${fmtShortDate(end)}`
 }
 
-// ── Summary alert bar (desktop only) ────────────────────────────────────────
-
-function SummaryBar({ meds, apts, tasks }) {
-  const urgentMed = meds.find(m => supplyStatus(m) === 'urgent')
-  const sorted = [...apts].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
-  const nextApt = sorted.find(a => aptStatus(a) !== 'past')
-  const overdueCt = tasks.filter(t => getTaskStatus(t) !== 'done' && isOverdue(t.dueDate)).length
-
-  if (!urgentMed && !nextApt && overdueCt === 0) return null
-
-  let aptLabel = null
-  if (nextApt) {
-    const db = fmtAptDateBlock(nextApt.dateTime)
-    const t = fmtAptTime(nextApt.dateTime)
-    aptLabel = `${db.month} ${db.day}${t ? ` · ${t}` : ''}`
-  }
-
-  return (
-    <div className="dash-summary-bar">
-      {urgentMed && (
-        <div className="dash-pill dash-pill-red">
-          <span className="dash-pill-icon">+</span>
-          <div className="dash-pill-text">
-            <span className="dash-pill-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              Urgent medication <PersonChip person={urgentMed.person || 'dad'} />
-            </span>
-            <span className="dash-pill-value">{urgentMed.name} — refill due</span>
-          </div>
-        </div>
-      )}
-      {nextApt && (
-        <div className="dash-pill dash-pill-amber">
-          <span className="dash-pill-icon">📅</span>
-          <div className="dash-pill-text">
-            <span className="dash-pill-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              Next appointment <PersonChip person={nextApt.person || 'dad'} />
-            </span>
-            <span className="dash-pill-value">{aptLabel}</span>
-          </div>
-        </div>
-      )}
-      {overdueCt > 0 && (
-        <div className="dash-pill dash-pill-violet">
-          <span className="dash-pill-icon">✓</span>
-          <div className="dash-pill-text">
-            <span className="dash-pill-label">Overdue task</span>
-            <span className="dash-pill-value">{overdueCt} needs attention</span>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── This Week card ───────────────────────────────────────────────────────────
 
 function WeekCard({ meds, apts, tasks, onNavigate }) {
@@ -462,7 +408,6 @@ export function BackBar({ label, onBack }) {
 export default function DashboardView({ meds, filteredMeds, apts, filteredApts, tasks, filteredTasks, milestones, phases, onNavigate }) {
   return (
     <div className="page dashboard-page">
-      <SummaryBar meds={meds} apts={apts} tasks={tasks} />
       <div className="dashboard-grid">
         <div className="dash-card-week-wrap">
           <WeekCard meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />
