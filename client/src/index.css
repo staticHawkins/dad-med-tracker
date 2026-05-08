@@ -2270,7 +2270,19 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-page{max-width:1100px;margin:0 auto;padding:20px 24px 48px}
 .hospital-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .hospital-body{display:flex;flex-direction:column;gap:20px}
-@media(min-width:768px){.hospital-body--sidebar{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:24px;align-items:start}}
+@media(min-width:768px){.hospital-body--sidebar{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}}
+.hospital-aside{display:flex;flex-direction:column;gap:16px}
+@media(max-width:767px){.hospital-aside{display:none}}
+.hospital-overview-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+.hospital-overview-heading{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4;margin-bottom:14px}
+.hospital-overview-stats{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.hospital-overview-stat{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 8px;gap:2px}
+.hospital-overview-stat+.hospital-overview-stat{border-left:1px solid var(--border)}
+.hospital-overview-val{font-size:24px;font-weight:700;letter-spacing:-.5px}
+.hospital-overview-label{font-size:11px;opacity:.5;font-weight:500}
+.hospital-overview-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid var(--border)}
+.hospital-overview-key{font-size:12px;opacity:.5;flex-shrink:0}
+.hospital-overview-rowval{font-size:12px;font-weight:500;text-align:right}
 .hospital-page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:0}
 
 .hospital-no-active{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 0;text-align:center}

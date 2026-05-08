@@ -183,7 +183,7 @@ export default function HospitalView({ stays, activeStay }) {
         <h1 className="hospital-page-title">Hospital Stay</h1>
       </div>
 
-      <div className={`hospital-body${pastStays.length > 0 ? ' hospital-body--sidebar' : ''}`}>
+      <div className={`hospital-body${activeStay ? ' hospital-body--sidebar' : ''}`}>
         <div>
           {activeStay ? (
             <ActiveStaySection
@@ -200,14 +200,48 @@ export default function HospitalView({ stays, activeStay }) {
           )}
         </div>
 
-        {pastStays.length > 0 && (
-          <div className="past-stays-section">
-            <div className="past-stays-heading">Past stays</div>
-            {pastStays.map(s => (
-              <PastStayCard key={s.id} stay={s} />
-            ))}
-          </div>
-        )}
+        <aside className="hospital-aside">
+          {activeStay && (
+            <div className="hospital-overview-card">
+              <div className="hospital-overview-heading">Stay overview</div>
+              <div className="hospital-overview-stats">
+                <div className="hospital-overview-stat">
+                  <span className="hospital-overview-val">{dayCount(activeStay.admissionDate)}</span>
+                  <span className="hospital-overview-label">days</span>
+                </div>
+                <div className="hospital-overview-stat">
+                  <span className="hospital-overview-val">{(activeStay.dailyLogs || []).length}</span>
+                  <span className="hospital-overview-label">logs</span>
+                </div>
+              </div>
+              {activeStay.department && (
+                <div className="hospital-overview-row">
+                  <span className="hospital-overview-key">Department</span>
+                  <span className="hospital-overview-rowval">{activeStay.department}</span>
+                </div>
+              )}
+              {activeStay.hospital && (
+                <div className="hospital-overview-row">
+                  <span className="hospital-overview-key">Hospital</span>
+                  <span className="hospital-overview-rowval">{activeStay.hospital}</span>
+                </div>
+              )}
+              <div className="hospital-overview-row">
+                <span className="hospital-overview-key">Admitted</span>
+                <span className="hospital-overview-rowval">{fmtDate(activeStay.admissionDate)}</span>
+              </div>
+            </div>
+          )}
+
+          {pastStays.length > 0 && (
+            <div className="past-stays-section">
+              <div className="past-stays-heading">Past stays</div>
+              {pastStays.map(s => (
+                <PastStayCard key={s.id} stay={s} />
+              ))}
+            </div>
+          )}
+        </aside>
       </div>
 
       {stayModalOpen && (
