@@ -183,28 +183,32 @@ export default function HospitalView({ stays, activeStay }) {
         <h1 className="hospital-page-title">Hospital Stay</h1>
       </div>
 
-      {activeStay ? (
-        <ActiveStaySection
-          stay={activeStay}
-          onEdit={openEditStay}
-          onDayClick={handleDayClick}
-        />
-      ) : (
-        <div className="hospital-no-active">
-          <div className="hospital-no-active-icon">🏥</div>
-          <div className="hospital-no-active-text">No active hospital stay</div>
-          <button className="btn-add" onClick={openNewStay}>+ Admit</button>
+      <div className={`hospital-body${pastStays.length > 0 ? ' hospital-body--sidebar' : ''}`}>
+        <div>
+          {activeStay ? (
+            <ActiveStaySection
+              stay={activeStay}
+              onEdit={openEditStay}
+              onDayClick={handleDayClick}
+            />
+          ) : (
+            <div className="hospital-no-active">
+              <div className="hospital-no-active-icon">🏥</div>
+              <div className="hospital-no-active-text">No active hospital stay</div>
+              <button className="btn-add" onClick={openNewStay}>+ Admit</button>
+            </div>
+          )}
         </div>
-      )}
 
-      {pastStays.length > 0 && (
-        <div className="past-stays-section">
-          <div className="past-stays-heading">Past stays</div>
-          {pastStays.map(s => (
-            <PastStayCard key={s.id} stay={s} />
-          ))}
-        </div>
-      )}
+        {pastStays.length > 0 && (
+          <div className="past-stays-section">
+            <div className="past-stays-heading">Past stays</div>
+            {pastStays.map(s => (
+              <PastStayCard key={s.id} stay={s} />
+            ))}
+          </div>
+        )}
+      </div>
 
       {stayModalOpen && (
         <HospitalStayModal

@@ -2267,8 +2267,10 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-dash-banner-link{background:none;border:none;font-size:13px;font-weight:600;color:var(--amber);cursor:pointer;text-decoration:underline;padding:0;white-space:nowrap}
 
 /* ── HOSPITAL VIEW ── */
-.hospital-page{max-width:720px;margin:0 auto;padding:20px 16px}
+.hospital-page{max-width:1100px;margin:0 auto;padding:20px 24px 48px}
 .hospital-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.hospital-body{display:flex;flex-direction:column;gap:20px}
+@media(min-width:768px){.hospital-body--sidebar{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:24px;align-items:start}}
 .hospital-page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:0}
 
 .hospital-no-active{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 0;text-align:center}
@@ -2301,7 +2303,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 
 .hospital-empty{padding:20px 16px;font-size:13px;opacity:.45;text-align:center}
 
-.past-stays-section{margin-top:24px}
+.past-stays-section{margin-top:0}
 .past-stays-heading{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4;margin-bottom:10px}
 .past-stay-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
 .past-stay-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:transparent;border:none;cursor:pointer;text-align:left}
