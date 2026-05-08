@@ -495,6 +495,22 @@ export async function deleteDailyLog(stayId, log) {
   })
 }
 
+export async function addHospitalMedLog(stayId, entry) {
+  const newEntry = { ...entry, id: entry.id || newId() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    medLogs: arrayUnion(newEntry),
+    updatedAt: new Date().toISOString(),
+  })
+  return newEntry
+}
+
+export async function deleteHospitalMedLog(stayId, entry) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    medLogs: arrayRemove(entry),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

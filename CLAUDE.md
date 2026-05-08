@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Rules
+
+- **Never commit or push** unless the user explicitly says to. Make code changes, then stop and wait.
+
 ## Running the App
 
 ```bash

@@ -17,6 +17,16 @@ function fmtDate(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function fmtTime(ts) {
+  if (!ts || !ts.includes('T')) return ts || ''
+  const [, time] = ts.split('T')
+  const [hStr, mStr] = time.split(':')
+  const h = parseInt(hStr, 10)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 || 12
+  return `${hour}:${mStr} ${ampm}`
+}
+
 function getDaySlots(admissionDate) {
   const slots = []
   const start = new Date(admissionDate + 'T00:00:00')
@@ -28,9 +38,24 @@ function getDaySlots(admissionDate) {
   return slots
 }
 
-function DaySlot({ dateStr, log, onClick }) {
+function groupMedLogs(medLogs) {
+  const groups = {}
+  for (const m of medLogs) {
+    if (!groups[m.date]) groups[m.date] = []
+    groups[m.date].push(m)
+  }
+  for (const date of Object.keys(groups)) {
+    groups[date].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+  }
+  return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a))
+}
+
+function DaySlot({ dateStr, log, onClick, admissionDate }) {
   const isToday = dateStr === todayStr()
   const hasLog = !!log
+  const dayNum = admissionDate
+    ? Math.round((new Date(dateStr + 'T00:00:00') - new Date(admissionDate + 'T00:00:00')) / 86400000) + 1
+    : null
 
   return (
     <button
@@ -40,6 +65,7 @@ function DaySlot({ dateStr, log, onClick }) {
       <div className="day-slot-header">
         <span className="day-slot-label">
           {isToday ? 'Today' : fmtDate(dateStr)}
+          {dayNum !== null && <span className="day-slot-day-num"> · Day {dayNum}</span>}
         </span>
         <span className="day-slot-action">
           {hasLog ? 'Edit ›' : '+ Add notes'}
@@ -90,9 +116,47 @@ function ActiveStaySection({ stay, onEdit, onDayClick }) {
             dateStr={dateStr}
             log={logsByDate[dateStr] || null}
             onClick={onDayClick}
+            admissionDate={stay.admissionDate}
           />
         ))}
       </div>
+    </div>
+  )
+}
+
+function MedLogList({ medLogs }) {
+  const grouped = groupMedLogs(medLogs)
+  if (grouped.length === 0) return (
+    <div className="hospital-medlog-empty">No medications logged yet.</div>
+  )
+  return grouped.map(([date, meds]) => (
+    <div key={date} className="hospital-medlog-group">
+      <div className="hospital-medlog-date">{fmtDate(date)}</div>
+      {meds.map(m => (
+        <div key={m.id} className="hospital-medlog-row">
+          <span className="hospital-medlog-time">{fmtTime(m.timestamp)}</span>
+          <span className="hospital-medlog-name">{m.name}</span>
+        </div>
+      ))}
+    </div>
+  ))
+}
+
+function MobileMedSection({ medLogs }) {
+  const [open, setOpen] = useState(false)
+  if (!medLogs.length) return null
+  return (
+    <div className="hospital-mobile-meds">
+      <button className="hospital-mobile-meds-toggle" onClick={() => setOpen(o => !o)}>
+        <span>Medications this stay</span>
+        <span className="hospital-mobile-meds-count">{medLogs.length}</span>
+        <span className={`past-stay-chevron${open ? ' open' : ''}`} style={{ marginLeft: 'auto' }}>›</span>
+      </button>
+      {open && (
+        <div className="hospital-mobile-meds-body">
+          <MedLogList medLogs={medLogs} />
+        </div>
+      )}
     </div>
   )
 }
@@ -154,6 +218,7 @@ export default function HospitalView({ stays, activeStay }) {
   const [editingDate, setEditingDate] = useState(null)
 
   const pastStays = stays.filter(s => !!s.dischargeDate)
+  const medLogs = activeStay?.medLogs || []
 
   function openEditStay() {
     setEditingStay(activeStay)
@@ -198,6 +263,9 @@ export default function HospitalView({ stays, activeStay }) {
               <button className="btn-add" onClick={openNewStay}>+ Admit</button>
             </div>
           )}
+
+          {/* Mobile only — med log section below the stay card */}
+          {activeStay && <MobileMedSection medLogs={medLogs} />}
         </div>
 
         <aside className="hospital-aside">
@@ -205,13 +273,9 @@ export default function HospitalView({ stays, activeStay }) {
             <div className="hospital-overview-card">
               <div className="hospital-overview-heading">Stay overview</div>
               <div className="hospital-overview-stats">
-                <div className="hospital-overview-stat">
+                <div className="hospital-overview-stat" style={{ flex: 'none', width: '100%' }}>
                   <span className="hospital-overview-val">{dayCount(activeStay.admissionDate)}</span>
-                  <span className="hospital-overview-label">days</span>
-                </div>
-                <div className="hospital-overview-stat">
-                  <span className="hospital-overview-val">{(activeStay.dailyLogs || []).length}</span>
-                  <span className="hospital-overview-label">logs</span>
+                  <span className="hospital-overview-label">days admitted</span>
                 </div>
               </div>
               {activeStay.department && (
@@ -230,6 +294,13 @@ export default function HospitalView({ stays, activeStay }) {
                 <span className="hospital-overview-key">Admitted</span>
                 <span className="hospital-overview-rowval">{fmtDate(activeStay.admissionDate)}</span>
               </div>
+            </div>
+          )}
+
+          {activeStay && (
+            <div className="hospital-medlog-card">
+              <div className="hospital-overview-heading">Medications this stay</div>
+              <MedLogList medLogs={medLogs} />
             </div>
           )}
 
@@ -257,6 +328,7 @@ export default function HospitalView({ stays, activeStay }) {
           log={editingLog}
           date={editingDate}
           onClose={closeLogModal}
+          medLogs={medLogs}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../../firebase'
-import { saveDailyLog, deleteDailyLog } from '../../lib/firestore'
+import { saveDailyLog, deleteDailyLog, addHospitalMedLog, deleteHospitalMedLog } from '../../lib/firestore'
 import { todayStr } from '../../lib/medUtils'
 
 const EMPTY = { date: todayStr(), notes: '', careTeam: '' }
@@ -17,7 +17,24 @@ function useAutoResize(value) {
   return ref
 }
 
-export default function DailyLogModal({ stayId, log, date, onClose }) {
+function fmtTime(ts) {
+  if (!ts || !ts.includes('T')) return ts || ''
+  const [, time] = ts.split('T')
+  const [hStr, mStr] = time.split(':')
+  const h = parseInt(hStr, 10)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 || 12
+  return `${hour}:${mStr} ${ampm}`
+}
+
+function defaultTimestamp(date) {
+  const now = new Date()
+  const h = now.getHours().toString().padStart(2, '0')
+  const m = now.getMinutes().toString().padStart(2, '0')
+  return `${date}T${h}:${m}`
+}
+
+export default function DailyLogModal({ stayId, log, date, onClose, medLogs = [] }) {
   const [fields, setFields] = useState({ ...EMPTY, date: date || todayStr() })
   const [saveStatus, setSaveStatus] = useState('idle')
   const [deleting, setDeleting] = useState(false)
@@ -26,12 +43,23 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
   const [aiError, setAiError] = useState(null)
   const [aiOpen, setAiOpen] = useState(true)
 
+  const [addingMed, setAddingMed] = useState(false)
+  const [medName, setMedName] = useState('')
+  const [medTime, setMedTime] = useState('')
+  const [savingMed, setSavingMed] = useState(false)
+  const medNameRef = useRef(null)
+
   const notesRef = useAutoResize(fields.notes)
   const careTeamRef = useAutoResize(fields.careTeam)
   const debounceTimer = useRef(null)
   const savedTimer = useRef(null)
   const lastFields = useRef(null)
   const currentSavedRef = useRef(log || null)
+
+  const currentDate = fields.date || date || todayStr()
+  const dayMedLogs = medLogs
+    .filter(m => m.date === currentDate)
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
 
   useEffect(() => {
     if (log) {
@@ -46,6 +74,10 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
       setFields(f => ({ ...f, date }))
     }
   }, [log, date])
+
+  useEffect(() => {
+    if (addingMed && medNameRef.current) medNameRef.current.focus()
+  }, [addingMed])
 
   async function persistFields(next) {
     const prev = currentSavedRef.current
@@ -126,6 +158,32 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
     }
   }
 
+  function openAddMed() {
+    setMedName('')
+    setMedTime(defaultTimestamp(currentDate))
+    setAddingMed(true)
+  }
+
+  async function handleSaveMed() {
+    if (!medName.trim()) return
+    setSavingMed(true)
+    try {
+      await addHospitalMedLog(stayId, {
+        name: medName.trim(),
+        timestamp: medTime,
+        date: currentDate,
+      })
+      setAddingMed(false)
+      setMedName('')
+    } finally {
+      setSavingMed(false)
+    }
+  }
+
+  async function handleDeleteMed(entry) {
+    await deleteHospitalMedLog(stayId, entry)
+  }
+
   const canSummarize = fields.notes.trim().length > 0 || fields.careTeam.trim().length > 0
   const hasContent = aiSummary || aiLoading || aiError
 
@@ -151,7 +209,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
         </div>
 
         <div className="right-panel-body">
-          {/* AI Summary — top, collapsible */}
+          {/* AI Summary */}
           <div className="daily-log-ai-section" style={{ marginTop: 0, marginBottom: 20 }}>
             <button
               className="daily-log-ai-header daily-log-ai-toggle"
@@ -205,6 +263,69 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
               onChange={e => setField('careTeam', e.target.value)}
               style={{ resize: 'none', overflow: 'hidden' }}
             />
+          </div>
+
+          {/* Medications */}
+          <div className="daily-log-meds-section">
+            <div className="daily-log-meds-header">
+              <span className="daily-log-meds-label">Medications</span>
+            </div>
+
+            {dayMedLogs.length > 0 && (
+              <div className="daily-log-meds-list">
+                {dayMedLogs.map(m => (
+                  <div key={m.id} className="daily-log-med-row">
+                    <span className="daily-log-med-time">{fmtTime(m.timestamp)}</span>
+                    <span className="daily-log-med-name">{m.name}</span>
+                    <button
+                      className="daily-log-med-delete"
+                      onClick={() => handleDeleteMed(m)}
+                      aria-label="Remove"
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {addingMed ? (
+              <div className="daily-log-med-form">
+                <input
+                  ref={medNameRef}
+                  className="daily-log-med-input"
+                  placeholder="Medication name"
+                  value={medName}
+                  onChange={e => setMedName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveMed(); if (e.key === 'Escape') setAddingMed(false) }}
+                />
+                <input
+                  type="datetime-local"
+                  className="daily-log-med-input"
+                  value={medTime}
+                  onChange={e => setMedTime(e.target.value)}
+                />
+                <div className="daily-log-med-form-actions">
+                  <button
+                    className="btn-primary"
+                    style={{ fontSize: 13, padding: '6px 14px' }}
+                    onClick={handleSaveMed}
+                    disabled={!medName.trim() || savingMed}
+                  >
+                    {savingMed ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    style={{ fontSize: 13 }}
+                    onClick={() => setAddingMed(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="daily-log-add-med-btn" onClick={openAddMed}>
+                + Log medication
+              </button>
+            )}
           </div>
 
           {log && (

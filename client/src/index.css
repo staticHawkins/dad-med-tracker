@@ -2277,7 +2277,6 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-overview-heading{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4;margin-bottom:14px}
 .hospital-overview-stats{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .hospital-overview-stat{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 8px;gap:2px}
-.hospital-overview-stat+.hospital-overview-stat{border-left:1px solid var(--border)}
 .hospital-overview-val{font-size:24px;font-weight:700;letter-spacing:-.5px}
 .hospital-overview-label{font-size:11px;opacity:.5;font-weight:500}
 .hospital-overview-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid var(--border)}
@@ -2306,6 +2305,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .day-slot-readonly:hover{background:transparent}
 .day-slot-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .day-slot-label{font-size:13px;font-weight:700;letter-spacing:-.2px}
+.day-slot-day-num{font-size:12px;font-weight:400;opacity:.45;letter-spacing:0}
 .day-slot-action{font-size:11px;opacity:.4;font-weight:500;white-space:nowrap}
 .day-slot-empty .day-slot-action{color:var(--amber);opacity:.7}
 .day-slot-content{margin-top:6px}
@@ -2326,5 +2326,39 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .past-stay-chevron{font-size:18px;opacity:.4;transition:transform .2s;display:inline-block}
 .past-stay-chevron.open{transform:rotate(90deg)}
 .past-stay-body{border-top:1px solid var(--border)}
+
+/* ── Hospital med log sidebar card ── */
+.hospital-medlog-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+.hospital-medlog-group{margin-bottom:12px}
+.hospital-medlog-group:last-child{margin-bottom:0}
+.hospital-medlog-date{font-size:11px;font-weight:700;letter-spacing:.3px;opacity:.5;margin-bottom:6px}
+.hospital-medlog-row{display:flex;align-items:baseline;gap:8px;padding:3px 0}
+.hospital-medlog-time{font-size:12px;opacity:.5;white-space:nowrap;min-width:58px}
+.hospital-medlog-name{font-size:13px;font-weight:500}
+.hospital-medlog-empty{font-size:12px;opacity:.4;font-style:italic;padding:4px 0}
+
+/* ── Mobile med log section (below active stay card) ── */
+.hospital-mobile-meds{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:12px}
+.hospital-mobile-meds-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:14px 16px;background:transparent;border:none;cursor:pointer;text-align:left;font-size:13px;font-weight:600}
+.hospital-mobile-meds-count{font-size:11px;background:var(--border2);border-radius:20px;padding:2px 7px;font-weight:600;opacity:.7}
+.hospital-mobile-meds-body{border-top:1px solid var(--border);padding:12px 16px}
+@media(min-width:768px){.hospital-mobile-meds{display:none}}
+
+/* ── Med logging in DailyLogModal ── */
+.daily-log-meds-section{margin-top:24px;border-top:1px solid var(--border);padding-top:20px}
+.daily-log-meds-header{margin-bottom:12px}
+.daily-log-meds-label{font-size:13px;font-weight:700;letter-spacing:-.1px}
+.daily-log-meds-list{display:flex;flex-direction:column;gap:1px;margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.daily-log-med-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--panel2)}
+.daily-log-med-row+.daily-log-med-row{border-top:1px solid var(--border)}
+.daily-log-med-time{font-size:12px;opacity:.5;white-space:nowrap;min-width:58px}
+.daily-log-med-name{font-size:13px;font-weight:500;flex:1}
+.daily-log-med-delete{background:none;border:none;cursor:pointer;font-size:11px;opacity:.35;padding:2px 4px;line-height:1;flex-shrink:0}
+.daily-log-med-delete:hover{opacity:.7}
+.daily-log-med-form{display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+.daily-log-med-input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box}
+.daily-log-med-form-actions{display:flex;gap:8px}
+.daily-log-add-med-btn{background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);padding:6px 0;opacity:.8}
+.daily-log-add-med-btn:hover{opacity:1}
 
 
