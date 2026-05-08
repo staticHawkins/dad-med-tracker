@@ -82,6 +82,7 @@ client/src/
 │   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
 │   ├── tasks/           # TasksView, TaskModal
 │   ├── timeline/        # TimelineView, DiseaseTimelineCard, MilestoneRow, MilestoneTag, PhaseStrip
+│   ├── hospital/        # HospitalView, HospitalStayModal, DailyLogModal
 │   └── chat/            # AskAiSheet
 ├── hooks/
 │   ├── useAuth.js       # onAuthStateChanged
@@ -91,6 +92,7 @@ client/src/
 │   ├── useCareTeam.js   # Firestore care team listener
 │   ├── useTasks.js      # Firestore tasks listener
 │   ├── useUsers.js      # Firestore users listener
+│   ├── useHospitalStays.js
 │   ├── useSpecialties.js
 │   ├── useMilestones.js
 │   ├── usePhases.js

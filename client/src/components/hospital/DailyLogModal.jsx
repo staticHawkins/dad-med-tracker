@@ -65,7 +65,6 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
             placeholder="Vitals, doctor updates, procedures, anything notable today…"
             value={fields.notes}
             onChange={e => setField('notes', e.target.value)}
-            autoFocus
           />
         </div>
 
