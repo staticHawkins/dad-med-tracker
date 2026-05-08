@@ -13,6 +13,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
   const [aiSummary, setAiSummary] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
+  const [aiOpen, setAiOpen] = useState(true)
 
   const debounceTimer = useRef(null)
   const savedTimer = useRef(null)
@@ -25,6 +26,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
         notes: log.notes || log.drNotes || '',
         careTeam: log.careTeam || '',
       })
+      setAiSummary(log.aiSummary || null)
     } else if (date) {
       setFields(f => ({ ...f, date }))
     }
@@ -79,6 +81,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
     setAiLoading(true)
     setAiError(null)
     setAiSummary(null)
+    setAiOpen(true)
     try {
       const fn = httpsCallable(functions, 'askClaude')
       const systemContext = `You are a medical summary assistant helping a family track a hospital stay. Write a concise, plain-language summary of the day based on the notes provided. Focus on key events, medical updates, and care team involvement. Keep it to 2–4 sentences. Do NOT use markdown — no **, ##, *, or bullet dashes. Write in plain prose only.`
@@ -91,6 +94,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
         systemContext,
       })
       setAiSummary(data.content)
+      await saveDailyLog(stayId, { id: log?.id, ...fields, aiSummary: data.content }, log)
     } catch {
       setAiError('Could not generate summary. Check your connection.')
     } finally {
@@ -99,6 +103,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
   }
 
   const canSummarize = fields.notes.trim().length > 0 || fields.careTeam.trim().length > 0
+  const hasContent = aiSummary || aiLoading || aiError
 
   return (
     <div className="right-panel-bg" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -122,6 +127,38 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
         </div>
 
         <div className="right-panel-body">
+          {/* AI Summary — top, collapsible */}
+          <div className="daily-log-ai-section" style={{ marginTop: 0, marginBottom: 20 }}>
+            <button
+              className="daily-log-ai-header daily-log-ai-toggle"
+              onClick={() => setAiOpen(o => !o)}
+              aria-expanded={aiOpen}
+            >
+              <span className="daily-log-ai-label">⊙ AI summary</span>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span
+                  className="daily-log-ai-btn"
+                  onClick={e => { e.stopPropagation(); generateSummary() }}
+                  style={{ pointerEvents: aiLoading || !canSummarize ? 'none' : 'auto', opacity: aiLoading || !canSummarize ? 0.4 : 1 }}
+                >
+                  {aiLoading ? 'Generating…' : aiSummary ? 'Regenerate' : 'Generate'}
+                </span>
+                <span className="daily-log-ai-divider" />
+                <span className={`daily-log-ai-chevron${aiOpen ? ' open' : ''}`}>›</span>
+              </div>
+            </button>
+            {aiOpen && (
+              <>
+                {aiLoading && <div className="daily-log-ai-loading">Summarizing the day…</div>}
+                {aiError && <div className="daily-log-ai-error">{aiError}</div>}
+                {aiSummary && !aiLoading && <div className="daily-log-ai-result">{aiSummary}</div>}
+                {!hasContent && (
+                  <div className="daily-log-ai-empty">No summary yet. Add notes below and tap Generate.</div>
+                )}
+              </>
+            )}
+          </div>
+
           <div className="fr">
             <label>Daily notes</label>
             <textarea
@@ -140,29 +177,6 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
               value={fields.careTeam}
               onChange={e => setField('careTeam', e.target.value)}
             />
-          </div>
-
-          {/* AI Summary */}
-          <div className="daily-log-ai-section">
-            <div className="daily-log-ai-header">
-              <span className="daily-log-ai-label">⊙ AI summary</span>
-              <button
-                className="daily-log-ai-btn"
-                onClick={generateSummary}
-                disabled={aiLoading || !canSummarize}
-              >
-                {aiLoading ? 'Generating…' : aiSummary ? 'Regenerate' : 'Generate'}
-              </button>
-            </div>
-            {aiLoading && (
-              <div className="daily-log-ai-loading">Summarizing the day…</div>
-            )}
-            {aiError && (
-              <div className="daily-log-ai-error">{aiError}</div>
-            )}
-            {aiSummary && !aiLoading && (
-              <div className="daily-log-ai-result">{aiSummary}</div>
-            )}
           </div>
 
           {log && (
