@@ -485,6 +485,7 @@ export async function saveDailyLog(stayId, log, existingLog) {
     dailyLogs: arrayUnion(newLog),
     updatedAt: new Date().toISOString(),
   })
+  return newLog
 }
 
 export async function deleteDailyLog(stayId, log) {

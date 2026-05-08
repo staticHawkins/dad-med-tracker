@@ -31,6 +31,7 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
   const debounceTimer = useRef(null)
   const savedTimer = useRef(null)
   const lastFields = useRef(null)
+  const currentSavedRef = useRef(log || null)
 
   useEffect(() => {
     if (log) {
@@ -40,16 +41,20 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
         careTeam: log.careTeam || '',
       })
       setAiSummary(log.aiSummary || null)
+      currentSavedRef.current = log
     } else if (date) {
       setFields(f => ({ ...f, date }))
     }
   }, [log, date])
 
   async function persistFields(next) {
+    const prev = currentSavedRef.current
+    const toSave = { id: prev?.id, ...(prev?.aiSummary ? { aiSummary: prev.aiSummary } : {}), ...next }
     lastFields.current = next
     setSaveStatus('saving')
     try {
-      await saveDailyLog(stayId, { id: log?.id, ...next }, log)
+      const saved = await saveDailyLog(stayId, toSave, prev)
+      currentSavedRef.current = saved
       setSaveStatus('saved')
       clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
@@ -60,9 +65,12 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
 
   async function retryWrite() {
     if (!lastFields.current) return
+    const prev = currentSavedRef.current
+    const toSave = { id: prev?.id, ...(prev?.aiSummary ? { aiSummary: prev.aiSummary } : {}), ...lastFields.current }
     setSaveStatus('saving')
     try {
-      await saveDailyLog(stayId, { id: log?.id, ...lastFields.current }, log)
+      const saved = await saveDailyLog(stayId, toSave, prev)
+      currentSavedRef.current = saved
       setSaveStatus('saved')
       clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSaveStatus('idle'), 2500)
@@ -97,17 +105,20 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
     setAiOpen(true)
     try {
       const fn = httpsCallable(functions, 'askClaude')
-      const systemContext = `You are a medical summary assistant helping a family track a hospital stay. Write a concise, plain-language summary of the day based on the notes provided. Focus on key events, medical updates, and care team involvement. Keep it to 2–4 sentences. Do NOT use markdown — no **, ##, *, or bullet dashes. Write in plain prose only.`
+      const systemContext = `You are a medical summary assistant. Write a 1–2 sentence plain-prose summary of the hospital day. Focus only on the most important update (key medical event, test result, or care change). No markdown, no bullet points, no filler phrases.`
       const userMessage = [
-        fields.notes.trim() && `Daily notes:\n${fields.notes.trim()}`,
-        fields.careTeam.trim() && `Care team today:\n${fields.careTeam.trim()}`,
+        fields.notes.trim() && `Notes:\n${fields.notes.trim()}`,
+        fields.careTeam.trim() && `Care team:\n${fields.careTeam.trim()}`,
       ].filter(Boolean).join('\n\n')
       const { data } = await fn({
-        messages: [{ role: 'user', content: `Please summarize this hospital day:\n\n${userMessage}` }],
+        messages: [{ role: 'user', content: userMessage }],
         systemContext,
       })
       setAiSummary(data.content)
-      await saveDailyLog(stayId, { id: log?.id, ...fields, aiSummary: data.content }, log)
+      const prev = currentSavedRef.current
+      const toSave = { id: prev?.id, ...fields, aiSummary: data.content }
+      const saved = await saveDailyLog(stayId, toSave, prev)
+      currentSavedRef.current = saved
     } catch {
       setAiError('Could not generate summary. Check your connection.')
     } finally {
