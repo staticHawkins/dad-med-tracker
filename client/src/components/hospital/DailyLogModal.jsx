@@ -6,6 +6,17 @@ import { todayStr } from '../../lib/medUtils'
 
 const EMPTY = { date: todayStr(), notes: '', careTeam: '' }
 
+function useAutoResize(value) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [value])
+  return ref
+}
+
 export default function DailyLogModal({ stayId, log, date, onClose }) {
   const [fields, setFields] = useState({ ...EMPTY, date: date || todayStr() })
   const [saveStatus, setSaveStatus] = useState('idle')
@@ -15,6 +26,8 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
   const [aiError, setAiError] = useState(null)
   const [aiOpen, setAiOpen] = useState(true)
 
+  const notesRef = useAutoResize(fields.notes)
+  const careTeamRef = useAutoResize(fields.careTeam)
   const debounceTimer = useRef(null)
   const savedTimer = useRef(null)
   const lastFields = useRef(null)
@@ -162,20 +175,24 @@ export default function DailyLogModal({ stayId, log, date, onClose }) {
           <div className="fr">
             <label>Daily notes</label>
             <textarea
+              ref={notesRef}
               rows={8}
               placeholder="Vitals, doctor updates, procedures, anything notable today…"
               value={fields.notes}
               onChange={e => setField('notes', e.target.value)}
+              style={{ resize: 'none', overflow: 'hidden' }}
             />
           </div>
 
           <div className="fr">
             <label>Care team today</label>
             <textarea
+              ref={careTeamRef}
               rows={3}
               placeholder="Who was present today"
               value={fields.careTeam}
               onChange={e => setField('careTeam', e.target.value)}
+              style={{ resize: 'none', overflow: 'hidden' }}
             />
           </div>
 
