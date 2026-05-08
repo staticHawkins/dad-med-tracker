@@ -450,6 +450,50 @@ export function exportJSON(meds) {
   dl('familycarehub-backup.json', JSON.stringify(meds, null, 2), 'application/json')
 }
 
+// ── Hospital stays ────────────────────────────────────────────────────────────
+
+export async function saveHospitalStay(fields, editId) {
+  const id = editId || newId()
+  const stay = {
+    id,
+    person: fields.person || 'dad',
+    hospital: fields.hospital || '',
+    department: fields.department || '',
+    reason: fields.reason || '',
+    admissionDate: fields.admissionDate || todayStr(),
+    dischargeDate: fields.dischargeDate ?? null,
+    dailyLogs: fields.dailyLogs || [],
+    updatedAt: new Date().toISOString(),
+  }
+  await setDoc(doc(db, 'hospitalStays', id), stay)
+}
+
+export async function dischargeHospitalStay(id) {
+  await updateDoc(doc(db, 'hospitalStays', id), {
+    dischargeDate: todayStr(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function saveDailyLog(stayId, log, existingLog) {
+  const ref = doc(db, 'hospitalStays', stayId)
+  const newLog = { ...log, id: log.id || newId() }
+  if (existingLog) {
+    await updateDoc(ref, { dailyLogs: arrayRemove(existingLog) })
+  }
+  await updateDoc(ref, {
+    dailyLogs: arrayUnion(newLog),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function deleteDailyLog(stayId, log) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    dailyLogs: arrayRemove(log),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

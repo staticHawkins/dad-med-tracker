@@ -10,7 +10,7 @@ const GROUP_META = {
   'as-needed': { label: 'As needed',         variant: 'as-needed',  defaultOpen: true  },
 }
 
-export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen, forceOpen = false }) {
+export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen, forceOpen = false, onHold = false }) {
   const meta = GROUP_META[groupKey]
   const [isOpen, setIsOpen] = useState(meta.defaultOpen || forceOpen)
 
@@ -32,7 +32,7 @@ export default function MedGroupSection({ groupKey, meds, sectionRef, onOpen, fo
       <div className="med-group-body">
         {isOpen
           ? meds.map(m => (
-              <MedRow key={m.id} m={m} onOpen={() => onOpen(m.id)} />
+              <MedRow key={m.id} m={m} onHold={onHold} onOpen={() => onOpen(m.id)} />
             ))
           : (
               <MedStockedCollapsed

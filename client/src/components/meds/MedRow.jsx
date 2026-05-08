@@ -1,7 +1,7 @@
 import { pillsNow, supplyStatus, supplyStatusLabel, refillStatusLabel, pillStatusClass, fmtDate, freqLabel, getRefillDate, queuedFill, effectiveDaysToZero } from '../../lib/medUtils'
 import PersonChip from '../PersonChip'
 
-export default function MedRow({ m, onOpen }) {
+export default function MedRow({ m, onOpen, onHold = false }) {
   const isInactive = m.active === false
   const s = supplyStatus(m)
   const lbl = supplyStatusLabel(m)
@@ -21,7 +21,7 @@ export default function MedRow({ m, onOpen }) {
 
   return (
     <div
-      className={`med-row${isInactive ? ' med-row-inactive' : ''}`}
+      className={`med-row${isInactive ? ' med-row-inactive' : ''}${onHold ? ' med-row-on-hold' : ''}`}
       style={{ borderLeft: `3px solid var(--${m.person || 'dad'})`, cursor: 'pointer' }}
       onClick={onOpen}
     >
@@ -54,8 +54,11 @@ export default function MedRow({ m, onOpen }) {
         </div>
 
         <div className="med-col-status">
-          <span className={`spill sp-${pillSt}`}>{lbl}</span>
-          {rsl && <span className="refill-status-badge">{rsl}</span>}
+          {onHold
+            ? <span className="on-hold-badge">On Hold</span>
+            : <span className={`spill sp-${pillSt}`}>{lbl}</span>
+          }
+          {!onHold && rsl && <span className="refill-status-badge">{rsl}</span>}
           <div className="med-mobile-pills">
             <span className={`med-mobile-count ${p.daysToZero === 999 ? pc : daysCls}`}>
               {p.daysToZero === 999 ? p.rem : p.daysToZero}

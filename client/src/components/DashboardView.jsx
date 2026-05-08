@@ -617,9 +617,29 @@ export function BackBar({ label, onBack }) {
   )
 }
 
-export default function DashboardView({ meds, filteredMeds, apts, filteredApts, tasks, filteredTasks, milestones, phases, onNavigate }) {
+function HospitalStayBanner({ stay, onNavigate }) {
+  const start = new Date(stay.admissionDate + 'T00:00:00')
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const day = Math.max(1, Math.round((now - start) / 86400000) + 1)
+  return (
+    <div className="hospital-dash-banner" role="status">
+      <span className="hospital-dash-banner-icon">🏥</span>
+      <span className="hospital-dash-banner-text">
+        Day {day} · {stay.hospital || 'Hospital'}
+        {stay.department ? ` · ${stay.department}` : ''}
+      </span>
+      <button className="hospital-dash-banner-link" onClick={() => onNavigate('hospital')}>
+        View stay →
+      </button>
+    </div>
+  )
+}
+
+export default function DashboardView({ meds, filteredMeds, apts, filteredApts, tasks, filteredTasks, milestones, phases, activeStay, onNavigate }) {
   return (
     <div className="page dashboard-page">
+      {activeStay && <HospitalStayBanner stay={activeStay} onNavigate={onNavigate} />}
       <div className="dashboard-grid">
         <div className="dash-card-week-wrap">
           <WeekCard meds={meds} apts={apts} tasks={tasks} onNavigate={onNavigate} />

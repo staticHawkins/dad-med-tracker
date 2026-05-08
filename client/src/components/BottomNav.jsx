@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { id: 'apts',      label: 'Appts', icon: '📅' },
   { id: 'tasks',     label: 'Tasks', icon: '✓'  },
   { id: 'timeline',  label: 'Timeline', icon: '⏱' },
+  { id: 'hospital',  label: 'Hospital', icon: '🏥' },
 ]
 
 export default function BottomNav({ activeTab, onNavigate }) {

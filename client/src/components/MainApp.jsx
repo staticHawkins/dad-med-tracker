@@ -3,6 +3,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { requestNotificationPermission } from '../lib/notifications'
 import { useMeds } from '../hooks/useMeds'
+import { useHospitalStays } from '../hooks/useHospitalStays'
 import { useApts } from '../hooks/useApts'
 import { useCareTeam } from '../hooks/useCareTeam'
 import { useTasks } from '../hooks/useTasks'
@@ -19,6 +20,7 @@ import CareTeamPanel from './CareTeamPanel'
 import DashboardView, { BackBar } from './DashboardView'
 import TimelineView from './timeline/TimelineView'
 import AskAiSheet from './chat/AskAiSheet'
+import HospitalView from './hospital/HospitalView'
 import NotificationBanner from './NotificationBanner'
 import BottomNav from './BottomNav'
 
@@ -50,6 +52,7 @@ const SIDEBAR_ITEMS = [
   { id: 'tasks',     label: 'Tasks',        icon: '✓'  },
   { id: 'timeline',  label: 'Timeline',     icon: '⏱' },
   { id: 'care-team', label: 'Care Team',    icon: '👥' },
+  { id: 'hospital',  label: 'Hospital',     icon: '🏥' },
 ]
 
 function Sidebar({ activeTab, onNavigate, onAskAi }) {
@@ -118,6 +121,7 @@ export default function MainApp({ user }) {
 
   const meds = useMeds()
   const activeMeds = meds.filter(m => m.active !== false)
+  const { stays, activeStay } = useHospitalStays()
   const apts = useApts()
   const careTeam = useCareTeam()
   const tasks = useTasks()
@@ -196,6 +200,7 @@ export default function MainApp({ user }) {
               filteredTasks={filteredTasks}
               milestones={milestones}
               phases={phases}
+              activeStay={activeStay}
               onNavigate={setActiveTab}
               personFilter={personFilter}
               onPersonFilter={setPersonFilter}
@@ -205,7 +210,7 @@ export default function MainApp({ user }) {
           {activeTab === 'meds' && (
             <>
               <BackBar label="Medications" onBack={() => setActiveTab('dashboard')} />
-              <MedicationsView meds={meds} careTeam={careTeam} personFilter={personFilter} onPersonFilter={setPersonFilter} />
+              <MedicationsView meds={meds} careTeam={careTeam} activeStay={activeStay} personFilter={personFilter} onPersonFilter={setPersonFilter} onNavigate={setActiveTab} />
             </>
           )}
           {activeTab === 'apts' && (
@@ -230,6 +235,12 @@ export default function MainApp({ user }) {
             <>
               <BackBar label="Disease Timeline" onBack={() => setActiveTab('dashboard')} />
               <TimelineView milestones={milestones} phases={phases} />
+            </>
+          )}
+          {activeTab === 'hospital' && (
+            <>
+              <BackBar label="Hospital Stay" onBack={() => setActiveTab('dashboard')} />
+              <HospitalView stays={stays} activeStay={activeStay} />
             </>
           )}
         </div>

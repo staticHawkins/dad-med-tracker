@@ -21,7 +21,7 @@ function PersonFilter({ value, onChange }) {
   )
 }
 
-export default function MedicationsView({ meds, careTeam, personFilter, onPersonFilter }) {
+export default function MedicationsView({ meds, careTeam, activeStay, personFilter, onPersonFilter, onNavigate }) {
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
@@ -81,6 +81,19 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
 
   return (
     <div className="page">
+      {activeStay && (
+        <div className="hospital-meds-banner">
+          <span className="hospital-meds-banner-icon">⏸</span>
+          <span className="hospital-meds-banner-text">
+            Meds on hold — hospital stay in progress
+          </span>
+          {onNavigate && (
+            <button className="hospital-meds-banner-link" onClick={() => onNavigate('hospital')}>
+              View stay →
+            </button>
+          )}
+        </div>
+      )}
       <div className="mobile-person-filter">
         <PersonFilter value={personFilter} onChange={onPersonFilter} />
       </div>
@@ -112,12 +125,12 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
       ) : (
         <div className="med-groups">
           {filtered.length > 0 && <>
-            <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onOpen={setViewingMedId} />
-            <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onOpen={setViewingMedId} />
-            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId}
+            <MedGroupSection groupKey="urgent" meds={grouped.urgent} sectionRef={urgentRef} onOpen={setViewingMedId} onHold={!!activeStay} />
+            <MedGroupSection groupKey="soon"   meds={grouped.soon}   sectionRef={soonRef}   onOpen={setViewingMedId} onHold={!!activeStay} />
+            <MedGroupSection groupKey="ok"     meds={grouped.ok}     sectionRef={okRef}     onOpen={setViewingMedId} onHold={!!activeStay}
               forceOpen={!grouped.urgent.length && !grouped.soon.length} />
           </>}
-          <MedGroupSection groupKey="as-needed" meds={asNeededMeds} sectionRef={asNeededRef} onOpen={setViewingMedId} />
+          <MedGroupSection groupKey="as-needed" meds={asNeededMeds} sectionRef={asNeededRef} onOpen={setViewingMedId} onHold={!!activeStay} />
           {inactiveMeds.length > 0 && (
             <div className="med-group med-group-inactive">
               <MedGroupHeader
@@ -130,7 +143,7 @@ export default function MedicationsView({ meds, careTeam, personFilter, onPerson
               {showInactive && (
                 <div className="med-group-body">
                   {inactiveMeds.map(m => (
-                    <MedRow key={m.id} m={m} onOpen={() => setViewingMedId(m.id)} />
+                    <MedRow key={m.id} m={m} onHold={!!activeStay} onOpen={() => setViewingMedId(m.id)} />
                   ))}
                 </div>
               )}
