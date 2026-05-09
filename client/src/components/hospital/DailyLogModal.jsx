@@ -431,17 +431,19 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                       style={{ marginBottom: 0 }}
                     />
                   </div>
-                  {filtered.map(sm => (
-                    <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
-                      <span className="med-picker-name">{sm.name}</span>
-                      <span className="med-picker-dose">
-                        {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
-                      </span>
-                    </button>
-                  ))}
-                  {filtered.length === 0 && (
-                    <div style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>No match</div>
-                  )}
+                  <div style={{ overflowY: 'auto', maxHeight: 280 }}>
+                    {filtered.map(sm => (
+                      <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
+                        <span className="med-picker-name">{sm.name}</span>
+                        <span className="med-picker-dose">
+                          {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                    {filtered.length === 0 && (
+                      <div style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>No match</div>
+                    )}
+                  </div>
                   <button className="med-picker-row med-picker-row--new" onClick={selectNewMed}>
                     <span className="med-picker-name">+ Add new medication</span>
                   </button>
