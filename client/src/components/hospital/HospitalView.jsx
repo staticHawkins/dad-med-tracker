@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { todayStr } from '../../lib/medUtils'
+import { addStayMed, removeStayMed, deleteHospitalMedLog } from '../../lib/firestore'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
 import PersonChip from '../PersonChip'
+
+const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
 
 function dayCount(admissionDate) {
   const start = new Date(admissionDate + 'T00:00:00')
@@ -36,18 +39,6 @@ function getDaySlots(admissionDate) {
     slots.push(d.toISOString().slice(0, 10))
   }
   return slots
-}
-
-function groupMedLogs(medLogs) {
-  const groups = {}
-  for (const m of medLogs) {
-    if (!groups[m.date]) groups[m.date] = []
-    groups[m.date].push(m)
-  }
-  for (const date of Object.keys(groups)) {
-    groups[date].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-  }
-  return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a))
 }
 
 function DaySlot({ dateStr, log, onClick, admissionDate }) {
@@ -124,37 +115,205 @@ function ActiveStaySection({ stay, onEdit, onDayClick }) {
   )
 }
 
-function MedLogList({ medLogs }) {
-  const grouped = groupMedLogs(medLogs)
-  if (grouped.length === 0) return (
-    <div className="hospital-medlog-empty">No medications logged yet.</div>
+function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
+  const [expandedId, setExpandedId] = useState(null)
+  const [addFormOpen, setAddFormOpen] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addDosage, setAddDosage] = useState('')
+  const [addUnit, setAddUnit] = useState('mg')
+  const [addPurpose, setAddPurpose] = useState('')
+  const [saving, setSaving] = useState(false)
+  const nameInputRef = useRef(null)
+
+  useEffect(() => {
+    if (addFormOpen && nameInputRef.current) nameInputRef.current.focus()
+  }, [addFormOpen])
+
+  async function handleAddMed(e) {
+    e.preventDefault()
+    if (!addName.trim()) return
+    setSaving(true)
+    try {
+      await addStayMed(stayId, {
+        name: addName.trim(),
+        dosage: parseFloat(addDosage) || 0,
+        unit: addUnit,
+        purpose: addPurpose.trim(),
+      })
+      setAddFormOpen(false)
+      setAddName('')
+      setAddDosage('')
+      setAddUnit('mg')
+      setAddPurpose('')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeleteMed(med) {
+    await removeStayMed(stayId, med)
+    if (expandedId === med.id) setExpandedId(null)
+  }
+
+  async function handleDeleteLog(log) {
+    await deleteHospitalMedLog(stayId, log)
+  }
+
+  const adHocLogs = medLogs.filter(l => !l.stayMedId)
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div className="hospital-overview-heading" style={{ marginBottom: 0 }}>Medications this stay</div>
+        {!addFormOpen && (
+          <button className="daily-log-add-med-btn" style={{ padding: 0, fontSize: 12 }} onClick={() => setAddFormOpen(true)}>
+            + Add
+          </button>
+        )}
+      </div>
+
+      {addFormOpen && (
+        <form className="stay-med-add-form" onSubmit={handleAddMed}>
+          <input
+            ref={nameInputRef}
+            className="daily-log-med-input"
+            placeholder="Medication name"
+            value={addName}
+            onChange={e => setAddName(e.target.value)}
+          />
+          <div className="med-form-dose-row">
+            <input
+              type="number"
+              className="daily-log-med-input"
+              placeholder="Dosage"
+              min="0"
+              step="any"
+              value={addDosage}
+              onChange={e => setAddDosage(e.target.value)}
+              style={{ width: 80, flex: 'none' }}
+            />
+            <select
+              className="med-unit-select"
+              value={addUnit}
+              onChange={e => setAddUnit(e.target.value)}
+            >
+              {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+          <input
+            className="daily-log-med-input"
+            placeholder="For (optional)"
+            value={addPurpose}
+            onChange={e => setAddPurpose(e.target.value)}
+          />
+          <div className="daily-log-med-form-actions">
+            <button type="submit" className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} disabled={!addName.trim() || saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setAddFormOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {stayMeds.length === 0 && !addFormOpen && (
+        <div className="hospital-medlog-empty">No medications added yet.</div>
+      )}
+
+      <div className="stay-meds-list">
+        {stayMeds.map(med => {
+          const logs = medLogs
+            .filter(l => l.stayMedId === med.id)
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          const isExpanded = expandedId === med.id
+
+          return (
+            <div key={med.id} className="stay-med-item">
+              <div className="stay-med-header">
+                <button
+                  className="stay-med-expand"
+                  onClick={() => setExpandedId(isExpanded ? null : med.id)}
+                >
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div className="stay-med-name">{med.name}</div>
+                    <div className="stay-med-meta">
+                      {med.dosage} {med.unit}{med.purpose ? ` · ${med.purpose}` : ''}
+                    </div>
+                  </div>
+                  <span className="stay-med-count">{logs.length} dose{logs.length !== 1 ? 's' : ''}</span>
+                  <span className={`past-stay-chevron${isExpanded ? ' open' : ''}`} style={{ fontSize: 14, marginLeft: 6 }}>›</span>
+                </button>
+                <button className="stay-med-delete-btn" onClick={() => handleDeleteMed(med)} aria-label="Remove medication">✕</button>
+              </div>
+              {isExpanded && (
+                <div className="stay-med-logs">
+                  {logs.length === 0 ? (
+                    <div className="stay-med-empty">No doses logged yet.</div>
+                  ) : (
+                    logs.map(l => (
+                      <div key={l.id} className="stay-med-log-entry">
+                        <span>{fmtDate(l.date)} · {fmtTime(l.timestamp)}</span>
+                        <button className="stay-med-log-delete" onClick={() => handleDeleteLog(l)} aria-label="Remove dose">✕</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {adHocLogs.length > 0 && (
+          <div className="stay-med-item">
+            <button
+              className="stay-med-header"
+              onClick={() => setExpandedId(expandedId === '__adhoc__' ? null : '__adhoc__')}
+            >
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <div className="stay-med-name">Other</div>
+                <div className="stay-med-meta">Unlisted medications</div>
+              </div>
+              <span className="stay-med-count">{adHocLogs.length} dose{adHocLogs.length !== 1 ? 's' : ''}</span>
+              <span className={`past-stay-chevron${expandedId === '__adhoc__' ? ' open' : ''}`} style={{ fontSize: 14, marginLeft: 6 }}>›</span>
+            </button>
+            {expandedId === '__adhoc__' && (
+              <div className="stay-med-logs">
+                {adHocLogs.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).map(l => (
+                  <div key={l.id} className="stay-med-log-entry">
+                    <span>{fmtDate(l.date)} · {fmtTime(l.timestamp)} · {l.name}</span>
+                    <button className="stay-med-log-delete" onClick={() => handleDeleteLog(l)} aria-label="Remove dose">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   )
-  return grouped.map(([date, meds]) => (
-    <div key={date} className="hospital-medlog-group">
-      <div className="hospital-medlog-date">{fmtDate(date)}</div>
-      {meds.map(m => (
-        <div key={m.id} className="hospital-medlog-row">
-          <span className="hospital-medlog-time">{fmtTime(m.timestamp)}</span>
-          <span className="hospital-medlog-name">{m.name}</span>
-        </div>
-      ))}
-    </div>
-  ))
 }
 
-function MobileMedSection({ medLogs }) {
+function StayMedsSidebar({ stayMeds = [], medLogs = [], stayId }) {
+  return (
+    <div className="hospital-medlog-card">
+      <StayMedsContent stayMeds={stayMeds} medLogs={medLogs} stayId={stayId} />
+    </div>
+  )
+}
+
+function MobileMedSection({ stayMeds = [], medLogs = [], stayId }) {
   const [open, setOpen] = useState(false)
-  if (!medLogs.length) return null
   return (
     <div className="hospital-mobile-meds">
       <button className="hospital-mobile-meds-toggle" onClick={() => setOpen(o => !o)}>
         <span>Medications this stay</span>
-        <span className="hospital-mobile-meds-count">{medLogs.length}</span>
+        <span className="hospital-mobile-meds-count">{stayMeds.length} med{stayMeds.length !== 1 ? 's' : ''}</span>
         <span className={`past-stay-chevron${open ? ' open' : ''}`} style={{ marginLeft: 'auto' }}>›</span>
       </button>
       {open && (
         <div className="hospital-mobile-meds-body">
-          <MedLogList medLogs={medLogs} />
+          <StayMedsContent stayMeds={stayMeds} medLogs={medLogs} stayId={stayId} />
         </div>
       )}
     </div>
@@ -219,6 +378,7 @@ export default function HospitalView({ stays, activeStay }) {
 
   const pastStays = stays.filter(s => !!s.dischargeDate)
   const medLogs = activeStay?.medLogs || []
+  const stayMeds = activeStay?.stayMeds || []
 
   function openEditStay() {
     setEditingStay(activeStay)
@@ -244,10 +404,6 @@ export default function HospitalView({ stays, activeStay }) {
 
   return (
     <div className="page hospital-page">
-      <div className="hospital-page-header">
-        <h1 className="hospital-page-title">Hospital Stay</h1>
-      </div>
-
       <div className={`hospital-body${activeStay ? ' hospital-body--sidebar' : ''}`}>
         <div>
           {activeStay ? (
@@ -264,8 +420,9 @@ export default function HospitalView({ stays, activeStay }) {
             </div>
           )}
 
-          {/* Mobile only — med log section below the stay card */}
-          {activeStay && <MobileMedSection medLogs={medLogs} />}
+          {activeStay && (
+            <MobileMedSection stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
+          )}
         </div>
 
         <aside className="hospital-aside">
@@ -298,10 +455,7 @@ export default function HospitalView({ stays, activeStay }) {
           )}
 
           {activeStay && (
-            <div className="hospital-medlog-card">
-              <div className="hospital-overview-heading">Medications this stay</div>
-              <MedLogList medLogs={medLogs} />
-            </div>
+            <StayMedsSidebar stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
           )}
 
           {pastStays.length > 0 && (
@@ -329,6 +483,7 @@ export default function HospitalView({ stays, activeStay }) {
           date={editingDate}
           onClose={closeLogModal}
           medLogs={medLogs}
+          stayMeds={stayMeds}
         />
       )}
     </div>

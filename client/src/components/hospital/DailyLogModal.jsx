@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../../firebase'
-import { saveDailyLog, deleteDailyLog, addHospitalMedLog, deleteHospitalMedLog } from '../../lib/firestore'
+import { saveDailyLog, deleteDailyLog, addHospitalMedLog, deleteHospitalMedLog, addStayMed } from '../../lib/firestore'
 import { todayStr } from '../../lib/medUtils'
+
+const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
 
 const EMPTY = { date: todayStr(), notes: '', careTeam: '' }
 
@@ -34,7 +36,7 @@ function defaultTimestamp(date) {
   return `${date}T${h}:${m}`
 }
 
-export default function DailyLogModal({ stayId, log, date, onClose, medLogs = [] }) {
+export default function DailyLogModal({ stayId, log, date, onClose, medLogs = [], stayMeds = [] }) {
   const [fields, setFields] = useState({ ...EMPTY, date: date || todayStr() })
   const [saveStatus, setSaveStatus] = useState('idle')
   const [deleting, setDeleting] = useState(false)
@@ -44,7 +46,13 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   const [aiOpen, setAiOpen] = useState(true)
 
   const [addingMed, setAddingMed] = useState(false)
+  const [medPickerStep, setMedPickerStep] = useState(false)
+  const [isNewMed, setIsNewMed] = useState(false)
+  const [selectedStayMed, setSelectedStayMed] = useState(null)
   const [medName, setMedName] = useState('')
+  const [medDosage, setMedDosage] = useState('')
+  const [medUnit, setMedUnit] = useState('mg')
+  const [medPurpose, setMedPurpose] = useState('')
   const [medTime, setMedTime] = useState('')
   const [savingMed, setSavingMed] = useState(false)
   const medNameRef = useRef(null)
@@ -76,8 +84,8 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   }, [log, date])
 
   useEffect(() => {
-    if (addingMed && medNameRef.current) medNameRef.current.focus()
-  }, [addingMed])
+    if (addingMed && !medPickerStep && isNewMed && medNameRef.current) medNameRef.current.focus()
+  }, [addingMed, medPickerStep, isNewMed])
 
   async function persistFields(next) {
     const prev = currentSavedRef.current
@@ -159,22 +167,64 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   }
 
   function openAddMed() {
+    const hasMeds = stayMeds.length > 0
+    setMedPickerStep(hasMeds)
+    setIsNewMed(!hasMeds)
+    setSelectedStayMed(null)
     setMedName('')
+    setMedDosage('')
+    setMedUnit('mg')
+    setMedPurpose('')
     setMedTime(defaultTimestamp(currentDate))
     setAddingMed(true)
+  }
+
+  function selectStayMed(sm) {
+    setSelectedStayMed(sm)
+    setMedName(sm.name)
+    setMedDosage(String(sm.dosage ?? ''))
+    setMedUnit(sm.unit || 'mg')
+    setMedPurpose('')
+    setIsNewMed(false)
+    setMedPickerStep(false)
+  }
+
+  function selectNewMed() {
+    setSelectedStayMed(null)
+    setMedName('')
+    setMedDosage('')
+    setMedUnit('mg')
+    setMedPurpose('')
+    setIsNewMed(true)
+    setMedPickerStep(false)
   }
 
   async function handleSaveMed() {
     if (!medName.trim()) return
     setSavingMed(true)
     try {
+      let stayMedId = selectedStayMed?.id || null
+      if (isNewMed) {
+        const newMed = await addStayMed(stayId, {
+          name: medName.trim(),
+          dosage: parseFloat(medDosage) || 0,
+          unit: medUnit,
+          purpose: medPurpose.trim(),
+        })
+        stayMedId = newMed.id
+      }
       await addHospitalMedLog(stayId, {
+        stayMedId,
         name: medName.trim(),
+        dosage: parseFloat(medDosage) || 0,
+        unit: medUnit,
         timestamp: medTime,
         date: currentDate,
       })
       setAddingMed(false)
-      setMedName('')
+      setIsNewMed(false)
+      setSelectedStayMed(null)
+      setMedPickerStep(false)
     } finally {
       setSavingMed(false)
     }
@@ -209,7 +259,6 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
         </div>
 
         <div className="right-panel-body">
-          {/* AI Summary */}
           <div className="daily-log-ai-section" style={{ marginTop: 0, marginBottom: 20 }}>
             <button
               className="daily-log-ai-header daily-log-ai-toggle"
@@ -265,7 +314,6 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
             />
           </div>
 
-          {/* Medications */}
           <div className="daily-log-meds-section">
             <div className="daily-log-meds-header">
               <span className="daily-log-meds-label">Medications</span>
@@ -276,7 +324,9 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                 {dayMedLogs.map(m => (
                   <div key={m.id} className="daily-log-med-row">
                     <span className="daily-log-med-time">{fmtTime(m.timestamp)}</span>
-                    <span className="daily-log-med-name">{m.name}</span>
+                    <span className="daily-log-med-name">
+                      {m.name}{m.dosage ? ` · ${m.dosage} ${m.unit}` : ''}
+                    </span>
                     <button
                       className="daily-log-med-delete"
                       onClick={() => handleDeleteMed(m)}
@@ -287,16 +337,69 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
               </div>
             )}
 
-            {addingMed ? (
+            {addingMed && medPickerStep && (
+              <div className="med-picker">
+                <div className="med-picker-label">SELECT MEDICATION</div>
+                {stayMeds.map(sm => (
+                  <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
+                    <span className="med-picker-name">{sm.name}</span>
+                    <span className="med-picker-dose">
+                      {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
+                    </span>
+                  </button>
+                ))}
+                <button className="med-picker-row med-picker-row--new" onClick={selectNewMed}>
+                  <span className="med-picker-name">+ Add new medication</span>
+                </button>
+                <div style={{ padding: '8px 12px' }}>
+                  <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setAddingMed(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {addingMed && !medPickerStep && (
               <div className="daily-log-med-form">
-                <input
-                  ref={medNameRef}
-                  className="daily-log-med-input"
-                  placeholder="Medication name"
-                  value={medName}
-                  onChange={e => setMedName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveMed(); if (e.key === 'Escape') setAddingMed(false) }}
-                />
+                {isNewMed ? (
+                  <>
+                    <input
+                      ref={medNameRef}
+                      className="daily-log-med-input"
+                      placeholder="Medication name"
+                      value={medName}
+                      onChange={e => setMedName(e.target.value)}
+                    />
+                    <div className="med-form-dose-row">
+                      <input
+                        type="number"
+                        className="daily-log-med-input"
+                        placeholder="Dosage"
+                        min="0"
+                        step="any"
+                        value={medDosage}
+                        onChange={e => setMedDosage(e.target.value)}
+                        style={{ width: 90, flex: 'none' }}
+                      />
+                      <select
+                        className="med-unit-select"
+                        value={medUnit}
+                        onChange={e => setMedUnit(e.target.value)}
+                      >
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                    <input
+                      className="daily-log-med-input"
+                      placeholder="For (optional)"
+                      value={medPurpose}
+                      onChange={e => setMedPurpose(e.target.value)}
+                    />
+                  </>
+                ) : (
+                  <div className="med-selected-summary">
+                    <span>{medName}{medDosage ? ` · ${medDosage} ${medUnit}` : ''}</span>
+                    <button className="med-selected-change" onClick={() => setMedPickerStep(true)}>Change</button>
+                  </div>
+                )}
                 <input
                   type="datetime-local"
                   className="daily-log-med-input"
@@ -321,7 +424,9 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                   </button>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {!addingMed && (
               <button className="daily-log-add-med-btn" onClick={openAddMed}>
                 + Log medication
               </button>
