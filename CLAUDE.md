@@ -105,6 +105,7 @@ client/src/
 ├── lib/
 │   ├── medUtils.js      # pillsNow(), supplyStatus(), getRefillDate()
 │   ├── aptUtils.js      # appointment helpers
+│   ├── fdaUtils.js      # OpenFDA drug name autocomplete (fetchDrugSuggestions, toTitleCase)
 │   ├── firestore.js     # Firestore write operations, newId(), export/import
 │   ├── notifications.js # push notification helpers
 │   └── storageUtils.js  # Firebase Storage helpers

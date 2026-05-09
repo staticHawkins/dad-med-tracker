@@ -1,12 +1,33 @@
 import { useState, useEffect, useRef } from 'react'
 import { todayStr } from '../../lib/medUtils'
-import { addStayMed, removeStayMed, deleteHospitalMedLog } from '../../lib/firestore'
+import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds } from '../../lib/firestore'
 import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
 import PersonChip from '../PersonChip'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
+
+const BSW_MEDS = [
+  { name: 'docusate sodium',              dosage: 50,   unit: 'mg',       purpose: 'bowel regularity · oral daily' },
+  { name: 'entecavir',                    dosage: 0.5,  unit: 'mg',       purpose: 'hepatitis B · oral every other day' },
+  { name: 'furosemide',                   dosage: 20,   unit: 'mg',       purpose: 'diuretic · oral daily' },
+  { name: 'heparin (porcine)',            dosage: 5000, unit: 'units',    purpose: 'DVT prevention · subq q12h' },
+  { name: 'methylphenidate HCl',          dosage: 10,   unit: 'mg',       purpose: 'oral 2x daily' },
+  { name: 'morphine',                     dosage: 15,   unit: 'mg',       purpose: 'pain · oral 2x daily' },
+  { name: 'multivitamin',                 dosage: 1,    unit: 'tablet(s)', purpose: 'vitamins · oral daily at noon' },
+  { name: 'OLANZapine',                   dosage: 5,    unit: 'mg',       purpose: 'oral nightly' },
+  { name: 'oxyCODONE',                    dosage: 10,   unit: 'mg',       purpose: 'pain · oral 2x daily' },
+  { name: 'pantoprazole',                 dosage: 40,   unit: 'mg',       purpose: 'acid reflux · oral daily before meal' },
+  { name: 'spironolactone',               dosage: 25,   unit: 'mg',       purpose: 'fluid/heart · oral every other day' },
+  { name: 'tamsulosin',                   dosage: 0.4,  unit: 'mg',       purpose: 'urinary · oral nightly' },
+  { name: 'Al-MgOH-simethicone',          dosage: 30,   unit: 'mL',       purpose: 'indigestion · PRN q6h' },
+  { name: 'benzocaine-menthol',           dosage: 1,    unit: 'lozenge',  purpose: 'sore throat/dry mouth · PRN q2h' },
+  { name: 'magnesium hydroxide',          dosage: 30,   unit: 'mL',       purpose: 'constipation · PRN q12h' },
+  { name: 'oxyCODONE (PRN)',              dosage: 10,   unit: 'mg',       purpose: 'severe pain 7-10 · PRN q8h' },
+  { name: '0.9% sodium chloride (NaCl)', dosage: 250,  unit: 'mL',       purpose: 'NS · IV continuous pm' },
+  { name: '0.9% sodium chloride (NaCl)', dosage: 15,   unit: 'mL',       purpose: 'NS · IV as needed' },
+]
 
 function dayCount(admissionDate) {
   const start = new Date(admissionDate + 'T00:00:00')
@@ -124,7 +145,22 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
   const [addUnit, setAddUnit] = useState('mg')
   const [addPurpose, setAddPurpose] = useState('')
   const [saving, setSaving] = useState(false)
+  const [bswConfirm, setBswConfirm] = useState(false)
+  const [importing, setImporting] = useState(false)
   const nameInputRef = useRef(null)
+
+  const existingNames = new Set(stayMeds.map(m => m.name.toLowerCase()))
+  const bswToAdd = BSW_MEDS.filter(m => !existingNames.has(m.name.toLowerCase()))
+
+  async function handleBswImport() {
+    setImporting(true)
+    try {
+      await bulkAddStayMeds(stayId, bswToAdd)
+      setBswConfirm(false)
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const [fdaSuggestions, setFdaSuggestions] = useState([])
   const [fdaLoading, setFdaLoading]         = useState(false)
@@ -238,11 +274,30 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div className="hospital-overview-heading" style={{ marginBottom: 0 }}>Medications this stay</div>
         {!addFormOpen && (
-          <button className="daily-log-add-med-btn" style={{ padding: 0, fontSize: 12 }} onClick={() => setAddFormOpen(true)}>
-            + Add
-          </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {bswToAdd.length > 0 && !bswConfirm && (
+              <button className="daily-log-add-med-btn" style={{ padding: 0, fontSize: 12 }} onClick={() => setBswConfirm(true)}>
+                Import BSW meds
+              </button>
+            )}
+            <button className="daily-log-add-med-btn" style={{ padding: 0, fontSize: 12 }} onClick={() => setAddFormOpen(true)}>
+              + Add
+            </button>
+          </div>
         )}
       </div>
+
+      {bswConfirm && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '8px 10px', background: 'var(--surface-raised)', borderRadius: 8, fontSize: 13 }}>
+          <span style={{ flex: 1, color: 'var(--text-secondary)' }}>Add {bswToAdd.length} medications from BSW?</span>
+          <button className="btn-primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleBswImport} disabled={importing}>
+            {importing ? 'Adding…' : 'Add all'}
+          </button>
+          <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setBswConfirm(false)} disabled={importing}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       {addFormOpen && (
         <form className="stay-med-add-form" onSubmit={handleAddMed}>

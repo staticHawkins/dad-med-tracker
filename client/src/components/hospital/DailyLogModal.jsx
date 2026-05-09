@@ -56,7 +56,9 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   const [medPurpose, setMedPurpose] = useState('')
   const [medTime, setMedTime] = useState('')
   const [savingMed, setSavingMed] = useState(false)
+  const [medSearch, setMedSearch] = useState('')
   const medNameRef = useRef(null)
+  const medSearchRef = useRef(null)
 
   const [fdaSuggestions, setFdaSuggestions] = useState([])
   const [fdaLoading, setFdaLoading]         = useState(false)
@@ -248,6 +250,7 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
     setMedUnit('mg')
     setMedPurpose('')
     setMedTime(defaultTimestamp(currentDate))
+    setMedSearch('')
     setAddingMed(true)
   }
 
@@ -409,25 +412,45 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
               </div>
             )}
 
-            {addingMed && medPickerStep && (
-              <div className="med-picker">
-                <div className="med-picker-label">SELECT MEDICATION</div>
-                {stayMeds.map(sm => (
-                  <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
-                    <span className="med-picker-name">{sm.name}</span>
-                    <span className="med-picker-dose">
-                      {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
-                    </span>
+            {addingMed && medPickerStep && (() => {
+              const q = medSearch.trim().toLowerCase()
+              const filtered = stayMeds
+                .filter(sm => !q || sm.name.toLowerCase().includes(q) || sm.purpose?.toLowerCase().includes(q))
+                .sort((a, b) => a.name.localeCompare(b.name))
+              return (
+                <div className="med-picker">
+                  <div className="med-picker-label">SELECT MEDICATION</div>
+                  <div style={{ padding: '6px 12px 4px' }}>
+                    <input
+                      ref={medSearchRef}
+                      autoFocus
+                      className="daily-log-med-input"
+                      placeholder="Search medications…"
+                      value={medSearch}
+                      onChange={e => setMedSearch(e.target.value)}
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                  {filtered.map(sm => (
+                    <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
+                      <span className="med-picker-name">{sm.name}</span>
+                      <span className="med-picker-dose">
+                        {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
+                      </span>
+                    </button>
+                  ))}
+                  {filtered.length === 0 && (
+                    <div style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>No match</div>
+                  )}
+                  <button className="med-picker-row med-picker-row--new" onClick={selectNewMed}>
+                    <span className="med-picker-name">+ Add new medication</span>
                   </button>
-                ))}
-                <button className="med-picker-row med-picker-row--new" onClick={selectNewMed}>
-                  <span className="med-picker-name">+ Add new medication</span>
-                </button>
-                <div style={{ padding: '8px 12px' }}>
-                  <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setAddingMed(false)}>Cancel</button>
+                  <div style={{ padding: '8px 12px' }}>
+                    <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setAddingMed(false)}>Cancel</button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {addingMed && !medPickerStep && (
               <div className="daily-log-med-form">
@@ -490,7 +513,7 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                 ) : (
                   <div className="med-selected-summary">
                     <span>{medName}{medDosage ? ` · ${medDosage} ${medUnit}` : ''}</span>
-                    <button className="med-selected-change" onClick={() => setMedPickerStep(true)}>Change</button>
+                    <button className="med-selected-change" onClick={() => { setMedPickerStep(true); setMedSearch('') }}>Change</button>
                   </div>
                 )}
                 <input

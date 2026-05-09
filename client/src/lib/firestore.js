@@ -520,6 +520,15 @@ export async function addStayMed(stayId, medData) {
   return entry
 }
 
+export async function bulkAddStayMeds(stayId, medsData) {
+  const entries = medsData.map(m => ({ ...m, id: newId(), addedAt: new Date().toISOString() }))
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    stayMeds: arrayUnion(...entries),
+    updatedAt: new Date().toISOString(),
+  })
+  return entries
+}
+
 export async function removeStayMed(stayId, medObj) {
   await updateDoc(doc(db, 'hospitalStays', stayId), {
     stayMeds: arrayRemove(medObj),
