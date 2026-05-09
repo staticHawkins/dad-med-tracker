@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { saveMed } from '../../lib/firestore'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { freqPerDay, fmtDate } from '../../lib/medUtils'
+import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 
 const EMPTY = {
   name: '', brandName: '', dose: '', purpose: '', frequencyPreset: 'once-daily',
@@ -24,14 +25,89 @@ export default function MedModal({ careTeam = [], onClose }) {
   const [form, setForm] = useState(EMPTY)
   const [creating, setCreating] = useState(false)
 
+  const [fdaSuggestions, setFdaSuggestions] = useState([])
+  const [fdaLoading, setFdaLoading]         = useState(false)
+  const [fdaOpen, setFdaOpen]               = useState(false)
+  const [fdaHighlight, setFdaHighlight]     = useState(-1)
+  const fdaDebounce = useRef(null)
+  const fdaAbort    = useRef(null)
+  const fdaWrapRef  = useRef(null)
+
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  useEffect(() => {
+    if (!fdaOpen) return
+    function handler(e) {
+      if (fdaWrapRef.current && !fdaWrapRef.current.contains(e.target)) {
+        setFdaOpen(false); setFdaHighlight(-1)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [fdaOpen])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(fdaDebounce.current)
+      if (fdaAbort.current) fdaAbort.current.abort()
+    }
+  }, [])
+
   function set(field) {
     return e => setForm(f => ({ ...f, [field]: e.target.value }))
+  }
+
+  function handleNameChange(e) {
+    const val = e.target.value
+    setForm(f => ({ ...f, name: val }))
+    if (val.trim().length < 2) {
+      setFdaOpen(false); setFdaSuggestions([]); return
+    }
+    if (fdaAbort.current) fdaAbort.current.abort()
+    clearTimeout(fdaDebounce.current)
+    setFdaLoading(true); setFdaOpen(true)
+    fdaDebounce.current = setTimeout(async () => {
+      const ctrl = new AbortController()
+      fdaAbort.current = ctrl
+      const results = await fetchDrugSuggestions(val, ctrl.signal)
+      if (ctrl.signal.aborted) return
+      setFdaSuggestions(results)
+      setFdaLoading(false)
+      if (results.length === 0) setFdaOpen(false)
+      setFdaHighlight(-1)
+    }, 350)
+  }
+
+  function handleNameKeyDown(e) {
+    if (!fdaOpen) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.min(h + 1, fdaSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter' && fdaHighlight >= 0) {
+      e.preventDefault()
+      handleSuggestionSelect(fdaSuggestions[fdaHighlight])
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      setFdaOpen(false); setFdaHighlight(-1)
+    }
+  }
+
+  function handleSuggestionSelect(s) {
+    setForm(f => ({
+      ...f,
+      name: s.genericName,
+      brandName: f.brandName.trim() === '' && s.brandName ? s.brandName : f.brandName,
+    }))
+    clearTimeout(fdaDebounce.current)
+    if (fdaAbort.current) fdaAbort.current.abort()
+    setFdaOpen(false); setFdaSuggestions([]); setFdaHighlight(-1)
   }
 
   async function handleCreate() {
@@ -62,9 +138,32 @@ export default function MedModal({ careTeam = [], onClose }) {
           ))}
         </div>
       </div>
-      <div className="fr">
+      <div className="fr" ref={fdaWrapRef} style={{ position: 'relative' }}>
         <label>Generic name <span className="req">*</span></label>
-        <input value={form.name} onChange={set('name')} placeholder="e.g. Metformin" />
+        <input
+          value={form.name}
+          onChange={handleNameChange}
+          onKeyDown={handleNameKeyDown}
+          placeholder="e.g. Metformin"
+          autoComplete="off"
+        />
+        {fdaOpen && (
+          <ul className="fda-suggestions" role="listbox">
+            {fdaLoading && (
+              <li className="fda-suggestion-loading">Searching…</li>
+            )}
+            {!fdaLoading && fdaSuggestions.map((s, i) => (
+              <li
+                key={s.genericName}
+                className={`fda-suggestion-item${i === fdaHighlight ? ' highlighted' : ''}`}
+                onMouseDown={e => { e.preventDefault(); handleSuggestionSelect(s) }}
+              >
+                <span className="fda-suggestion-generic">{s.genericName}</span>
+                {s.brandName && <span className="fda-suggestion-brand">{s.brandName}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="fr">
         <label>Brand name</label>

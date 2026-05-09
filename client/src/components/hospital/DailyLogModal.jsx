@@ -3,6 +3,7 @@ import { httpsCallable } from 'firebase/functions'
 import { functions } from '../../firebase'
 import { saveDailyLog, deleteDailyLog, addHospitalMedLog, deleteHospitalMedLog, addStayMed } from '../../lib/firestore'
 import { todayStr } from '../../lib/medUtils'
+import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
 
@@ -57,6 +58,14 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   const [savingMed, setSavingMed] = useState(false)
   const medNameRef = useRef(null)
 
+  const [fdaSuggestions, setFdaSuggestions] = useState([])
+  const [fdaLoading, setFdaLoading]         = useState(false)
+  const [fdaOpen, setFdaOpen]               = useState(false)
+  const [fdaHighlight, setFdaHighlight]     = useState(-1)
+  const fdaMedDebounce = useRef(null)
+  const fdaMedAbort    = useRef(null)
+  const fdaMedWrapRef  = useRef(null)
+
   const notesRef = useAutoResize(fields.notes)
   const careTeamRef = useAutoResize(fields.careTeam)
   const debounceTimer = useRef(null)
@@ -86,6 +95,24 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
   useEffect(() => {
     if (addingMed && !medPickerStep && isNewMed && medNameRef.current) medNameRef.current.focus()
   }, [addingMed, medPickerStep, isNewMed])
+
+  useEffect(() => {
+    if (!fdaOpen) return
+    function handler(e) {
+      if (fdaMedWrapRef.current && !fdaMedWrapRef.current.contains(e.target)) {
+        setFdaOpen(false); setFdaHighlight(-1)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [fdaOpen])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(fdaMedDebounce.current)
+      if (fdaMedAbort.current) fdaMedAbort.current.abort()
+    }
+  }, [])
 
   async function persistFields(next) {
     const prev = currentSavedRef.current
@@ -164,6 +191,51 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
     } finally {
       setAiLoading(false)
     }
+  }
+
+  function handleMedNameChange(e) {
+    const val = e.target.value
+    setMedName(val)
+    if (val.trim().length < 2) {
+      setFdaOpen(false); setFdaSuggestions([]); return
+    }
+    if (fdaMedAbort.current) fdaMedAbort.current.abort()
+    clearTimeout(fdaMedDebounce.current)
+    setFdaLoading(true); setFdaOpen(true)
+    fdaMedDebounce.current = setTimeout(async () => {
+      const ctrl = new AbortController()
+      fdaMedAbort.current = ctrl
+      const results = await fetchDrugSuggestions(val, ctrl.signal)
+      if (ctrl.signal.aborted) return
+      setFdaSuggestions(results)
+      setFdaLoading(false)
+      if (results.length === 0) setFdaOpen(false)
+      setFdaHighlight(-1)
+    }, 350)
+  }
+
+  function handleMedNameKeyDown(e) {
+    if (!fdaOpen) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.min(h + 1, fdaSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter' && fdaHighlight >= 0) {
+      e.preventDefault()
+      handleMedSuggestionSelect(fdaSuggestions[fdaHighlight])
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      setFdaOpen(false); setFdaHighlight(-1)
+    }
+  }
+
+  function handleMedSuggestionSelect(s) {
+    setMedName(s.genericName)
+    clearTimeout(fdaMedDebounce.current)
+    if (fdaMedAbort.current) fdaMedAbort.current.abort()
+    setFdaOpen(false); setFdaSuggestions([]); setFdaHighlight(-1)
   }
 
   function openAddMed() {
@@ -361,13 +433,34 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
               <div className="daily-log-med-form">
                 {isNewMed ? (
                   <>
-                    <input
-                      ref={medNameRef}
-                      className="daily-log-med-input"
-                      placeholder="Medication name"
-                      value={medName}
-                      onChange={e => setMedName(e.target.value)}
-                    />
+                    <div ref={fdaMedWrapRef} style={{ position: 'relative' }}>
+                      <input
+                        ref={medNameRef}
+                        className="daily-log-med-input"
+                        placeholder="Medication name"
+                        value={medName}
+                        onChange={handleMedNameChange}
+                        onKeyDown={handleMedNameKeyDown}
+                        autoComplete="off"
+                      />
+                      {fdaOpen && (
+                        <ul className="fda-suggestions" role="listbox">
+                          {fdaLoading && (
+                            <li className="fda-suggestion-loading">Searching…</li>
+                          )}
+                          {!fdaLoading && fdaSuggestions.map((s, i) => (
+                            <li
+                              key={s.genericName}
+                              className={`fda-suggestion-item${i === fdaHighlight ? ' highlighted' : ''}`}
+                              onMouseDown={e => { e.preventDefault(); handleMedSuggestionSelect(s) }}
+                            >
+                              <span className="fda-suggestion-generic">{s.genericName}</span>
+                              {s.brandName && <span className="fda-suggestion-brand">{s.brandName}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <div className="med-form-dose-row">
                       <input
                         type="number"

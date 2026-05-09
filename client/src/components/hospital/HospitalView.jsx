@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { todayStr } from '../../lib/medUtils'
 import { addStayMed, removeStayMed, deleteHospitalMedLog } from '../../lib/firestore'
+import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
 import PersonChip from '../PersonChip'
@@ -125,9 +126,80 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
   const [saving, setSaving] = useState(false)
   const nameInputRef = useRef(null)
 
+  const [fdaSuggestions, setFdaSuggestions] = useState([])
+  const [fdaLoading, setFdaLoading]         = useState(false)
+  const [fdaOpen, setFdaOpen]               = useState(false)
+  const [fdaHighlight, setFdaHighlight]     = useState(-1)
+  const fdaDebounce = useRef(null)
+  const fdaAbort    = useRef(null)
+  const fdaWrapRef  = useRef(null)
+
   useEffect(() => {
     if (addFormOpen && nameInputRef.current) nameInputRef.current.focus()
   }, [addFormOpen])
+
+  useEffect(() => {
+    if (!fdaOpen) return
+    function handler(e) {
+      if (fdaWrapRef.current && !fdaWrapRef.current.contains(e.target)) {
+        setFdaOpen(false); setFdaHighlight(-1)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [fdaOpen])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(fdaDebounce.current)
+      if (fdaAbort.current) fdaAbort.current.abort()
+    }
+  }, [])
+
+  function handleAddNameChange(e) {
+    const val = e.target.value
+    setAddName(val)
+    if (val.trim().length < 2) {
+      setFdaOpen(false); setFdaSuggestions([]); return
+    }
+    if (fdaAbort.current) fdaAbort.current.abort()
+    clearTimeout(fdaDebounce.current)
+    setFdaLoading(true); setFdaOpen(true)
+    fdaDebounce.current = setTimeout(async () => {
+      const ctrl = new AbortController()
+      fdaAbort.current = ctrl
+      const results = await fetchDrugSuggestions(val, ctrl.signal)
+      if (ctrl.signal.aborted) return
+      setFdaSuggestions(results)
+      setFdaLoading(false)
+      if (results.length === 0) setFdaOpen(false)
+      setFdaHighlight(-1)
+    }, 350)
+  }
+
+  function handleAddNameKeyDown(e) {
+    if (!fdaOpen) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.min(h + 1, fdaSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setFdaHighlight(h => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter' && fdaHighlight >= 0) {
+      e.preventDefault()
+      handleAddSuggestionSelect(fdaSuggestions[fdaHighlight])
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      setFdaOpen(false); setFdaHighlight(-1)
+    }
+  }
+
+  function handleAddSuggestionSelect(s) {
+    setAddName(s.genericName)
+    clearTimeout(fdaDebounce.current)
+    if (fdaAbort.current) fdaAbort.current.abort()
+    setFdaOpen(false); setFdaSuggestions([]); setFdaHighlight(-1)
+  }
 
   async function handleAddMed(e) {
     e.preventDefault()
@@ -174,13 +246,34 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
 
       {addFormOpen && (
         <form className="stay-med-add-form" onSubmit={handleAddMed}>
-          <input
-            ref={nameInputRef}
-            className="daily-log-med-input"
-            placeholder="Medication name"
-            value={addName}
-            onChange={e => setAddName(e.target.value)}
-          />
+          <div ref={fdaWrapRef} style={{ position: 'relative' }}>
+            <input
+              ref={nameInputRef}
+              className="daily-log-med-input"
+              placeholder="Medication name"
+              value={addName}
+              onChange={handleAddNameChange}
+              onKeyDown={handleAddNameKeyDown}
+              autoComplete="off"
+            />
+            {fdaOpen && (
+              <ul className="fda-suggestions" role="listbox">
+                {fdaLoading && (
+                  <li className="fda-suggestion-loading">Searching…</li>
+                )}
+                {!fdaLoading && fdaSuggestions.map((s, i) => (
+                  <li
+                    key={s.genericName}
+                    className={`fda-suggestion-item${i === fdaHighlight ? ' highlighted' : ''}`}
+                    onMouseDown={e => { e.preventDefault(); handleAddSuggestionSelect(s) }}
+                  >
+                    <span className="fda-suggestion-generic">{s.genericName}</span>
+                    {s.brandName && <span className="fda-suggestion-brand">{s.brandName}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <div className="med-form-dose-row">
             <input
               type="number"
