@@ -431,7 +431,7 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                       style={{ marginBottom: 0 }}
                     />
                   </div>
-                  <div style={{ overflowY: 'auto', maxHeight: 280, width: '100%' }}>
+                  <div style={{ overflowY: 'auto', maxHeight: 280, width: '100%', display: 'flex', flexDirection: 'column' }}>
                     {filtered.map(sm => (
                       <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
                         <span className="med-picker-name">{sm.name}</span>
