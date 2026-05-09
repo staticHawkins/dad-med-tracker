@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../../firebase'
 import { todayStr } from '../../lib/medUtils'
-import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds } from '../../lib/firestore'
+import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, saveTreatmentSummary, clearTreatmentSummary } from '../../lib/firestore'
+import { deleteStayDocument } from '../../lib/storageUtils'
 import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
+import AddDocumentModal from './AddDocumentModal'
 import PersonChip from '../PersonChip'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
@@ -61,6 +65,190 @@ function getDaySlots(admissionDate) {
     slots.push(d.toISOString().slice(0, 10))
   }
   return slots
+}
+
+function DocCard({ doc, isNote, stayId, onAfterDelete }) {
+  const [expanded, setExpanded] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm(`Delete this ${isNote ? 'note' : 'result'}?`)) return
+    setDeleting(true)
+    try {
+      if (doc.storagePath) {
+        try { await deleteStayDocument(doc.storagePath) } catch {}
+      }
+      if (isNote) {
+        await deleteDoctorNote(stayId, doc)
+      } else {
+        await deleteTestResult(stayId, doc)
+      }
+      onAfterDelete?.(doc, isNote)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const title = isNote
+    ? [doc.noteType, doc.author].filter(Boolean).join(' · ')
+    : doc.testName || 'Test Result'
+
+  return (
+    <div className="doc-card">
+      <div className="doc-card-header">
+        <div className="doc-card-meta">
+          <span className="doc-card-date">{fmtDate(doc.date)}</span>
+          {title && <span className="doc-card-title">{title}</span>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {doc.pdfUrl && (
+            <a
+              href={doc.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="doc-card-pdf-link"
+              onClick={e => e.stopPropagation()}
+            >
+              PDF
+            </a>
+          )}
+          <button
+            className="stay-med-delete-btn"
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-label="Delete"
+          >
+            {deleting ? '…' : '✕'}
+          </button>
+        </div>
+      </div>
+
+      {doc.interpretation && (
+        <div className="doc-card-body">
+          <div
+            className={`doc-card-interpretation${expanded ? ' doc-card-interpretation--expanded' : ''}`}
+            style={{ whiteSpace: 'pre-wrap' }}
+          >
+            {doc.interpretation}
+          </div>
+          <div className="doc-card-actions">
+            {doc.interpretation.length > 200 && (
+              <button className="doc-card-toggle" onClick={() => setExpanded(v => !v)}>
+                {expanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+            {doc.extractedText && (
+              <button className="doc-card-toggle" onClick={() => setShowRaw(v => !v)}>
+                {showRaw ? 'Hide raw text' : 'View raw text'}
+              </button>
+            )}
+          </div>
+          {showRaw && doc.extractedText && (
+            <div className="doc-raw-text">{doc.extractedText}</div>
+          )}
+        </div>
+      )}
+
+      {!doc.interpretation && doc.extractedText && (
+        <div className="doc-card-body">
+          <div className="doc-card-no-interpretation">No interpretation — raw text only</div>
+          <button className="doc-card-toggle" onClick={() => setShowRaw(v => !v)}>
+            {showRaw ? 'Hide raw text' : 'View raw text'}
+          </button>
+          {showRaw && <div className="doc-raw-text">{doc.extractedText}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const PLAN_SECTIONS = [
+  { key: 'CURRENT REGIMEN',  label: 'Current regimen'   },
+  { key: 'RECENT DECISIONS', label: 'Recent decisions'  },
+  { key: 'ACTIVE CONCERNS',  label: 'Active concerns'   },
+  { key: 'NEXT STEPS',       label: 'Next steps'        },
+]
+
+function parseTreatmentSummary(content) {
+  const result = {}
+  const keys = PLAN_SECTIONS.map(s => s.key)
+  keys.forEach((key, i) => {
+    const start = content.indexOf(key)
+    if (start === -1) return
+    const textStart = start + key.length
+    const nextKey = keys.slice(i + 1).map(k => content.indexOf(k, textStart)).filter(p => p !== -1)
+    const end = nextKey.length > 0 ? Math.min(...nextKey) : content.length
+    result[key] = content.slice(textStart, end).replace(/^\n+/, '').trim()
+  })
+  return result
+}
+
+function TreatmentSummaryCard({ stay, onRegenerate, regenerating }) {
+  const [open, setOpen] = useState(true)
+  const hasDocuments = (stay.doctorNotes?.length || 0) + (stay.testResults?.length || 0) > 0
+  const summary = stay.treatmentSummary
+
+  if (!hasDocuments) return null
+
+  const sections = summary ? parseTreatmentSummary(summary.content) : {}
+  const lastUpdated = summary?.updatedAt
+    ? new Date(summary.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : null
+
+  return (
+    <div className="treatment-plan-card">
+      <button className="treatment-plan-header" onClick={() => setOpen(o => !o)}>
+        <div className="treatment-plan-header-left">
+          <span className="treatment-plan-icon">⊙</span>
+          <span className="treatment-plan-title">Treatment Plan</span>
+          {lastUpdated && !regenerating && (
+            <span className="treatment-plan-updated">Updated {lastUpdated}</span>
+          )}
+          {regenerating && (
+            <span className="treatment-plan-updated treatment-plan-updating">Updating…</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            className="treatment-plan-regen"
+            onClick={e => { e.stopPropagation(); onRegenerate() }}
+            style={{ pointerEvents: regenerating ? 'none' : 'auto', opacity: regenerating ? 0.4 : 1 }}
+          >
+            {regenerating ? 'Updating…' : summary ? 'Regenerate' : 'Generate'}
+          </span>
+          <span className={`daily-log-ai-chevron${open ? ' open' : ''}`}>›</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="treatment-plan-body">
+          {!summary && !regenerating && (
+            <div className="treatment-plan-empty">
+              No treatment plan yet. Click Generate to create one from the uploaded notes and results.
+            </div>
+          )}
+          {regenerating && !summary && (
+            <div className="treatment-plan-loading">Synthesizing treatment plan from uploaded documents…</div>
+          )}
+          {summary && (
+            <div className="treatment-plan-sections">
+              {PLAN_SECTIONS.map(({ key, label }) => {
+                const text = sections[key]
+                if (!text) return null
+                return (
+                  <div key={key} className="treatment-plan-section">
+                    <div className="treatment-plan-section-label">{label}</div>
+                    <div className="treatment-plan-section-text">{text}</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function DaySlot({ dateStr, log, onClick, admissionDate }) {
@@ -523,10 +711,83 @@ export default function HospitalView({ stays, activeStay }) {
   const [logModalOpen, setLogModalOpen] = useState(false)
   const [editingLog, setEditingLog] = useState(null)
   const [editingDate, setEditingDate] = useState(null)
+  const [docModalType, setDocModalType] = useState(null)
+  const [regenerating, setRegenerating] = useState(false)
+
+  // Clear loading state once Firestore delivers the new or cleared treatment summary
+  useEffect(() => {
+    setRegenerating(false)
+  }, [activeStay?.treatmentSummary?.updatedAt])
 
   const pastStays = stays.filter(s => !!s.dischargeDate)
   const medLogs = activeStay?.medLogs || []
   const stayMeds = activeStay?.stayMeds || []
+  const doctorNotes = [...(activeStay?.doctorNotes || [])].sort((a, b) => b.date.localeCompare(a.date))
+  const testResults = [...(activeStay?.testResults || [])].sort((a, b) => b.date.localeCompare(a.date))
+
+  async function runPlanGeneration(stayId, allNotes, allResults) {
+    if (allNotes.length === 0 && allResults.length === 0) {
+      await clearTreatmentSummary(stayId)
+      return
+    }
+    const fn = httpsCallable(functions, 'askClaude')
+    const notesText = allNotes
+      .slice().sort((a, b) => b.date.localeCompare(a.date))
+      .map(n => `[${n.date}] ${[n.noteType, n.author].filter(Boolean).join(' · ')}\n${n.extractedText || n.interpretation || ''}`)
+      .join('\n\n---\n\n')
+    const resultsText = allResults
+      .slice().sort((a, b) => b.date.localeCompare(a.date))
+      .map(r => `[${r.date}] ${r.testName || 'Test Result'}\n${r.extractedText || r.interpretation || ''}`)
+      .join('\n\n---\n\n')
+    const userContent = [
+      allNotes.length > 0 && `DOCTOR NOTES:\n${notesText}`,
+      allResults.length > 0 && `TEST RESULTS:\n${resultsText}`,
+    ].filter(Boolean).join('\n\n')
+    const systemContext = `You are a medical care coordinator summarizing a patient's ongoing hospital treatment for their family. Based on the doctor notes and test results provided, write a structured treatment summary with exactly these 4 labeled sections:
+
+CURRENT REGIMEN
+Describe the active treatments, drugs, and therapies currently in use.
+
+RECENT DECISIONS
+Summarize the key clinical decisions or changes made at the most recent visits.
+
+ACTIVE CONCERNS
+List the symptoms, lab values, or conditions the care team flagged to watch closely.
+
+NEXT STEPS
+Describe upcoming tests, treatments, decisions, or follow-up actions the doctors mentioned.
+
+Write each section as 2-4 plain English sentences. No medical jargon. No markdown, no bullet points, no bold text. Use exactly the section labels above on their own line before each section's text.`
+    const { data } = await fn({
+      messages: [{ role: 'user', content: userContent }],
+      systemContext,
+    })
+    await saveTreatmentSummary(stayId, data.content)
+  }
+
+  async function handleRegeneratePlan() {
+    if (!activeStay || regenerating) return
+    setRegenerating(true)
+    try {
+      await runPlanGeneration(activeStay.id, activeStay.doctorNotes || [], activeStay.testResults || [])
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  function handleAfterDelete(deletedDoc, isNote) {
+    if (!activeStay) return
+    const remainingNotes = isNote
+      ? (activeStay.doctorNotes || []).filter(n => n.id !== deletedDoc.id)
+      : (activeStay.doctorNotes || [])
+    const remainingResults = !isNote
+      ? (activeStay.testResults || []).filter(r => r.id !== deletedDoc.id)
+      : (activeStay.testResults || [])
+    setRegenerating(true)
+    runPlanGeneration(activeStay.id, remainingNotes, remainingResults).catch(() => {}).finally(() => setRegenerating(false))
+  }
 
   function openEditStay() {
     setEditingStay(activeStay)
@@ -569,7 +830,51 @@ export default function HospitalView({ stays, activeStay }) {
           )}
 
           {activeStay && (
+            <TreatmentSummaryCard
+              stay={activeStay}
+              onRegenerate={handleRegeneratePlan}
+              regenerating={regenerating}
+            />
+          )}
+
+          {activeStay && (
             <MobileMedSection stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
+          )}
+
+          {activeStay && (
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Doctor Notes</span>
+                <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>
+                  + Add
+                </button>
+              </div>
+              {doctorNotes.length === 0 ? (
+                <div className="doc-section-empty">No notes uploaded yet.</div>
+              ) : (
+                doctorNotes.map(n => (
+                  <DocCard key={n.id} doc={n} isNote stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                ))
+              )}
+            </div>
+          )}
+
+          {activeStay && (
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Test Results</span>
+                <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>
+                  + Add
+                </button>
+              </div>
+              {testResults.length === 0 ? (
+                <div className="doc-section-empty">No results uploaded yet.</div>
+              ) : (
+                testResults.map(r => (
+                  <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                ))
+              )}
+            </div>
           )}
         </div>
 
@@ -632,6 +937,16 @@ export default function HospitalView({ stays, activeStay }) {
           onClose={closeLogModal}
           medLogs={medLogs}
           stayMeds={stayMeds}
+        />
+      )}
+
+      {docModalType && activeStay && (
+        <AddDocumentModal
+          stayId={activeStay.id}
+          stay={activeStay}
+          type={docModalType}
+          onClose={() => setDocModalType(null)}
+          onSaved={() => setRegenerating(true)}
         />
       )}
     </div>

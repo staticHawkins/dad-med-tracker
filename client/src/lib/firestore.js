@@ -536,6 +536,52 @@ export async function removeStayMed(stayId, medObj) {
   })
 }
 
+export async function saveTreatmentSummary(stayId, content) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    treatmentSummary: { content, updatedAt: new Date().toISOString() },
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function clearTreatmentSummary(stayId) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    treatmentSummary: deleteField(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addDoctorNote(stayId, noteData) {
+  const entry = { ...noteData, id: noteData.id || newId(), uploadedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    doctorNotes: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteDoctorNote(stayId, noteObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    doctorNotes: arrayRemove(noteObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addTestResult(stayId, resultData) {
+  const entry = { ...resultData, id: resultData.id || newId(), uploadedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    testResults: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteTestResult(stayId, resultObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    testResults: arrayRemove(resultObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
