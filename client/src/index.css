@@ -2468,6 +2468,9 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .doc-section{margin-top:24px}
 .doc-section-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px}
 .doc-section-title{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75}
+.doc-section-collapse-btn{background:none;border:none;padding:0;cursor:default;display:flex;align-items:center;gap:6px;text-align:left}
+.doc-section-chevron{font-size:14px;opacity:.6;transition:transform .2s;line-height:1;display:none}
+@media(max-width:767px){.doc-section-collapse-btn{cursor:pointer}.doc-section-chevron{display:inline}}
 .doc-section-empty{font-size:12px;opacity:.35;font-style:italic;padding:8px 0}
 .doc-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
 .doc-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px}

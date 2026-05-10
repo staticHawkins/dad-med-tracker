@@ -54,13 +54,13 @@ export default function BulkUploadModal({ stayId, stay, type, onClose, onSaved }
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))
   }
 
-  async function processItem(item, addedTeamNames) {
+  async function processItem(item, addedTeamNames, savedResults) {
     const text = await extractTextFromPdf(item.file)
     const fn = httpsCallable(functions, 'askClaude')
 
     let date = todayStr()
     let author = '', role = '', noteType = NOTE_TYPES[0], testName = item.file.name.replace(/\.pdf$/i, '')
-    let interpretation = '', labValues = []
+    let interpretation = '', labValues = [], labPanels = []
 
     if (text) {
       const systemContext = isNote
@@ -71,6 +71,10 @@ AUTHOR: <provider name — if not found, omit>
 ROLE: <their role or specialty in 3-5 words — if not found, omit>
 DATE: <service or note date in YYYY-MM-DD format — if not found, omit>
 TYPE: <note type from: Progress Note, Consult Note, Discharge Summary, H&P, Operative Note, Nursing Note, Social Work Note, Other — pick best match>
+
+If the note contains any quantitative lab results (CBC, BMP, CMP, metabolic panel, liver function, renal function, coagulation, urinalysis, etc.), output this line:
+LAB_PANELS: [{"testName":"CBC Panel","date":"YYYY-MM-DD","labValues":[{"name":"HGB","value":7.1,"unit":"g/dL","refLow":12,"refHigh":17,"flag":"L"},...]}]
+Use flag values: "N"=normal, "H"=high, "L"=low, "C"=critical. Only numeric values with known reference ranges. Include all distinct panels in the array. Omit this line entirely if no quantitative labs are present.
 
 Then translate the note into plain English. Write 3-5 bullet points starting with a dash (-). No markdown headers, no bold, no medical jargon.`
         : `You are helping a family understand medical test results for their father.
@@ -87,8 +91,7 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
 
       const { data } = await fn({ messages: [{ role: 'user', content: text }], systemContext })
       const lines = data.content.split('\n')
-      let rest = lines
-      const metaKeys = ['AUTHOR:', 'ROLE:', 'DATE:', 'TYPE:', 'TEST_NAME:', 'LAB_VALUES:']
+      const metaKeys = ['AUTHOR:', 'ROLE:', 'DATE:', 'TYPE:', 'TEST_NAME:', 'LAB_VALUES:', 'LAB_PANELS:']
       const contentLines = []
       for (const line of lines) {
         if (line.startsWith('AUTHOR:')) author = line.replace('AUTHOR:', '').trim()
@@ -103,6 +106,8 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
           testName = line.replace('TEST_NAME:', '').trim() || testName
         } else if (line.startsWith('LAB_VALUES:')) {
           try { labValues = JSON.parse(line.replace('LAB_VALUES:', '').trim()) } catch {}
+        } else if (line.startsWith('LAB_PANELS:')) {
+          try { labPanels = JSON.parse(line.replace('LAB_PANELS:', '').trim()) } catch {}
         } else if (!metaKeys.some(k => line.startsWith(k))) {
           contentLines.push(line)
         }
@@ -127,6 +132,23 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
         addedTeamNames.add(author.toLowerCase())
         addStayTeamMember(stayId, { name: author, role })
       }
+      for (const panel of labPanels) {
+        if (!panel.testName || !panel.labValues?.length) continue
+        const panelDate = panel.date || date
+        const alreadyExists = savedResults.some(
+          r => r.testName?.toLowerCase() === panel.testName.toLowerCase() && r.date === panelDate
+        )
+        if (!alreadyExists) {
+          const panelResult = await addTestResult(stayId, {
+            testName: panel.testName,
+            date: panelDate,
+            labValues: panel.labValues,
+            interpretation: `Lab values extracted from ${noteType}${author ? ` by ${author}` : ''}`,
+            extractedText: '',
+          })
+          savedResults.push(panelResult)
+        }
+      }
     } else {
       savedEntry = await addTestResult(stayId, { ...base, testName, labValues })
     }
@@ -146,7 +168,7 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
       if (item.status !== 'pending') continue
       updateItem(item.id, { status: 'processing' })
       try {
-        const saved = await processItem(item, addedTeamNames)
+        const saved = await processItem(item, addedTeamNames, savedResults)
         if (isNote) savedNotes.push(saved)
         else savedResults.push(saved)
         updateItem(item.id, { status: 'done' })

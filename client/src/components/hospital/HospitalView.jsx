@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../../firebase'
 import { todayStr } from '../../lib/medUtils'
-import { addStayMed, removeStayMed, updateStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, clearTreatmentSummary, addStayTeamMember, deleteStayTeamMember, updateStayTeamMember } from '../../lib/firestore'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { addStayMed, removeStayMed, updateStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, addTestResult, clearTreatmentSummary, addStayTeamMember, deleteStayTeamMember, updateStayTeamMember } from '../../lib/firestore'
 import { generateTreatmentSummary } from '../../lib/treatmentPlan'
 import { deleteStayDocument } from '../../lib/storageUtils'
 import { fetchDrugSuggestions } from '../../lib/fdaUtils'
@@ -990,6 +993,10 @@ export default function HospitalView({ stays, activeStay }) {
   const [docModalType, setDocModalType] = useState(null)
   const [bulkModalType, setBulkModalType] = useState(null)
   const [regenerating, setRegenerating] = useState(false)
+  const [reprocessing, setReprocessing] = useState(false)
+  const isMobile = useIsMobile()
+  const [notesCollapsed, setNotesCollapsed] = useState(true)
+  const [resultsCollapsed, setResultsCollapsed] = useState(true)
 
   // Clear loading state once Firestore delivers the new or cleared treatment summary
   useEffect(() => {
@@ -1019,6 +1026,50 @@ export default function HospitalView({ stays, activeStay }) {
       // Silent fail — user can retry
     } finally {
       setRegenerating(false)
+    }
+  }
+
+  async function handleReprocessLabs() {
+    if (!activeStay || reprocessing) return
+    setReprocessing(true)
+    try {
+      const fn = httpsCallable(functions, 'askClaude')
+      const existingResults = [...(activeStay.testResults || [])]
+      const notesWithText = (activeStay.doctorNotes || []).filter(n => n.extractedText?.length > 50)
+      for (const note of notesWithText) {
+        const systemContext = `Extract quantitative lab panels from this clinical note.
+Output only this line (or nothing if no quantitative labs are present):
+LAB_PANELS: [{"testName":"CBC Panel","date":"YYYY-MM-DD","labValues":[{"name":"HGB","value":7.1,"unit":"g/dL","refLow":12,"refHigh":17,"flag":"L"},...]}]
+Use flag values: "N"=normal, "H"=high, "L"=low, "C"=critical. Only numeric values with known reference ranges.`
+        const { data } = await fn({ messages: [{ role: 'user', content: note.extractedText }], systemContext })
+        let labPanels = []
+        for (const line of data.content.split('\n')) {
+          if (line.startsWith('LAB_PANELS:')) {
+            try { labPanels = JSON.parse(line.replace('LAB_PANELS:', '').trim()) } catch {}
+          }
+        }
+        for (const panel of labPanels) {
+          if (!panel.testName || !panel.labValues?.length) continue
+          const panelDate = panel.date || note.date
+          const alreadyExists = existingResults.some(
+            r => r.testName?.toLowerCase() === panel.testName.toLowerCase() && r.date === panelDate
+          )
+          if (!alreadyExists) {
+            const entry = await addTestResult(activeStay.id, {
+              testName: panel.testName,
+              date: panelDate,
+              labValues: panel.labValues,
+              interpretation: `Lab values extracted from ${note.noteType || 'doctor note'}${note.author ? ` by ${note.author}` : ''}`,
+              extractedText: '',
+            })
+            existingResults.push(entry)
+          }
+        }
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setReprocessing(false)
     }
   }
 
@@ -1123,30 +1174,53 @@ export default function HospitalView({ stays, activeStay }) {
           <div className="hospital-docs-col">
             <div className="doc-section">
               <div className="doc-section-header">
-                <span className="doc-section-title">Doctor Notes</span>
+                <button
+                  className="doc-section-collapse-btn"
+                  onClick={() => isMobile && setNotesCollapsed(v => !v)}
+                  aria-expanded={!notesCollapsed}
+                >
+                  <span className="doc-section-title">Doctor Notes</span>
+                  {isMobile && (
+                    <span className="doc-section-chevron" style={{ transform: notesCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+                  )}
+                </button>
                 <div style={{ display: 'flex', gap: 8 }}>
+                  {activeStay.doctorNotes?.some(n => n.extractedText?.length > 50) && (
+                    <button className="daily-log-add-med-btn" onClick={handleReprocessLabs} disabled={reprocessing} title="Re-scan uploaded notes for lab values">
+                      {reprocessing ? 'Scanning…' : 'Extract labs'}
+                    </button>
+                  )}
                   <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('note')}>+ Bulk</button>
                   <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>+ Add</button>
                 </div>
               </div>
-              {doctorNotes.length === 0 ? (
+              {(!isMobile || !notesCollapsed) && (doctorNotes.length === 0 ? (
                 <div className="doc-section-empty">No notes uploaded yet.</div>
               ) : (
                 doctorNotes.map(n => (
                   <DocCard key={n.id} doc={n} isNote stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
                 ))
-              )}
+              ))}
             </div>
 
             <div className="doc-section">
               <div className="doc-section-header">
-                <span className="doc-section-title">Test Results</span>
+                <button
+                  className="doc-section-collapse-btn"
+                  onClick={() => isMobile && setResultsCollapsed(v => !v)}
+                  aria-expanded={!resultsCollapsed}
+                >
+                  <span className="doc-section-title">Test Results</span>
+                  {isMobile && (
+                    <span className="doc-section-chevron" style={{ transform: resultsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+                  )}
+                </button>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('result')}>+ Bulk</button>
                   <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>+ Add</button>
                 </div>
               </div>
-              {testResults.length === 0 ? (
+              {(!isMobile || !resultsCollapsed) && (testResults.length === 0 ? (
                 <div className="doc-section-empty">No results uploaded yet.</div>
               ) : (
                 <>
@@ -1155,7 +1229,7 @@ export default function HospitalView({ stays, activeStay }) {
                     <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
                   ))}
                 </>
-              )}
+              ))}
             </div>
           </div>
         )}
