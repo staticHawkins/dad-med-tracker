@@ -1058,76 +1058,9 @@ export default function HospitalView({ stays, activeStay }) {
 
   return (
     <div className="page hospital-page">
-      <div className={`hospital-body${activeStay ? ' hospital-body--sidebar' : ''}`}>
-        <div>
-          {activeStay ? (
-            <ActiveStaySection
-              stay={activeStay}
-              onEdit={openEditStay}
-              onDayClick={handleDayClick}
-            />
-          ) : (
-            <div className="hospital-no-active">
-              <div className="hospital-no-active-icon">🏥</div>
-              <div className="hospital-no-active-text">No active hospital stay</div>
-              <button className="btn-add" onClick={openNewStay}>+ Admit</button>
-            </div>
-          )}
+      <div className={activeStay ? 'hospital-layout' : 'hospital-layout--empty'}>
 
-          {activeStay && (
-            <TreatmentSummaryCard
-              stay={activeStay}
-              onRegenerate={handleRegeneratePlan}
-              regenerating={regenerating}
-            />
-          )}
-
-          {activeStay && (
-            <MobileMedSection stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
-          )}
-
-          {activeStay && (
-            <div className="doc-section">
-              <div className="doc-section-header">
-                <span className="doc-section-title">Doctor Notes</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('note')}>+ Bulk</button>
-                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>+ Add</button>
-                </div>
-              </div>
-              {doctorNotes.length === 0 ? (
-                <div className="doc-section-empty">No notes uploaded yet.</div>
-              ) : (
-                doctorNotes.map(n => (
-                  <DocCard key={n.id} doc={n} isNote stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
-                ))
-              )}
-            </div>
-          )}
-
-          {activeStay && (
-            <div className="doc-section">
-              <div className="doc-section-header">
-                <span className="doc-section-title">Test Results</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('result')}>+ Bulk</button>
-                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>+ Add</button>
-                </div>
-              </div>
-              {testResults.length === 0 ? (
-                <div className="doc-section-empty">No results uploaded yet.</div>
-              ) : (
-                <>
-                  <LabTrendsPanel testResults={testResults} />
-                  {testResults.map(r => (
-                    <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
+        {/* Col 1 — aside: overview, team, meds, past stays */}
         <aside className="hospital-aside">
           {activeStay && (
             <div className="hospital-overview-card">
@@ -1156,24 +1089,76 @@ export default function HospitalView({ stays, activeStay }) {
               </div>
             </div>
           )}
-
-          {activeStay && (
-            <StayTeamSection stay={activeStay} />
-          )}
-
-          {activeStay && (
-            <StayMedsSidebar stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
-          )}
-
+          {activeStay && <StayTeamSection stay={activeStay} />}
+          {activeStay && <StayMedsSidebar stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />}
           {pastStays.length > 0 && (
             <div className="past-stays-section">
               <div className="past-stays-heading">Past stays</div>
-              {pastStays.map(s => (
-                <PastStayCard key={s.id} stay={s} />
-              ))}
+              {pastStays.map(s => <PastStayCard key={s.id} stay={s} />)}
             </div>
           )}
         </aside>
+
+        {/* Col 2 — center: daily timeline + treatment plan */}
+        <div className="hospital-center-col">
+          {activeStay ? (
+            <ActiveStaySection stay={activeStay} onEdit={openEditStay} onDayClick={handleDayClick} />
+          ) : (
+            <div className="hospital-no-active">
+              <div className="hospital-no-active-icon">🏥</div>
+              <div className="hospital-no-active-text">No active hospital stay</div>
+              <button className="btn-add" onClick={openNewStay}>+ Admit</button>
+            </div>
+          )}
+          {activeStay && (
+            <TreatmentSummaryCard stay={activeStay} onRegenerate={handleRegeneratePlan} regenerating={regenerating} />
+          )}
+          {activeStay && (
+            <MobileMedSection stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
+          )}
+        </div>
+
+        {/* Col 3 — docs: notes + results */}
+        {activeStay && (
+          <div className="hospital-docs-col">
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Doctor Notes</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('note')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>+ Add</button>
+                </div>
+              </div>
+              {doctorNotes.length === 0 ? (
+                <div className="doc-section-empty">No notes uploaded yet.</div>
+              ) : (
+                doctorNotes.map(n => (
+                  <DocCard key={n.id} doc={n} isNote stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                ))
+              )}
+            </div>
+
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Test Results</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('result')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>+ Add</button>
+                </div>
+              </div>
+              {testResults.length === 0 ? (
+                <div className="doc-section-empty">No results uploaded yet.</div>
+              ) : (
+                <>
+                  <LabTrendsPanel testResults={testResults} />
+                  {testResults.map(r => (
+                    <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {stayModalOpen && (

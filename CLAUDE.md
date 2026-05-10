@@ -49,6 +49,7 @@ Spec files:
 - `color-audit.spec.js` — screenshots for dark/light mode color audit
 - `profile-dropdown.spec.js` — profile dropdown open/close, navigation, theme toggle
 - `pwa.spec.js` — manifest fields, icons, PWA meta tags, service worker registration, mobile bottom nav
+- `hospital.spec.js` — hospital stay view, documents, lab trends
 
 If ports are already occupied from a previous run, kill them first:
 ```bash
@@ -86,7 +87,7 @@ client/src/
 │   ├── apts/            # AppointmentsView, AptCard, AptModal, AptDetailModal, HeroCard, MiniCalendar, AgendaGroups
 │   ├── tasks/           # TasksView, TaskModal
 │   ├── timeline/        # TimelineView, DiseaseTimelineCard, MilestoneRow, MilestoneTag, PhaseStrip
-│   ├── hospital/        # HospitalView, HospitalStayModal, DailyLogModal
+│   ├── hospital/        # HospitalView, HospitalStayModal, DailyLogModal, AddDocumentModal, BulkUploadModal, LabTrendsPanel
 │   └── chat/            # AskAiSheet
 ├── hooks/
 │   ├── useAuth.js       # onAuthStateChanged
@@ -108,6 +109,8 @@ client/src/
 │   ├── fdaUtils.js      # OpenFDA drug name autocomplete (fetchDrugSuggestions, toTitleCase)
 │   ├── firestore.js     # Firestore write operations, newId(), export/import
 │   ├── notifications.js # push notification helpers
+│   ├── pdfUtils.js      # PDF text extraction (pdfjs-dist)
+│   ├── treatmentPlan.js # AI treatment plan summarization via Firebase Functions
 │   └── storageUtils.js  # Firebase Storage helpers
 ├── data/
 │   ├── clinical-notes/  # enriched clinical notes JSON

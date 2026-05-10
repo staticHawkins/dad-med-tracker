@@ -2280,14 +2280,26 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-dash-banner-link{background:none;border:none;font-size:13px;font-weight:600;color:var(--amber);cursor:pointer;text-decoration:underline;padding:0;white-space:nowrap}
 
 /* ── HOSPITAL VIEW ── */
-.hospital-page{max-width:1100px;margin:0 auto;padding:20px 24px 48px}
+.hospital-page{max-width:1400px;margin:0 auto;padding:20px 24px 48px}
 .hospital-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.hospital-body{display:flex;flex-direction:column;gap:20px}
-@media(min-width:768px){.hospital-body--sidebar{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}}
-.hospital-aside{display:flex;flex-direction:column;gap:16px}
-@media(max-width:767px){.hospital-aside{display:none}}
+/* 3-column desktop layout */
+.hospital-layout{display:grid;grid-template-columns:240px minmax(0,1fr) 360px;grid-template-areas:"aside center docs";gap:28px;align-items:start}
+.hospital-layout--empty{display:block}
+.hospital-aside{grid-area:aside;display:flex;flex-direction:column;gap:16px}
+.hospital-center-col{grid-area:center;display:flex;flex-direction:column;gap:0;min-width:0}
+.hospital-docs-col{grid-area:docs;display:flex;flex-direction:column;gap:20px;min-width:0}
+@media(min-width:1200px){.hospital-docs-col{position:sticky;top:20px;max-height:calc(100vh - 60px);overflow-y:auto;scrollbar-width:thin;padding-right:2px}}
+/* tablet: aside right, center+docs stack in left col */
+@media(max-width:1199px){
+  .hospital-layout{grid-template-columns:minmax(0,1fr) 240px;grid-template-areas:"center aside" "docs aside"}
+}
+/* mobile: single column, hide aside */
+@media(max-width:767px){
+  .hospital-layout{grid-template-columns:1fr;grid-template-areas:"center" "docs"}
+  .hospital-aside{display:none}
+}
 .hospital-overview-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
-.hospital-overview-heading{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4;margin-bottom:14px}
+.hospital-overview-heading{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75;margin-bottom:14px}
 .hospital-overview-stats{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .hospital-overview-stat{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 8px;gap:2px}
 .hospital-overview-val{font-size:24px;font-weight:700;letter-spacing:-.5px}
@@ -2298,7 +2310,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:0}
 .stay-team-section{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px}
 .stay-team-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.stay-team-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4}
+.stay-team-title{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75}
 .stay-team-empty{font-size:12px;opacity:.35;font-style:italic}
 .stay-team-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border)}
 .stay-team-member-info{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -2364,7 +2376,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-empty{padding:20px 16px;font-size:13px;opacity:.45;text-align:center}
 
 .past-stays-section{margin-top:0}
-.past-stays-heading{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4;margin-bottom:10px}
+.past-stays-heading{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75;margin-bottom:10px}
 .past-stay-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
 .past-stay-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:transparent;border:none;cursor:pointer;text-align:left}
 .past-stay-header-left{display:flex;align-items:center;gap:10px}
@@ -2437,13 +2449,14 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .treatment-plan-header:hover{background:var(--panel2)}
 .treatment-plan-header-left{display:flex;align-items:center;gap:8px;min-width:0}
 .treatment-plan-icon{font-size:14px;opacity:.7;flex-shrink:0}
-.treatment-plan-title{font-size:12px;font-weight:700;letter-spacing:.3px}
+.treatment-plan-title{font-size:13px;font-weight:700;letter-spacing:.3px}
 .treatment-plan-updated{font-size:11px;opacity:.4;font-style:italic;white-space:nowrap}
 .treatment-plan-updating{color:var(--accent,#5C8CFF);opacity:.7;font-style:normal}
 .treatment-plan-regen{font-size:11px;font-weight:600;color:var(--accent,#5C8CFF);opacity:.8;cursor:pointer;flex-shrink:0}
 .treatment-plan-regen:hover{opacity:1}
 .treatment-plan-body{border-top:1px solid var(--border)}
 .treatment-plan-sections{display:flex;flex-direction:column}
+@media(min-width:1200px){.treatment-plan-sections{display:grid;grid-template-columns:1fr 1fr}.treatment-plan-section:last-child:nth-child(odd){grid-column:1/-1}}
 .treatment-plan-section{padding:12px 16px;border-bottom:1px solid var(--border2,var(--border))}
 .treatment-plan-section:last-child{border-bottom:none}
 .treatment-plan-section-label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;opacity:.4;margin-bottom:5px}
@@ -2454,7 +2467,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 /* Doctor Notes & Test Results sections */
 .doc-section{margin-top:24px}
 .doc-section-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px}
-.doc-section-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.45}
+.doc-section-title{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75}
 .doc-section-empty{font-size:12px;opacity:.35;font-style:italic;padding:8px 0}
 .doc-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
 .doc-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px}
@@ -2464,7 +2477,7 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .doc-card-pdf-link{font-size:11px;font-weight:600;color:var(--accent,#5C8CFF);opacity:.8;text-decoration:none;flex-shrink:0}
 .doc-card-pdf-link:hover{opacity:1}
 .doc-card-body{padding:0 14px 12px;border-top:1px solid var(--border2,var(--border))}
-.doc-card-interpretation{font-size:13px;color:var(--text2);line-height:1.6;padding-top:10px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.doc-card-interpretation{font-size:13px;color:var(--text2);line-height:1.6;padding-top:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .doc-card-interpretation--expanded{display:block;overflow:visible;-webkit-line-clamp:unset}
 .doc-card-no-interpretation{font-size:12px;opacity:.4;font-style:italic;padding-top:10px}
 .doc-card-actions{display:flex;gap:12px;padding-top:8px}
@@ -2485,8 +2498,8 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .lab-preview-bar-label--right{transform:translateX(-50%)}
 .lab-preview-range{font-size:11px;opacity:.4}
 .lab-trends-panel{margin-bottom:16px}
-.lab-trends-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.45;margin-bottom:12px}
-.lab-trends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.lab-trends-title{font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75;margin-bottom:12px}
+.lab-trends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
 .metric-chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 10px 8px;transition:box-shadow .15s}
 .metric-chart-wrap:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .metric-chart-title{font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:4px}
