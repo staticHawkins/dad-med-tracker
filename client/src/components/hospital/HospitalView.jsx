@@ -68,6 +68,47 @@ function getDaySlots(admissionDate) {
   return slots
 }
 
+function LabValuesDisplay({ labValues }) {
+  if (!labValues?.length) return null
+  return (
+    <div className="doc-card-lab-values">
+      {labValues.map((lv, i) => {
+        const color = lv.flag === 'N' ? '#4caf80' : lv.flag === 'C' ? '#c0605a' : '#d4872a'
+        const flagLabel = { N: 'Normal', H: 'High', L: 'Low', C: 'Critical' }[lv.flag] || ''
+        const hasRange = lv.refLow != null && lv.refHigh != null
+        let dotPct = null, greenLeft = 30, greenRight = 70
+        if (hasRange) {
+          const range = lv.refHigh - lv.refLow || 1
+          const buffer = range * 0.75
+          const scaleMin = lv.refLow - buffer
+          const scaleMax = lv.refHigh + buffer
+          const total = scaleMax - scaleMin
+          dotPct = Math.min(97, Math.max(3, ((lv.value - scaleMin) / total) * 100))
+          greenLeft = ((lv.refLow - scaleMin) / total) * 100
+          greenRight = ((lv.refHigh - scaleMin) / total) * 100
+        }
+        return (
+          <div key={i} className="lab-preview-row">
+            <div className="lab-preview-meta">
+              <span className="lab-preview-name">{lv.name}</span>
+              <span className="lab-preview-val" style={{ color }}>{lv.value} {lv.unit}</span>
+              {flagLabel && <span className="lab-preview-flag" style={{ color }}>{flagLabel}</span>}
+            </div>
+            {dotPct != null && (
+              <div className="lab-preview-bar-track">
+                <div className="lab-preview-bar-normal" style={{ left: `${greenLeft}%`, right: `${100 - greenRight}%` }} />
+                <div className="lab-preview-bar-dot" style={{ left: `${dotPct}%`, background: color }} />
+                <span className="lab-preview-bar-label" style={{ left: `${greenLeft}%` }}>{lv.refLow}</span>
+                <span className="lab-preview-bar-label" style={{ left: `${greenRight}%` }}>{lv.refHigh}</span>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function DocCard({ doc, isNote, stayId, onAfterDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
@@ -124,6 +165,12 @@ function DocCard({ doc, isNote, stayId, onAfterDelete }) {
           </button>
         </div>
       </div>
+
+      {!isNote && doc.labValues?.length > 0 && (
+        <div className="doc-card-body" style={{ paddingBottom: 4 }}>
+          <LabValuesDisplay labValues={doc.labValues} />
+        </div>
+      )}
 
       {doc.interpretation && (
         <div className="doc-card-body">
