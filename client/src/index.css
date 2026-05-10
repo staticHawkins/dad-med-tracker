@@ -2307,8 +2307,9 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .stay-team-delete{flex-shrink:0;background:none;border:none;cursor:pointer;opacity:.35;font-size:11px;padding:2px 4px;transition:opacity .15s}
 .stay-team-delete:hover{opacity:.7}
 .stay-team-add-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
-.stay-team-add-form input{font-size:13px}
+.stay-team-add-form input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box;font-family:var(--ff)}
 .stay-team-add-actions{display:flex;gap:8px;margin-top:2px}
+.stay-team-add-actions .btn-add{font-size:12px;padding:5px 12px}
 .bulk-dropzone{width:100%;border:2px dashed var(--border);border-radius:12px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;color:var(--text);transition:border-color .15s}
 .bulk-dropzone:hover{border-color:var(--accent)}
 .bulk-dropzone-icon{font-size:28px;opacity:.4}
@@ -2416,8 +2417,11 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .stay-med-header:hover .stay-med-name{opacity:.75}
 .stay-med-expand{display:flex;align-items:center;flex:1;gap:8px;background:none;border:none;cursor:pointer;padding:10px 0;text-align:left}
 .stay-med-name{font-size:13px;font-weight:600;transition:opacity .15s}
+.stay-med-brand{font-weight:400;opacity:.55}
 .stay-med-meta{font-size:11px;opacity:.5;margin-top:1px}
-.stay-med-count{font-size:11px;opacity:.4;white-space:nowrap;flex-shrink:0}
+.stay-med-count{font-size:11px;opacity:.4;white-space:nowrap;flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;transition:opacity .15s,background .15s;font-family:var(--ff)}
+.stay-med-count:hover{opacity:.7;background:var(--panel2)}
+.stay-med-count--open{opacity:.8;background:var(--panel2)}
 .stay-med-delete-btn{background:none;border:none;cursor:pointer;font-size:11px;opacity:.25;padding:4px 6px;flex-shrink:0;line-height:1}
 .stay-med-delete-btn:hover{opacity:.8;color:var(--red,#D85A30)}
 .stay-med-logs{display:flex;flex-direction:column;gap:3px;padding:2px 0 10px 12px;border-left:2px solid var(--border);margin-left:4px}

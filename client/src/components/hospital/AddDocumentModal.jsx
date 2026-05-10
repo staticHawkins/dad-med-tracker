@@ -266,7 +266,7 @@ Then on a new line, translate the note into plain English. Focus on: what the do
 
           <div style={{ marginTop: 24, display: 'flex', gap: 10 }}>
             <button
-              className="btn-primary"
+              className="btn-add"
               onClick={handleSave}
               disabled={!canSave}
             >

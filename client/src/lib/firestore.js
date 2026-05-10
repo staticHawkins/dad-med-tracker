@@ -598,6 +598,20 @@ export async function deleteStayTeamMember(stayId, memberObj) {
   })
 }
 
+export async function updateStayMed(stayId, oldMed, updates) {
+  const ref = doc(db, 'hospitalStays', stayId)
+  const updated = { ...oldMed, ...updates }
+  await updateDoc(ref, { stayMeds: arrayRemove(oldMed), updatedAt: new Date().toISOString() })
+  await updateDoc(ref, { stayMeds: arrayUnion(updated), updatedAt: new Date().toISOString() })
+}
+
+export async function updateStayTeamMember(stayId, oldMember, updates) {
+  const ref = doc(db, 'hospitalStays', stayId)
+  const updated = { ...oldMember, ...updates }
+  await updateDoc(ref, { stayTeam: arrayRemove(oldMember), updatedAt: new Date().toISOString() })
+  await updateDoc(ref, { stayTeam: arrayUnion(updated), updatedAt: new Date().toISOString() })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

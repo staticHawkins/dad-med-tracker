@@ -219,11 +219,11 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
 
           <div style={{ marginTop: 24, display: 'flex', gap: 10 }}>
             {done ? (
-              <button className="btn-primary" onClick={onClose}>Done</button>
+              <button className="btn-add" onClick={onClose}>Done</button>
             ) : (
               <>
                 <button
-                  className="btn-primary"
+                  className="btn-add"
                   onClick={handleUploadAll}
                   disabled={processing || pendingCount === 0}
                 >
