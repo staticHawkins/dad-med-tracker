@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { httpsCallable } from 'firebase/functions'
-import { functions } from '../../firebase'
 import { todayStr } from '../../lib/medUtils'
-import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, saveTreatmentSummary, clearTreatmentSummary } from '../../lib/firestore'
+import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, clearTreatmentSummary, addStayTeamMember, deleteStayTeamMember } from '../../lib/firestore'
+import { generateTreatmentSummary } from '../../lib/treatmentPlan'
 import { deleteStayDocument } from '../../lib/storageUtils'
 import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
 import AddDocumentModal from './AddDocumentModal'
+import BulkUploadModal from './BulkUploadModal'
 import PersonChip from '../PersonChip'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
@@ -163,25 +163,92 @@ function DocCard({ doc, isNote, stayId, onAfterDelete }) {
   )
 }
 
-const PLAN_SECTIONS = [
-  { key: 'CURRENT REGIMEN',  label: 'Current regimen'   },
-  { key: 'RECENT DECISIONS', label: 'Recent decisions'  },
-  { key: 'ACTIVE CONCERNS',  label: 'Active concerns'   },
-  { key: 'NEXT STEPS',       label: 'Next steps'        },
-]
+function StayTeamSection({ stay }) {
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [role, setRole] = useState('')
+  const [saving, setSaving] = useState(false)
+  const team = stay.stayTeam || []
 
-function parseTreatmentSummary(content) {
-  const result = {}
-  const keys = PLAN_SECTIONS.map(s => s.key)
-  keys.forEach((key, i) => {
+  async function handleAdd() {
+    if (!name.trim()) return
+    setSaving(true)
+    try {
+      await addStayTeamMember(stay.id, { name: name.trim(), role: role.trim() })
+      setName('')
+      setRole('')
+      setAdding(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="stay-team-section">
+      <div className="stay-team-header">
+        <span className="stay-team-title">Care Team</span>
+        {!adding && (
+          <button className="daily-log-add-med-btn" onClick={() => setAdding(true)}>+ Add</button>
+        )}
+      </div>
+      {team.length === 0 && !adding && (
+        <div className="stay-team-empty">No team members added yet.</div>
+      )}
+      {team.map(member => (
+        <div key={member.id} className="stay-team-member">
+          <div className="stay-team-member-info">
+            <span className="stay-team-member-name">{member.name}</span>
+            {member.role && <span className="stay-team-member-role">{member.role}</span>}
+          </div>
+          <button
+            className="stay-team-delete"
+            onClick={() => deleteStayTeamMember(stay.id, member)}
+            aria-label={`Remove ${member.name}`}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      {adding && (
+        <div className="stay-team-add-form">
+          <input
+            type="text"
+            placeholder="Name (e.g., Dr. Huynh)"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+          />
+          <input
+            type="text"
+            placeholder="Role (e.g., Attending Nephrologist)"
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          />
+          <div className="stay-team-add-actions">
+            <button className="btn-primary" onClick={handleAdd} disabled={!name.trim() || saving}>
+              {saving ? 'Adding…' : 'Add'}
+            </button>
+            <button className="btn-ghost" onClick={() => { setAdding(false); setName(''); setRole('') }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function legacyParseTreatmentSummary(content) {
+  const keys = ['CURRENT REGIMEN', 'RECENT DECISIONS', 'ACTIVE CONCERNS', 'NEXT STEPS']
+  const labels = { 'CURRENT REGIMEN': 'Current regimen', 'RECENT DECISIONS': 'Recent decisions', 'ACTIVE CONCERNS': 'Active concerns', 'NEXT STEPS': 'Next steps' }
+  return keys.flatMap((key, i) => {
     const start = content.indexOf(key)
-    if (start === -1) return
+    if (start === -1) return []
     const textStart = start + key.length
     const nextKey = keys.slice(i + 1).map(k => content.indexOf(k, textStart)).filter(p => p !== -1)
     const end = nextKey.length > 0 ? Math.min(...nextKey) : content.length
-    result[key] = content.slice(textStart, end).replace(/^\n+/, '').trim()
+    const text = content.slice(textStart, end).replace(/^\n+/, '').trim()
+    return text ? [{ problem: labels[key], summary: text }] : []
   })
-  return result
 }
 
 function TreatmentSummaryCard({ stay, onRegenerate, regenerating }) {
@@ -191,7 +258,9 @@ function TreatmentSummaryCard({ stay, onRegenerate, regenerating }) {
 
   if (!hasDocuments) return null
 
-  const sections = summary ? parseTreatmentSummary(summary.content) : {}
+  const problems = summary?.problems
+    ?? (summary?.content ? legacyParseTreatmentSummary(summary.content) : null)
+
   const lastUpdated = summary?.updatedAt
     ? new Date(summary.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : null
@@ -228,21 +297,17 @@ function TreatmentSummaryCard({ stay, onRegenerate, regenerating }) {
               No treatment plan yet. Click Generate to create one from the uploaded notes and results.
             </div>
           )}
-          {regenerating && !summary && (
+          {regenerating && (
             <div className="treatment-plan-loading">Synthesizing treatment plan from uploaded documents…</div>
           )}
-          {summary && (
+          {!regenerating && problems && (
             <div className="treatment-plan-sections">
-              {PLAN_SECTIONS.map(({ key, label }) => {
-                const text = sections[key]
-                if (!text) return null
-                return (
-                  <div key={key} className="treatment-plan-section">
-                    <div className="treatment-plan-section-label">{label}</div>
-                    <div className="treatment-plan-section-text">{text}</div>
-                  </div>
-                )
-              })}
+              {problems.map(({ problem, summary: text }) => (
+                <div key={problem} className="treatment-plan-section">
+                  <div className="treatment-plan-section-label">{problem}</div>
+                  <div className="treatment-plan-section-text">{text}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -712,6 +777,7 @@ export default function HospitalView({ stays, activeStay }) {
   const [editingLog, setEditingLog] = useState(null)
   const [editingDate, setEditingDate] = useState(null)
   const [docModalType, setDocModalType] = useState(null)
+  const [bulkModalType, setBulkModalType] = useState(null)
   const [regenerating, setRegenerating] = useState(false)
 
   // Clear loading state once Firestore delivers the new or cleared treatment summary
@@ -730,39 +796,7 @@ export default function HospitalView({ stays, activeStay }) {
       await clearTreatmentSummary(stayId)
       return
     }
-    const fn = httpsCallable(functions, 'askClaude')
-    const notesText = allNotes
-      .slice().sort((a, b) => b.date.localeCompare(a.date))
-      .map(n => `[${n.date}] ${[n.noteType, n.author].filter(Boolean).join(' · ')}\n${n.extractedText || n.interpretation || ''}`)
-      .join('\n\n---\n\n')
-    const resultsText = allResults
-      .slice().sort((a, b) => b.date.localeCompare(a.date))
-      .map(r => `[${r.date}] ${r.testName || 'Test Result'}\n${r.extractedText || r.interpretation || ''}`)
-      .join('\n\n---\n\n')
-    const userContent = [
-      allNotes.length > 0 && `DOCTOR NOTES:\n${notesText}`,
-      allResults.length > 0 && `TEST RESULTS:\n${resultsText}`,
-    ].filter(Boolean).join('\n\n')
-    const systemContext = `You are a medical care coordinator summarizing a patient's ongoing hospital treatment for their family. Based on the doctor notes and test results provided, write a structured treatment summary with exactly these 4 labeled sections:
-
-CURRENT REGIMEN
-Describe the active treatments, drugs, and therapies currently in use.
-
-RECENT DECISIONS
-Summarize the key clinical decisions or changes made at the most recent visits.
-
-ACTIVE CONCERNS
-List the symptoms, lab values, or conditions the care team flagged to watch closely.
-
-NEXT STEPS
-Describe upcoming tests, treatments, decisions, or follow-up actions the doctors mentioned.
-
-Write each section as 2-4 plain English sentences. No medical jargon. No markdown, no bullet points, no bold text. Use exactly the section labels above on their own line before each section's text.`
-    const { data } = await fn({
-      messages: [{ role: 'user', content: userContent }],
-      systemContext,
-    })
-    await saveTreatmentSummary(stayId, data.content)
+    await generateTreatmentSummary(stayId, allNotes, allResults)
   }
 
   async function handleRegeneratePlan() {
@@ -845,9 +879,10 @@ Write each section as 2-4 plain English sentences. No medical jargon. No markdow
             <div className="doc-section">
               <div className="doc-section-header">
                 <span className="doc-section-title">Doctor Notes</span>
-                <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>
-                  + Add
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('note')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>+ Add</button>
+                </div>
               </div>
               {doctorNotes.length === 0 ? (
                 <div className="doc-section-empty">No notes uploaded yet.</div>
@@ -863,9 +898,10 @@ Write each section as 2-4 plain English sentences. No medical jargon. No markdow
             <div className="doc-section">
               <div className="doc-section-header">
                 <span className="doc-section-title">Test Results</span>
-                <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>
-                  + Add
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('result')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>+ Add</button>
+                </div>
               </div>
               {testResults.length === 0 ? (
                 <div className="doc-section-empty">No results uploaded yet.</div>
@@ -908,6 +944,10 @@ Write each section as 2-4 plain English sentences. No medical jargon. No markdow
           )}
 
           {activeStay && (
+            <StayTeamSection stay={activeStay} />
+          )}
+
+          {activeStay && (
             <StayMedsSidebar stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
           )}
 
@@ -946,6 +986,16 @@ Write each section as 2-4 plain English sentences. No medical jargon. No markdow
           stay={activeStay}
           type={docModalType}
           onClose={() => setDocModalType(null)}
+          onSaved={() => setRegenerating(true)}
+        />
+      )}
+
+      {bulkModalType && activeStay && (
+        <BulkUploadModal
+          stayId={activeStay.id}
+          stay={activeStay}
+          type={bulkModalType}
+          onClose={() => setBulkModalType(null)}
           onSaved={() => setRegenerating(true)}
         />
       )}

@@ -2296,6 +2296,40 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-overview-key{font-size:12px;opacity:.5;flex-shrink:0}
 .hospital-overview-rowval{font-size:12px;font-weight:500;text-align:right}
 .hospital-page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:0}
+.stay-team-section{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px}
+.stay-team-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.stay-team-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4}
+.stay-team-empty{font-size:12px;opacity:.35;font-style:italic}
+.stay-team-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border)}
+.stay-team-member-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stay-team-member-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stay-team-member-role{font-size:11px;opacity:.5}
+.stay-team-delete{flex-shrink:0;background:none;border:none;cursor:pointer;opacity:.35;font-size:11px;padding:2px 4px;transition:opacity .15s}
+.stay-team-delete:hover{opacity:.7}
+.stay-team-add-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.stay-team-add-form input{font-size:13px}
+.stay-team-add-actions{display:flex;gap:8px;margin-top:2px}
+.bulk-dropzone{width:100%;border:2px dashed var(--border);border-radius:12px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;color:var(--text);transition:border-color .15s}
+.bulk-dropzone:hover{border-color:var(--accent)}
+.bulk-dropzone-icon{font-size:28px;opacity:.4}
+.bulk-dropzone-label{font-size:15px;font-weight:600}
+.bulk-dropzone-hint{font-size:12px;opacity:.45}
+.bulk-file-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:4px}
+.bulk-file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.bulk-file-row:last-child{border-bottom:none}
+.bulk-file-row--done{opacity:.6}
+.bulk-file-row--error{background:rgba(255,80,80,.06)}
+.bulk-file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bulk-file-status-label{font-size:11px;opacity:.5;flex-shrink:0}
+.bulk-file-remove{background:none;border:none;cursor:pointer;opacity:.35;font-size:11px;padding:2px 4px;flex-shrink:0}
+.bulk-file-remove:hover{opacity:.7}
+.bulk-status{font-size:14px;flex-shrink:0;width:16px;text-align:center}
+.bulk-status--pending{opacity:.3}
+.bulk-status--processing{opacity:.7;color:var(--accent)}
+.bulk-status--done{color:#22c55e}
+.bulk-status--error{color:#ef4444}
+.bulk-add-more{background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);padding:6px 0;text-align:left}
+.bulk-done-msg{font-size:13px;padding:12px 14px;background:var(--surface2);border-radius:10px;margin-top:12px;opacity:.8}
 
 .hospital-no-active{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 0;text-align:center}
 .hospital-no-active-icon{font-size:48px;opacity:.5}

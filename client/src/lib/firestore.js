@@ -536,9 +536,9 @@ export async function removeStayMed(stayId, medObj) {
   })
 }
 
-export async function saveTreatmentSummary(stayId, content) {
+export async function saveTreatmentSummary(stayId, problems) {
   await updateDoc(doc(db, 'hospitalStays', stayId), {
-    treatmentSummary: { content, updatedAt: new Date().toISOString() },
+    treatmentSummary: { problems, updatedAt: new Date().toISOString() },
     updatedAt: new Date().toISOString(),
   })
 }
@@ -578,6 +578,22 @@ export async function addTestResult(stayId, resultData) {
 export async function deleteTestResult(stayId, resultObj) {
   await updateDoc(doc(db, 'hospitalStays', stayId), {
     testResults: arrayRemove(resultObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addStayTeamMember(stayId, memberData) {
+  const entry = { ...memberData, id: memberData.id || newId(), addedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    stayTeam: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteStayTeamMember(stayId, memberObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    stayTeam: arrayRemove(memberObj),
     updatedAt: new Date().toISOString(),
   })
 }

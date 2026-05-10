@@ -1,58 +1,11 @@
 import { useState, useRef } from 'react'
-import { httpsCallable } from 'firebase/functions'
-import { functions } from '../../firebase'
-import { addDoctorNote, addTestResult, saveTreatmentSummary } from '../../lib/firestore'
+import { addDoctorNote, addTestResult, addStayTeamMember } from '../../lib/firestore'
 import { uploadStayDocument } from '../../lib/storageUtils'
 import { extractTextFromPdf } from '../../lib/pdfUtils'
 import { todayStr } from '../../lib/medUtils'
-
-const NOTE_TYPES = ['Progress Note', 'Consult Note', 'Discharge Summary', 'H&P', 'Operative Note', 'Nursing Note', 'Social Work Note', 'Other']
-
-async function generateTreatmentSummary(stayId, allNotes, allResults) {
-  if (allNotes.length === 0 && allResults.length === 0) return
-  try {
-    const fn = httpsCallable(functions, 'askClaude')
-
-    const notesText = allNotes
-      .slice().sort((a, b) => b.date.localeCompare(a.date))
-      .map(n => `[${n.date}] ${[n.noteType, n.author].filter(Boolean).join(' · ')}\n${n.extractedText || n.interpretation || ''}`)
-      .join('\n\n---\n\n')
-
-    const resultsText = allResults
-      .slice().sort((a, b) => b.date.localeCompare(a.date))
-      .map(r => `[${r.date}] ${r.testName || 'Test Result'}\n${r.extractedText || r.interpretation || ''}`)
-      .join('\n\n---\n\n')
-
-    const userContent = [
-      allNotes.length > 0 && `DOCTOR NOTES:\n${notesText}`,
-      allResults.length > 0 && `TEST RESULTS:\n${resultsText}`,
-    ].filter(Boolean).join('\n\n')
-
-    const systemContext = `You are a medical care coordinator summarizing a patient's ongoing hospital treatment for their family. Based on the doctor notes and test results provided, write a structured treatment summary with exactly these 4 labeled sections:
-
-CURRENT REGIMEN
-Describe the active treatments, drugs, and therapies currently in use.
-
-RECENT DECISIONS
-Summarize the key clinical decisions or changes made at the most recent visits.
-
-ACTIVE CONCERNS
-List the symptoms, lab values, or conditions the care team flagged to watch closely.
-
-NEXT STEPS
-Describe upcoming tests, treatments, decisions, or follow-up actions the doctors mentioned.
-
-Write each section as 2-4 plain English sentences. No medical jargon. No markdown, no bullet points, no bold text. Use exactly the section labels above on their own line before each section's text.`
-
-    const { data } = await fn({
-      messages: [{ role: 'user', content: userContent }],
-      systemContext,
-    })
-    await saveTreatmentSummary(stayId, data.content)
-  } catch {
-    // Silent — treatment summary is best-effort
-  }
-}
+import { generateTreatmentSummary } from '../../lib/treatmentPlan'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../../firebase'
 
 export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved }) {
   const isNote = type === 'note'
@@ -68,6 +21,7 @@ export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved 
   const [interpreting, setInterpreting] = useState(false)
   const [interpretError, setInterpretError] = useState(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [extractedRole, setExtractedRole] = useState('')
   const [saving, setSaving] = useState(false)
   const [fileObj, setFileObj] = useState(null)
   const fileInputRef = useRef(null)
@@ -83,6 +37,8 @@ export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved 
     setExtractedText('')
     setFallbackText('')
     setShowRaw(false)
+    setExtractedRole('')
+    setDate(todayStr())
 
     const text = await extractTextFromPdf(file)
     if (!text) {
@@ -102,8 +58,10 @@ export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved 
       const systemContext = isNote
         ? `You are helping a family understand their father's clinical notes from his hospital care team.
 
-First, look for the author or provider name in the note — check for labels like "Attending:", "Provider:", "Author:", "Signed by:", "Dictated by:", or a signature block. If you find a name, output it on the very first line in exactly this format:
-AUTHOR: <name>
+First, extract the following metadata from the note and output each on its own line at the very top:
+AUTHOR: <provider name from signature, "Attending:", "Provider:", "Signed by:", or "Dictated by:" — if not found, omit this line>
+ROLE: <their role or specialty in 3-5 words max, e.g., Attending Nephrologist, Resident, Oncologist — if not found, omit this line>
+DATE: <service or note date in YYYY-MM-DD format — look for "Service date:", "Signed", or a date in the header — if not found, omit this line>
 
 Then on a new line, translate the note into plain English. Focus on: what the doctor observed or assessed, any key decisions made, current treatment status, and what to expect next. Write 3-5 clear bullet points, each starting with a dash (-). No markdown headers, no bold text, no medical jargon.`
         : `You are helping a family understand medical test results for their father. Extract and explain the key findings from this report in plain English. Flag anything outside normal range and explain what it means clinically. Write 3-5 clear bullet points, each starting with a dash (-). No markdown headers, no bold text, no medical jargon.`
@@ -113,13 +71,23 @@ Then on a new line, translate the note into plain English. Focus on: what the do
       })
       if (isNote) {
         const lines = data.content.split('\n')
-        if (lines[0].startsWith('AUTHOR:')) {
-          const extracted = lines[0].replace('AUTHOR:', '').trim()
-          if (extracted) setAuthor(extracted)
-          setInterpretation(lines.slice(1).join('\n').trimStart())
-        } else {
-          setInterpretation(data.content)
+        let rest = lines
+        const metaKeys = ['AUTHOR:', 'ROLE:', 'DATE:']
+        while (rest.length > 0 && metaKeys.some(k => rest[0]?.startsWith(k))) {
+          const line = rest[0]
+          if (line.startsWith('AUTHOR:')) {
+            const val = line.replace('AUTHOR:', '').trim()
+            if (val) setAuthor(val)
+          } else if (line.startsWith('ROLE:')) {
+            const val = line.replace('ROLE:', '').trim()
+            if (val) setExtractedRole(val)
+          } else if (line.startsWith('DATE:')) {
+            const val = line.replace('DATE:', '').trim()
+            if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) setDate(val)
+          }
+          rest = rest.slice(1)
         }
+        setInterpretation(rest.join('\n').trimStart())
       } else {
         setInterpretation(data.content)
       }
@@ -147,6 +115,14 @@ Then on a new line, translate the note into plain English. Focus on: what the do
       let savedEntry
       if (isNote) {
         savedEntry = await addDoctorNote(stayId, { ...base, author: author.trim(), noteType })
+        const trimmedAuthor = author.trim()
+        if (trimmedAuthor) {
+          const existing = stay?.stayTeam || []
+          const alreadyAdded = existing.some(m => m.name.toLowerCase() === trimmedAuthor.toLowerCase())
+          if (!alreadyAdded) {
+            addStayTeamMember(stayId, { name: trimmedAuthor, role: extractedRole })
+          }
+        }
       } else {
         savedEntry = await addTestResult(stayId, { ...base, testName: testName.trim() })
       }
