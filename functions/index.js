@@ -131,3 +131,5 @@ exports.checkMedSupply = onSchedule(
     );
   }
 );
+
+exports.syncBswData = require("./bswSync").syncBswData;

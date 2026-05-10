@@ -997,6 +997,8 @@ export default function HospitalView({ stays, activeStay }) {
   const isMobile = useIsMobile()
   const [notesCollapsed, setNotesCollapsed] = useState(true)
   const [resultsCollapsed, setResultsCollapsed] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
 
   // Clear loading state once Firestore delivers the new or cleared treatment summary
   useEffect(() => {
@@ -1070,6 +1072,27 @@ Use flag values: "N"=normal, "H"=high, "L"=low, "C"=critical. Only numeric value
       // Silent fail
     } finally {
       setReprocessing(false)
+    }
+  }
+
+  async function handleBswSync() {
+    if (!activeStay || syncing) return
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const fn = httpsCallable(functions, 'syncBswData', { timeout: 570000 })
+      const { data } = await fn({ stayId: activeStay.id })
+      setSyncResult(data)
+      if (data.notesAdded > 0 || data.resultsAdded > 0) {
+        setRegenerating(true)
+        runPlanGeneration(activeStay.id, activeStay.doctorNotes || [], activeStay.testResults || [])
+          .catch(() => {})
+          .finally(() => setRegenerating(false))
+      }
+    } catch (err) {
+      setSyncResult({ error: err.message || 'Sync failed' })
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -1172,6 +1195,26 @@ Use flag values: "N"=normal, "H"=high, "L"=low, "C"=critical. Only numeric value
         {/* Col 3 — docs: notes + results */}
         {activeStay && (
           <div className="hospital-docs-col">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <button
+                className="daily-log-add-med-btn"
+                onClick={handleBswSync}
+                disabled={syncing}
+                style={{ fontSize: 12 }}
+              >
+                {syncing ? 'Syncing from BSW…' : 'Sync from BSW'}
+              </button>
+              {syncResult && !syncing && (
+                <span style={{ fontSize: 12, color: syncResult.error ? 'var(--error)' : 'var(--text-secondary)' }}>
+                  {syncResult.error
+                    ? `Sync failed: ${syncResult.error}`
+                    : syncResult.notesAdded === 0 && syncResult.resultsAdded === 0
+                      ? 'Already up to date'
+                      : `Added ${syncResult.notesAdded} note${syncResult.notesAdded !== 1 ? 's' : ''}, ${syncResult.resultsAdded} result${syncResult.resultsAdded !== 1 ? 's' : ''}`
+                  }
+                </span>
+              )}
+            </div>
             <div className="doc-section">
               <div className="doc-section-header">
                 <button
