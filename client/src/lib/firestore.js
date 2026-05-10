@@ -536,6 +536,82 @@ export async function removeStayMed(stayId, medObj) {
   })
 }
 
+export async function saveTreatmentSummary(stayId, problems) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    treatmentSummary: { problems, updatedAt: new Date().toISOString() },
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function clearTreatmentSummary(stayId) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    treatmentSummary: deleteField(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addDoctorNote(stayId, noteData) {
+  const entry = { ...noteData, id: noteData.id || newId(), uploadedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    doctorNotes: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteDoctorNote(stayId, noteObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    doctorNotes: arrayRemove(noteObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addTestResult(stayId, resultData) {
+  const entry = { ...resultData, id: resultData.id || newId(), uploadedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    testResults: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteTestResult(stayId, resultObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    testResults: arrayRemove(resultObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function addStayTeamMember(stayId, memberData) {
+  const entry = { ...memberData, id: memberData.id || newId(), addedAt: new Date().toISOString() }
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    stayTeam: arrayUnion(entry),
+    updatedAt: new Date().toISOString(),
+  })
+  return entry
+}
+
+export async function deleteStayTeamMember(stayId, memberObj) {
+  await updateDoc(doc(db, 'hospitalStays', stayId), {
+    stayTeam: arrayRemove(memberObj),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export async function updateStayMed(stayId, oldMed, updates) {
+  const ref = doc(db, 'hospitalStays', stayId)
+  const updated = { ...oldMed, ...updates }
+  await updateDoc(ref, { stayMeds: arrayRemove(oldMed), updatedAt: new Date().toISOString() })
+  await updateDoc(ref, { stayMeds: arrayUnion(updated), updatedAt: new Date().toISOString() })
+}
+
+export async function updateStayTeamMember(stayId, oldMember, updates) {
+  const ref = doc(db, 'hospitalStays', stayId)
+  const updated = { ...oldMember, ...updates }
+  await updateDoc(ref, { stayTeam: arrayRemove(oldMember), updatedAt: new Date().toISOString() })
+  await updateDoc(ref, { stayTeam: arrayUnion(updated), updatedAt: new Date().toISOString() })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

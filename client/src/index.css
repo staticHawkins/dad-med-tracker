@@ -2296,6 +2296,41 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .hospital-overview-key{font-size:12px;opacity:.5;flex-shrink:0}
 .hospital-overview-rowval{font-size:12px;font-weight:500;text-align:right}
 .hospital-page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:0}
+.stay-team-section{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px}
+.stay-team-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.stay-team-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.4}
+.stay-team-empty{font-size:12px;opacity:.35;font-style:italic}
+.stay-team-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border)}
+.stay-team-member-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stay-team-member-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stay-team-member-role{font-size:11px;opacity:.5}
+.stay-team-delete{flex-shrink:0;background:none;border:none;cursor:pointer;opacity:.35;font-size:11px;padding:2px 4px;transition:opacity .15s}
+.stay-team-delete:hover{opacity:.7}
+.stay-team-add-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.stay-team-add-form input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box;font-family:var(--ff)}
+.stay-team-add-actions{display:flex;gap:8px;margin-top:2px}
+.stay-team-add-actions .btn-add{font-size:12px;padding:5px 12px}
+.bulk-dropzone{width:100%;border:2px dashed var(--border);border-radius:12px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;color:var(--text);transition:border-color .15s}
+.bulk-dropzone:hover{border-color:var(--accent)}
+.bulk-dropzone-icon{font-size:28px;opacity:.4}
+.bulk-dropzone-label{font-size:15px;font-weight:600}
+.bulk-dropzone-hint{font-size:12px;opacity:.45}
+.bulk-file-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:4px}
+.bulk-file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.bulk-file-row:last-child{border-bottom:none}
+.bulk-file-row--done{opacity:.6}
+.bulk-file-row--error{background:rgba(255,80,80,.06)}
+.bulk-file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bulk-file-status-label{font-size:11px;opacity:.5;flex-shrink:0}
+.bulk-file-remove{background:none;border:none;cursor:pointer;opacity:.35;font-size:11px;padding:2px 4px;flex-shrink:0}
+.bulk-file-remove:hover{opacity:.7}
+.bulk-status{font-size:14px;flex-shrink:0;width:16px;text-align:center}
+.bulk-status--pending{opacity:.3}
+.bulk-status--processing{opacity:.7;color:var(--accent)}
+.bulk-status--done{color:#22c55e}
+.bulk-status--error{color:#ef4444}
+.bulk-add-more{background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);padding:6px 0;text-align:left}
+.bulk-done-msg{font-size:13px;padding:12px 14px;background:var(--surface2);border-radius:10px;margin-top:12px;opacity:.8}
 
 .hospital-no-active{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 0;text-align:center}
 .hospital-no-active-icon{font-size:48px;opacity:.5}
@@ -2382,8 +2417,11 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .stay-med-header:hover .stay-med-name{opacity:.75}
 .stay-med-expand{display:flex;align-items:center;flex:1;gap:8px;background:none;border:none;cursor:pointer;padding:10px 0;text-align:left}
 .stay-med-name{font-size:13px;font-weight:600;transition:opacity .15s}
+.stay-med-brand{font-weight:400;opacity:.55}
 .stay-med-meta{font-size:11px;opacity:.5;margin-top:1px}
-.stay-med-count{font-size:11px;opacity:.4;white-space:nowrap;flex-shrink:0}
+.stay-med-count{font-size:11px;opacity:.4;white-space:nowrap;flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;transition:opacity .15s,background .15s;font-family:var(--ff)}
+.stay-med-count:hover{opacity:.7;background:var(--panel2)}
+.stay-med-count--open{opacity:.8;background:var(--panel2)}
 .stay-med-delete-btn{background:none;border:none;cursor:pointer;font-size:11px;opacity:.25;padding:4px 6px;flex-shrink:0;line-height:1}
 .stay-med-delete-btn:hover{opacity:.8;color:var(--red,#D85A30)}
 .stay-med-logs{display:flex;flex-direction:column;gap:3px;padding:2px 0 10px 12px;border-left:2px solid var(--border);margin-left:4px}
@@ -2392,6 +2430,51 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .stay-med-log-delete:hover{opacity:.8;color:var(--red,#D85A30)}
 .stay-med-empty{font-size:12px;opacity:.4;font-style:italic}
 .stay-med-add-form{margin-bottom:12px;padding:12px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+
+/* Treatment Plan card */
+.treatment-plan-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:20px}
+.treatment-plan-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;width:100%;background:transparent;border:none;cursor:pointer;text-align:left}
+.treatment-plan-header:hover{background:var(--panel2)}
+.treatment-plan-header-left{display:flex;align-items:center;gap:8px;min-width:0}
+.treatment-plan-icon{font-size:14px;opacity:.7;flex-shrink:0}
+.treatment-plan-title{font-size:12px;font-weight:700;letter-spacing:.3px}
+.treatment-plan-updated{font-size:11px;opacity:.4;font-style:italic;white-space:nowrap}
+.treatment-plan-updating{color:var(--accent,#5C8CFF);opacity:.7;font-style:normal}
+.treatment-plan-regen{font-size:11px;font-weight:600;color:var(--accent,#5C8CFF);opacity:.8;cursor:pointer;flex-shrink:0}
+.treatment-plan-regen:hover{opacity:1}
+.treatment-plan-body{border-top:1px solid var(--border)}
+.treatment-plan-sections{display:flex;flex-direction:column}
+.treatment-plan-section{padding:12px 16px;border-bottom:1px solid var(--border2,var(--border))}
+.treatment-plan-section:last-child{border-bottom:none}
+.treatment-plan-section-label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;opacity:.4;margin-bottom:5px}
+.treatment-plan-section-text{font-size:13px;color:var(--text2);line-height:1.65}
+.treatment-plan-empty{padding:14px 16px;font-size:12px;opacity:.4;font-style:italic}
+.treatment-plan-loading{padding:14px 16px;font-size:13px;color:var(--text3)}
+
+/* Doctor Notes & Test Results sections */
+.doc-section{margin-top:24px}
+.doc-section-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.doc-section-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.45}
+.doc-section-empty{font-size:12px;opacity:.35;font-style:italic;padding:8px 0}
+.doc-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
+.doc-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 14px}
+.doc-card-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.doc-card-date{font-size:11px;opacity:.45;font-weight:500}
+.doc-card-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-card-pdf-link{font-size:11px;font-weight:600;color:var(--accent,#5C8CFF);opacity:.8;text-decoration:none;flex-shrink:0}
+.doc-card-pdf-link:hover{opacity:1}
+.doc-card-body{padding:0 14px 12px;border-top:1px solid var(--border2,var(--border))}
+.doc-card-interpretation{font-size:13px;color:var(--text2);line-height:1.6;padding-top:10px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.doc-card-interpretation--expanded{display:block;overflow:visible;-webkit-line-clamp:unset}
+.doc-card-no-interpretation{font-size:12px;opacity:.4;font-style:italic;padding-top:10px}
+.doc-card-actions{display:flex;gap:12px;padding-top:8px}
+.doc-card-toggle{background:none;border:none;cursor:pointer;font-size:12px;color:var(--accent,#5C8CFF);padding:0;opacity:.8}
+.doc-card-toggle:hover{opacity:1}
+.doc-raw-text{margin-top:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.5;white-space:pre-wrap;max-height:240px;overflow-y:auto;font-family:monospace}
+.doc-upload-btn{display:flex;align-items:center;gap:6px;width:100%;padding:10px 12px;background:var(--panel2);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);text-align:left;transition:border-color .15s}
+.doc-upload-btn:hover{border-color:var(--accent,#5C8CFF);color:var(--text)}
+.doc-upload-btn--loaded{border-style:solid;border-color:var(--accent,#5C8CFF);color:var(--text)}
+.doc-upload-change{font-size:11px;opacity:.5;margin-left:4px}
 
 /* Med picker in DailyLogModal */
 .med-picker{display:flex;flex-direction:column;margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden}

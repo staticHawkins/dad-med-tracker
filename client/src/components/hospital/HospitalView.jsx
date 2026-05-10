@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { todayStr } from '../../lib/medUtils'
-import { addStayMed, removeStayMed, deleteHospitalMedLog, bulkAddStayMeds } from '../../lib/firestore'
+import { addStayMed, removeStayMed, updateStayMed, deleteHospitalMedLog, bulkAddStayMeds, deleteDoctorNote, deleteTestResult, clearTreatmentSummary, addStayTeamMember, deleteStayTeamMember, updateStayTeamMember } from '../../lib/firestore'
+import { generateTreatmentSummary } from '../../lib/treatmentPlan'
+import { deleteStayDocument } from '../../lib/storageUtils'
 import { fetchDrugSuggestions } from '../../lib/fdaUtils'
 import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
+import AddDocumentModal from './AddDocumentModal'
+import BulkUploadModal from './BulkUploadModal'
 import PersonChip from '../PersonChip'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
@@ -61,6 +65,312 @@ function getDaySlots(admissionDate) {
     slots.push(d.toISOString().slice(0, 10))
   }
   return slots
+}
+
+function DocCard({ doc, isNote, stayId, onAfterDelete }) {
+  const [expanded, setExpanded] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm(`Delete this ${isNote ? 'note' : 'result'}?`)) return
+    setDeleting(true)
+    try {
+      if (doc.storagePath) {
+        try { await deleteStayDocument(doc.storagePath) } catch {}
+      }
+      if (isNote) {
+        await deleteDoctorNote(stayId, doc)
+      } else {
+        await deleteTestResult(stayId, doc)
+      }
+      onAfterDelete?.(doc, isNote)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const title = isNote
+    ? [doc.noteType, doc.author].filter(Boolean).join(' · ')
+    : doc.testName || 'Test Result'
+
+  return (
+    <div className="doc-card">
+      <div className="doc-card-header">
+        <div className="doc-card-meta">
+          <span className="doc-card-date">{fmtDate(doc.date)}</span>
+          {title && <span className="doc-card-title">{title}</span>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {doc.pdfUrl && (
+            <a
+              href={doc.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="doc-card-pdf-link"
+              onClick={e => e.stopPropagation()}
+            >
+              PDF
+            </a>
+          )}
+          <button
+            className="stay-med-delete-btn"
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-label="Delete"
+          >
+            {deleting ? '…' : '✕'}
+          </button>
+        </div>
+      </div>
+
+      {doc.interpretation && (
+        <div className="doc-card-body">
+          <div
+            className={`doc-card-interpretation${expanded ? ' doc-card-interpretation--expanded' : ''}`}
+            style={{ whiteSpace: 'pre-wrap' }}
+          >
+            {doc.interpretation}
+          </div>
+          <div className="doc-card-actions">
+            {doc.interpretation.length > 200 && (
+              <button className="doc-card-toggle" onClick={() => setExpanded(v => !v)}>
+                {expanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+            {doc.extractedText && (
+              <button className="doc-card-toggle" onClick={() => setShowRaw(v => !v)}>
+                {showRaw ? 'Hide raw text' : 'View raw text'}
+              </button>
+            )}
+          </div>
+          {showRaw && doc.extractedText && (
+            <div className="doc-raw-text">{doc.extractedText}</div>
+          )}
+        </div>
+      )}
+
+      {!doc.interpretation && doc.extractedText && (
+        <div className="doc-card-body">
+          <div className="doc-card-no-interpretation">No interpretation — raw text only</div>
+          <button className="doc-card-toggle" onClick={() => setShowRaw(v => !v)}>
+            {showRaw ? 'Hide raw text' : 'View raw text'}
+          </button>
+          {showRaw && <div className="doc-raw-text">{doc.extractedText}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StayTeamSection({ stay }) {
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [role, setRole] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [editingMemberId, setEditingMemberId] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const team = stay.stayTeam || []
+
+  async function handleAdd() {
+    if (!name.trim()) return
+    setSaving(true)
+    try {
+      await addStayTeamMember(stay.id, { name: name.trim(), role: role.trim() })
+      setName('')
+      setRole('')
+      setAdding(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function startEdit(member) {
+    setEditingMemberId(member.id)
+    setEditName(member.name)
+    setEditRole(member.role || '')
+    setAdding(false)
+  }
+
+  function cancelEdit() {
+    setEditingMemberId(null)
+  }
+
+  async function handleSaveEdit(member) {
+    if (!editName.trim()) return
+    setEditSaving(true)
+    try {
+      await updateStayTeamMember(stay.id, member, { name: editName.trim(), role: editRole.trim() })
+      setEditingMemberId(null)
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  return (
+    <div className="stay-team-section">
+      <div className="stay-team-header">
+        <span className="stay-team-title">Care Team</span>
+        {!adding && (
+          <button className="daily-log-add-med-btn" onClick={() => { setAdding(true); setEditingMemberId(null) }}>+ Add</button>
+        )}
+      </div>
+      {team.length === 0 && !adding && (
+        <div className="stay-team-empty">No team members added yet.</div>
+      )}
+      {team.map(member => (
+        <div key={member.id} className="stay-team-member">
+          {editingMemberId === member.id ? (
+            <div className="stay-team-add-form" style={{ flex: 1 }}>
+              <input
+                type="text"
+                placeholder="Name (e.g., Dr. Huynh)"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                autoFocus
+              />
+              <input
+                type="text"
+                placeholder="Role (e.g., Attending Nephrologist)"
+                value={editRole}
+                onChange={e => setEditRole(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSaveEdit(member)}
+              />
+              <div className="stay-team-add-actions">
+                <button className="btn-add" onClick={() => handleSaveEdit(member)} disabled={!editName.trim() || editSaving}>
+                  {editSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button className="btn-ghost" onClick={cancelEdit}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div
+                className="stay-team-member-info"
+                style={{ flex: 1, cursor: 'pointer' }}
+                onClick={() => startEdit(member)}
+              >
+                <span className="stay-team-member-name">{member.name}</span>
+                {member.role && <span className="stay-team-member-role">{member.role}</span>}
+              </div>
+              <button
+                className="stay-team-delete"
+                onClick={() => deleteStayTeamMember(stay.id, member)}
+                aria-label={`Remove ${member.name}`}
+              >
+                ✕
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+      {adding && (
+        <div className="stay-team-add-form">
+          <input
+            type="text"
+            placeholder="Name (e.g., Dr. Huynh)"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+          />
+          <input
+            type="text"
+            placeholder="Role (e.g., Attending Nephrologist)"
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          />
+          <div className="stay-team-add-actions">
+            <button className="btn-add" onClick={handleAdd} disabled={!name.trim() || saving}>
+              {saving ? 'Adding…' : 'Add'}
+            </button>
+            <button className="btn-ghost" onClick={() => { setAdding(false); setName(''); setRole('') }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function legacyParseTreatmentSummary(content) {
+  const keys = ['CURRENT REGIMEN', 'RECENT DECISIONS', 'ACTIVE CONCERNS', 'NEXT STEPS']
+  const labels = { 'CURRENT REGIMEN': 'Current regimen', 'RECENT DECISIONS': 'Recent decisions', 'ACTIVE CONCERNS': 'Active concerns', 'NEXT STEPS': 'Next steps' }
+  return keys.flatMap((key, i) => {
+    const start = content.indexOf(key)
+    if (start === -1) return []
+    const textStart = start + key.length
+    const nextKey = keys.slice(i + 1).map(k => content.indexOf(k, textStart)).filter(p => p !== -1)
+    const end = nextKey.length > 0 ? Math.min(...nextKey) : content.length
+    const text = content.slice(textStart, end).replace(/^\n+/, '').trim()
+    return text ? [{ problem: labels[key], summary: text }] : []
+  })
+}
+
+function TreatmentSummaryCard({ stay, onRegenerate, regenerating }) {
+  const [open, setOpen] = useState(true)
+  const hasDocuments = (stay.doctorNotes?.length || 0) + (stay.testResults?.length || 0) > 0
+  const summary = stay.treatmentSummary
+
+  if (!hasDocuments) return null
+
+  const problems = summary?.problems
+    ?? (summary?.content ? legacyParseTreatmentSummary(summary.content) : null)
+
+  const lastUpdated = summary?.updatedAt
+    ? new Date(summary.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : null
+
+  return (
+    <div className="treatment-plan-card">
+      <button className="treatment-plan-header" onClick={() => setOpen(o => !o)}>
+        <div className="treatment-plan-header-left">
+          <span className="treatment-plan-icon">⊙</span>
+          <span className="treatment-plan-title">Treatment Plan</span>
+          {lastUpdated && !regenerating && (
+            <span className="treatment-plan-updated">Updated {lastUpdated}</span>
+          )}
+          {regenerating && (
+            <span className="treatment-plan-updated treatment-plan-updating">Updating…</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            className="treatment-plan-regen"
+            onClick={e => { e.stopPropagation(); onRegenerate() }}
+            style={{ pointerEvents: regenerating ? 'none' : 'auto', opacity: regenerating ? 0.4 : 1 }}
+          >
+            {regenerating ? 'Updating…' : summary ? 'Regenerate' : 'Generate'}
+          </span>
+          <span className={`daily-log-ai-chevron${open ? ' open' : ''}`}>›</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="treatment-plan-body">
+          {!summary && !regenerating && (
+            <div className="treatment-plan-empty">
+              No treatment plan yet. Click Generate to create one from the uploaded notes and results.
+            </div>
+          )}
+          {regenerating && (
+            <div className="treatment-plan-loading">Synthesizing treatment plan from uploaded documents…</div>
+          )}
+          {!regenerating && problems && (
+            <div className="treatment-plan-sections">
+              {problems.map(({ problem, summary: text }) => (
+                <div key={problem} className="treatment-plan-section">
+                  <div className="treatment-plan-section-label">{problem}</div>
+                  <div className="treatment-plan-section-text">{text}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function DaySlot({ dateStr, log, onClick, admissionDate }) {
@@ -141,12 +451,20 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
   const [expandedId, setExpandedId] = useState(null)
   const [addFormOpen, setAddFormOpen] = useState(false)
   const [addName, setAddName] = useState('')
+  const [addBrandName, setAddBrandName] = useState('')
   const [addDosage, setAddDosage] = useState('')
   const [addUnit, setAddUnit] = useState('mg')
   const [addPurpose, setAddPurpose] = useState('')
   const [saving, setSaving] = useState(false)
   const [bswConfirm, setBswConfirm] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [editingMedId, setEditingMedId] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editBrandName, setEditBrandName] = useState('')
+  const [editDosage, setEditDosage] = useState('')
+  const [editUnit, setEditUnit] = useState('mg')
+  const [editPurpose, setEditPurpose] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
   const nameInputRef = useRef(null)
 
   const existingNames = new Set(stayMeds.map(m => m.name.toLowerCase()))
@@ -232,6 +550,7 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
 
   function handleAddSuggestionSelect(s) {
     setAddName(s.genericName)
+    if (s.brandName) setAddBrandName(s.brandName)
     clearTimeout(fdaDebounce.current)
     if (fdaAbort.current) fdaAbort.current.abort()
     setFdaOpen(false); setFdaSuggestions([]); setFdaHighlight(-1)
@@ -244,12 +563,14 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
     try {
       await addStayMed(stayId, {
         name: addName.trim(),
+        brandName: addBrandName.trim(),
         dosage: parseFloat(addDosage) || 0,
         unit: addUnit,
         purpose: addPurpose.trim(),
       })
       setAddFormOpen(false)
       setAddName('')
+      setAddBrandName('')
       setAddDosage('')
       setAddUnit('mg')
       setAddPurpose('')
@@ -265,6 +586,37 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
 
   async function handleDeleteLog(log) {
     await deleteHospitalMedLog(stayId, log)
+  }
+
+  function startEditMed(med) {
+    setEditingMedId(med.id)
+    setEditName(med.name)
+    setEditBrandName(med.brandName || '')
+    setEditDosage(String(med.dosage ?? ''))
+    setEditUnit(med.unit || 'mg')
+    setEditPurpose(med.purpose || '')
+    setAddFormOpen(false)
+  }
+
+  function cancelEditMed() {
+    setEditingMedId(null)
+  }
+
+  async function handleSaveEditMed(med) {
+    if (!editName.trim()) return
+    setEditSaving(true)
+    try {
+      await updateStayMed(stayId, med, {
+        name: editName.trim(),
+        brandName: editBrandName.trim(),
+        dosage: parseFloat(editDosage) || 0,
+        unit: editUnit,
+        purpose: editPurpose.trim(),
+      })
+      setEditingMedId(null)
+    } finally {
+      setEditSaving(false)
+    }
   }
 
   const adHocLogs = medLogs.filter(l => !l.stayMedId)
@@ -290,7 +642,7 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
       {bswConfirm && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '8px 10px', background: 'var(--surface-raised)', borderRadius: 8, fontSize: 13 }}>
           <span style={{ flex: 1, color: 'var(--text-secondary)' }}>Add {bswToAdd.length} medications from BSW?</span>
-          <button className="btn-primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleBswImport} disabled={importing}>
+          <button className="btn-add" style={{ fontSize: 12, padding: '4px 10px' }} onClick={handleBswImport} disabled={importing}>
             {importing ? 'Adding…' : 'Add all'}
           </button>
           <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setBswConfirm(false)} disabled={importing}>
@@ -329,6 +681,12 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
               </ul>
             )}
           </div>
+          <input
+            className="daily-log-med-input"
+            placeholder="Brand name (optional)"
+            value={addBrandName}
+            onChange={e => setAddBrandName(e.target.value)}
+          />
           <div className="med-form-dose-row">
             <input
               type="number"
@@ -355,7 +713,7 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
             onChange={e => setAddPurpose(e.target.value)}
           />
           <div className="daily-log-med-form-actions">
-            <button type="submit" className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} disabled={!addName.trim() || saving}>
+            <button type="submit" className="btn-add" style={{ fontSize: 12, padding: '5px 12px' }} disabled={!addName.trim() || saving}>
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button type="button" className="btn-ghost" style={{ fontSize: 12 }} onClick={() => setAddFormOpen(false)}>
@@ -374,39 +732,97 @@ function StayMedsContent({ stayMeds = [], medLogs = [], stayId }) {
           const logs = medLogs
             .filter(l => l.stayMedId === med.id)
             .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-          const isExpanded = expandedId === med.id
+          const isEditing = editingMedId === med.id
 
           return (
             <div key={med.id} className="stay-med-item">
-              <div className="stay-med-header">
-                <button
-                  className="stay-med-expand"
-                  onClick={() => setExpandedId(isExpanded ? null : med.id)}
-                >
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div className="stay-med-name">{med.name}</div>
-                    <div className="stay-med-meta">
-                      {med.dosage} {med.unit}{med.purpose ? ` · ${med.purpose}` : ''}
-                    </div>
+              {isEditing ? (
+                <form className="stay-med-add-form" onSubmit={e => { e.preventDefault(); handleSaveEditMed(med) }}>
+                  <input
+                    className="daily-log-med-input"
+                    placeholder="Medication name"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  <input
+                    className="daily-log-med-input"
+                    placeholder="Brand name (optional)"
+                    value={editBrandName}
+                    onChange={e => setEditBrandName(e.target.value)}
+                  />
+                  <div className="med-form-dose-row">
+                    <input
+                      type="number"
+                      className="daily-log-med-input"
+                      placeholder="Dosage"
+                      min="0"
+                      step="any"
+                      value={editDosage}
+                      onChange={e => setEditDosage(e.target.value)}
+                      style={{ width: 80, flex: 'none' }}
+                    />
+                    <select
+                      className="med-unit-select"
+                      value={editUnit}
+                      onChange={e => setEditUnit(e.target.value)}
+                    >
+                      {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
                   </div>
-                  <span className="stay-med-count">{logs.length} dose{logs.length !== 1 ? 's' : ''}</span>
-                  <span className={`past-stay-chevron${isExpanded ? ' open' : ''}`} style={{ fontSize: 14, marginLeft: 6 }}>›</span>
-                </button>
-                <button className="stay-med-delete-btn" onClick={() => handleDeleteMed(med)} aria-label="Remove medication">✕</button>
-              </div>
-              {isExpanded && (
-                <div className="stay-med-logs">
-                  {logs.length === 0 ? (
-                    <div className="stay-med-empty">No doses logged yet.</div>
-                  ) : (
-                    logs.map(l => (
-                      <div key={l.id} className="stay-med-log-entry">
-                        <span>{fmtDate(l.date)} · {fmtTime(l.timestamp)}</span>
-                        <button className="stay-med-log-delete" onClick={() => handleDeleteLog(l)} aria-label="Remove dose">✕</button>
+                  <input
+                    className="daily-log-med-input"
+                    placeholder="For (optional)"
+                    value={editPurpose}
+                    onChange={e => setEditPurpose(e.target.value)}
+                  />
+                  <div className="daily-log-med-form-actions">
+                    <button type="submit" className="btn-add" style={{ fontSize: 12, padding: '5px 12px' }} disabled={!editName.trim() || editSaving}>
+                      {editSaving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button type="button" className="btn-ghost" style={{ fontSize: 12 }} onClick={cancelEditMed}>Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="stay-med-header" style={{ cursor: 'pointer' }} onClick={() => startEditMed(med)}>
+                    <div style={{ flex: 1 }}>
+                      <div className="stay-med-name">
+                        {med.name}
+                        {med.brandName && <span className="stay-med-brand"> ({med.brandName})</span>}
                       </div>
-                    ))
+                      <div className="stay-med-meta">
+                        {med.dosage} {med.unit}{med.purpose ? ` · ${med.purpose}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      className={`stay-med-count${expandedId === med.id ? ' stay-med-count--open' : ''}`}
+                      onClick={e => { e.stopPropagation(); setExpandedId(expandedId === med.id ? null : med.id) }}
+                    >
+                      {logs.length} dose{logs.length !== 1 ? 's' : ''}
+                    </button>
+                    <button
+                      className="stay-med-delete-btn"
+                      onClick={e => { e.stopPropagation(); handleDeleteMed(med) }}
+                      aria-label="Remove medication"
+                    >✕</button>
+                  </div>
+                  {expandedId === med.id && (
+                    <div className="stay-med-logs">
+                      {logs.length === 0 ? (
+                        <div className="stay-med-empty">No doses logged yet.</div>
+                      ) : (
+                        logs.map(l => (
+                          <div key={l.id} className="stay-med-log-entry">
+                            <span>{fmtDate(l.date)} · {fmtTime(l.timestamp)}</span>
+                            <button className="stay-med-log-delete" onClick={() => handleDeleteLog(l)} aria-label="Remove dose">✕</button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           )
@@ -523,10 +939,52 @@ export default function HospitalView({ stays, activeStay }) {
   const [logModalOpen, setLogModalOpen] = useState(false)
   const [editingLog, setEditingLog] = useState(null)
   const [editingDate, setEditingDate] = useState(null)
+  const [docModalType, setDocModalType] = useState(null)
+  const [bulkModalType, setBulkModalType] = useState(null)
+  const [regenerating, setRegenerating] = useState(false)
+
+  // Clear loading state once Firestore delivers the new or cleared treatment summary
+  useEffect(() => {
+    setRegenerating(false)
+  }, [activeStay?.treatmentSummary?.updatedAt])
 
   const pastStays = stays.filter(s => !!s.dischargeDate)
   const medLogs = activeStay?.medLogs || []
   const stayMeds = activeStay?.stayMeds || []
+  const doctorNotes = [...(activeStay?.doctorNotes || [])].sort((a, b) => b.date.localeCompare(a.date))
+  const testResults = [...(activeStay?.testResults || [])].sort((a, b) => b.date.localeCompare(a.date))
+
+  async function runPlanGeneration(stayId, allNotes, allResults) {
+    if (allNotes.length === 0 && allResults.length === 0) {
+      await clearTreatmentSummary(stayId)
+      return
+    }
+    await generateTreatmentSummary(stayId, allNotes, allResults)
+  }
+
+  async function handleRegeneratePlan() {
+    if (!activeStay || regenerating) return
+    setRegenerating(true)
+    try {
+      await runPlanGeneration(activeStay.id, activeStay.doctorNotes || [], activeStay.testResults || [])
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  function handleAfterDelete(deletedDoc, isNote) {
+    if (!activeStay) return
+    const remainingNotes = isNote
+      ? (activeStay.doctorNotes || []).filter(n => n.id !== deletedDoc.id)
+      : (activeStay.doctorNotes || [])
+    const remainingResults = !isNote
+      ? (activeStay.testResults || []).filter(r => r.id !== deletedDoc.id)
+      : (activeStay.testResults || [])
+    setRegenerating(true)
+    runPlanGeneration(activeStay.id, remainingNotes, remainingResults).catch(() => {}).finally(() => setRegenerating(false))
+  }
 
   function openEditStay() {
     setEditingStay(activeStay)
@@ -569,7 +1027,53 @@ export default function HospitalView({ stays, activeStay }) {
           )}
 
           {activeStay && (
+            <TreatmentSummaryCard
+              stay={activeStay}
+              onRegenerate={handleRegeneratePlan}
+              regenerating={regenerating}
+            />
+          )}
+
+          {activeStay && (
             <MobileMedSection stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
+          )}
+
+          {activeStay && (
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Doctor Notes</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('note')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('note')}>+ Add</button>
+                </div>
+              </div>
+              {doctorNotes.length === 0 ? (
+                <div className="doc-section-empty">No notes uploaded yet.</div>
+              ) : (
+                doctorNotes.map(n => (
+                  <DocCard key={n.id} doc={n} isNote stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                ))
+              )}
+            </div>
+          )}
+
+          {activeStay && (
+            <div className="doc-section">
+              <div className="doc-section-header">
+                <span className="doc-section-title">Test Results</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="daily-log-add-med-btn" onClick={() => setBulkModalType('result')}>+ Bulk</button>
+                  <button className="daily-log-add-med-btn" onClick={() => setDocModalType('result')}>+ Add</button>
+                </div>
+              </div>
+              {testResults.length === 0 ? (
+                <div className="doc-section-empty">No results uploaded yet.</div>
+              ) : (
+                testResults.map(r => (
+                  <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                ))
+              )}
+            </div>
           )}
         </div>
 
@@ -603,6 +1107,10 @@ export default function HospitalView({ stays, activeStay }) {
           )}
 
           {activeStay && (
+            <StayTeamSection stay={activeStay} />
+          )}
+
+          {activeStay && (
             <StayMedsSidebar stayMeds={stayMeds} medLogs={medLogs} stayId={activeStay.id} />
           )}
 
@@ -632,6 +1140,26 @@ export default function HospitalView({ stays, activeStay }) {
           onClose={closeLogModal}
           medLogs={medLogs}
           stayMeds={stayMeds}
+        />
+      )}
+
+      {docModalType && activeStay && (
+        <AddDocumentModal
+          stayId={activeStay.id}
+          stay={activeStay}
+          type={docModalType}
+          onClose={() => setDocModalType(null)}
+          onSaved={() => setRegenerating(true)}
+        />
+      )}
+
+      {bulkModalType && activeStay && (
+        <BulkUploadModal
+          stayId={activeStay.id}
+          stay={activeStay}
+          type={bulkModalType}
+          onClose={() => setBulkModalType(null)}
+          onSaved={() => setRegenerating(true)}
         />
       )}
     </div>

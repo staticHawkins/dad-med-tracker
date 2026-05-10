@@ -31,7 +31,7 @@ function buildSuggestions(meds, apts) {
   return suggestions.slice(0, 3)
 }
 
-function buildSystemContext(meds, apts, tasks, careTeam) {
+function buildSystemContext(meds, apts, tasks, careTeam, activeStay) {
   const dateStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
@@ -77,6 +77,41 @@ function buildSystemContext(meds, apts, tasks, careTeam) {
     return `- ${d.name}${spec}${aff}`
   }).join('\n')
 
+  let stayDocsSection = ''
+  if (activeStay) {
+    const notes = activeStay.doctorNotes || []
+    const results = activeStay.testResults || []
+    if (notes.length > 0 || results.length > 0) {
+      const notesText = notes.length === 0 ? '' : notes
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map(n => {
+          const title = [n.noteType, n.author].filter(Boolean).join(' · ')
+          const header = `[${n.date}] ${title}`
+          const interp = n.interpretation ? `Interpretation: ${n.interpretation}` : ''
+          const raw = n.extractedText ? `Full text:\n${n.extractedText.slice(0, 5000)}` : ''
+          return [header, interp, raw].filter(Boolean).join('\n')
+        })
+        .join('\n\n---\n\n')
+
+      const resultsText = results.length === 0 ? '' : results
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map(r => {
+          const header = `[${r.date}] ${r.testName || 'Test Result'}`
+          const interp = r.interpretation ? `Interpretation: ${r.interpretation}` : ''
+          const raw = r.extractedText ? `Full text:\n${r.extractedText.slice(0, 5000)}` : ''
+          return [header, interp, raw].filter(Boolean).join('\n')
+        })
+        .join('\n\n---\n\n')
+
+      const parts = []
+      if (notesText) parts.push(`DOCTOR NOTES (${notes.length}):\n${notesText}`)
+      if (resultsText) parts.push(`TEST RESULTS (${results.length}):\n${resultsText}`)
+      stayDocsSection = '\n\n' + parts.join('\n\n')
+    }
+  }
+
   return `You are a helpful assistant for a family caring for their parents (Mom and Dad). Answer questions concisely and accurately based only on the data provided below. Each item is labeled [Mom] or [Dad]. Today is ${dateStr}.
 
 MEDICATIONS (${meds.length} total):
@@ -89,7 +124,7 @@ OPEN TASKS (${openTasks.length}):
 ${tasksSection}
 
 CARE TEAM (${careTeam.length}):
-${careSection}
+${careSection}${stayDocsSection}
 
 Keep responses focused and practical. Do NOT use markdown — no **, __, ##, *, or bullet dashes. Write in plain sentences and short paragraphs only. For urgent items wrap the key sentence with [urgent]...[/urgent]. For informational highlights use [info]...[/info].`
 }
@@ -159,7 +194,7 @@ function renderAiContent(text) {
   return parts
 }
 
-export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam }) {
+export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam, activeStay }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -169,6 +204,7 @@ export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam 
 
   const upcomingCount = apts.filter(a => aptStatus(a) !== 'past').length
   const activeTaskCount = tasks.filter(t => getTaskStatus(t) !== 'done').length
+  const docCount = (activeStay?.doctorNotes?.length || 0) + (activeStay?.testResults?.length || 0)
 
   useEffect(() => {
     if (open) {
@@ -200,7 +236,7 @@ export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam 
       const fn = httpsCallable(functions, 'askClaude')
       const { data } = await fn({
         messages: next,
-        systemContext: buildSystemContext(meds, apts, tasks, careTeam)
+        systemContext: buildSystemContext(meds, apts, tasks, careTeam, activeStay)
       })
       setMessages(m => [...m, { role: 'assistant', content: data.content }])
     } catch (e) {
@@ -241,6 +277,9 @@ export default function AskAiSheet({ open, onClose, meds, apts, tasks, careTeam 
           <span className="ai-ctx-chip">• {upcomingCount} appt{upcomingCount !== 1 ? 's' : ''}</span>
           <span className="ai-ctx-chip">• {activeTaskCount} task{activeTaskCount !== 1 ? 's' : ''}</span>
           <span className="ai-ctx-chip">• {careTeam.length} doctor{careTeam.length !== 1 ? 's' : ''}</span>
+          {docCount > 0 && (
+            <span className="ai-ctx-chip">• {docCount} doc{docCount !== 1 ? 's' : ''}</span>
+          )}
         </div>
 
         {isFirstMessage && suggestions.length > 0 && (

@@ -415,7 +415,7 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
             {addingMed && medPickerStep && (() => {
               const q = medSearch.trim().toLowerCase()
               const filtered = stayMeds
-                .filter(sm => !q || sm.name.toLowerCase().includes(q) || sm.purpose?.toLowerCase().includes(q))
+                .filter(sm => !q || sm.name.toLowerCase().includes(q) || sm.brandName?.toLowerCase().includes(q) || sm.purpose?.toLowerCase().includes(q))
                 .sort((a, b) => a.name.localeCompare(b.name))
               return (
                 <div className="med-picker">
@@ -434,7 +434,10 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                   <div style={{ overflowY: 'auto', maxHeight: 280, width: '100%', display: 'flex', flexDirection: 'column' }}>
                     {filtered.map(sm => (
                       <button key={sm.id} className="med-picker-row" onClick={() => selectStayMed(sm)}>
-                        <span className="med-picker-name">{sm.name}</span>
+                        <span className="med-picker-name">
+                          {sm.name}
+                          {sm.brandName && <span className="stay-med-brand"> ({sm.brandName})</span>}
+                        </span>
                         <span className="med-picker-dose">
                           {sm.dosage} {sm.unit}{sm.purpose ? ` · ${sm.purpose}` : ''}
                         </span>
@@ -526,7 +529,7 @@ export default function DailyLogModal({ stayId, log, date, onClose, medLogs = []
                 />
                 <div className="daily-log-med-form-actions">
                   <button
-                    className="btn-primary"
+                    className="btn-add"
                     style={{ fontSize: 13, padding: '6px 14px' }}
                     onClick={handleSaveMed}
                     disabled={!medName.trim() || savingMed}

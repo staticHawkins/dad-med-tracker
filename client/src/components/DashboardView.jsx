@@ -419,7 +419,7 @@ function FilesCard({ apts, onNavigate }) {
     .slice(0, 6)
 
   return (
-    <button className="dash-card dash-card-files" onClick={() => onNavigate('apts')} aria-label="Go to Appointments">
+    <button className="dash-card dash-card-files" onClick={() => onNavigate('apts')} aria-label="Go to Appointment Files">
       <div className="dash-card-header">
         <span className="dash-card-icon">📎</span>
         <span className="dash-card-title">Appointment Files</span>

@@ -255,6 +255,7 @@ export default function MainApp({ user }) {
         apts={apts}
         tasks={tasks}
         careTeam={careTeam}
+        activeStay={activeStay}
       />
     </>
   )
