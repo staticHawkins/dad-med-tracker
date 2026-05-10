@@ -60,7 +60,7 @@ export default function BulkUploadModal({ stayId, stay, type, onClose, onSaved }
 
     let date = todayStr()
     let author = '', role = '', noteType = NOTE_TYPES[0], testName = item.file.name.replace(/\.pdf$/i, '')
-    let interpretation = ''
+    let interpretation = '', labValues = []
 
     if (text) {
       const systemContext = isNote
@@ -75,18 +75,22 @@ TYPE: <note type from: Progress Note, Consult Note, Discharge Summary, H&P, Oper
 Then translate the note into plain English. Write 3-5 bullet points starting with a dash (-). No markdown headers, no bold, no medical jargon.`
         : `You are helping a family understand medical test results for their father.
 
-First, extract the following metadata and output each on its own line at the very top:
+First, output the following metadata on their own lines:
 TEST_NAME: <name of the test or report, e.g., CBC Panel, CT Chest — if not found, use the file title>
 DATE: <result date in YYYY-MM-DD format — if not found, omit>
+
+If this is a quantitative lab report (CBC, BMP, CMP, metabolic panel, liver function, renal function, lipid panel, thyroid, coagulation, urinalysis), also output exactly one line:
+LAB_VALUES: [{"name":"HGB","value":7.1,"unit":"g/dL","refLow":12,"refHigh":17,"flag":"L"},...]
+Use flag values: "N" = normal, "H" = high, "L" = low, "C" = critical. Only include numeric values with known reference ranges. If not a quantitative lab, omit this line entirely.
 
 Then explain the key findings in plain English. Write 3-5 bullet points starting with a dash (-). Flag anything outside normal range and explain what it means. No medical jargon.`
 
       const { data } = await fn({ messages: [{ role: 'user', content: text }], systemContext })
       const lines = data.content.split('\n')
       let rest = lines
-      const metaKeys = ['AUTHOR:', 'ROLE:', 'DATE:', 'TYPE:', 'TEST_NAME:']
-      while (rest.length > 0 && metaKeys.some(k => rest[0]?.startsWith(k))) {
-        const line = rest[0]
+      const metaKeys = ['AUTHOR:', 'ROLE:', 'DATE:', 'TYPE:', 'TEST_NAME:', 'LAB_VALUES:']
+      const contentLines = []
+      for (const line of lines) {
         if (line.startsWith('AUTHOR:')) author = line.replace('AUTHOR:', '').trim()
         else if (line.startsWith('ROLE:')) role = line.replace('ROLE:', '').trim()
         else if (line.startsWith('DATE:')) {
@@ -97,10 +101,13 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
           if (NOTE_TYPES.includes(val)) noteType = val
         } else if (line.startsWith('TEST_NAME:')) {
           testName = line.replace('TEST_NAME:', '').trim() || testName
+        } else if (line.startsWith('LAB_VALUES:')) {
+          try { labValues = JSON.parse(line.replace('LAB_VALUES:', '').trim()) } catch {}
+        } else if (!metaKeys.some(k => line.startsWith(k))) {
+          contentLines.push(line)
         }
-        rest = rest.slice(1)
       }
-      interpretation = rest.join('\n').trimStart()
+      interpretation = contentLines.join('\n').replace(/^[\s\-*_]+\n/, '').trimStart()
     }
 
     const meta = await uploadStayDocument(item.file, stayId)
@@ -121,7 +128,7 @@ Then explain the key findings in plain English. Write 3-5 bullet points starting
         addStayTeamMember(stayId, { name: author, role })
       }
     } else {
-      savedEntry = await addTestResult(stayId, { ...base, testName })
+      savedEntry = await addTestResult(stayId, { ...base, testName, labValues })
     }
 
     return savedEntry

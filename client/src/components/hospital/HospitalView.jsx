@@ -8,6 +8,7 @@ import HospitalStayModal from './HospitalStayModal'
 import DailyLogModal from './DailyLogModal'
 import AddDocumentModal from './AddDocumentModal'
 import BulkUploadModal from './BulkUploadModal'
+import LabTrendsPanel from './LabTrendsPanel'
 import PersonChip from '../PersonChip'
 
 const UNITS = ['mg', 'mcg', 'g', 'mL', 'L', 'units', 'IU', 'mEq', 'tablet(s)', 'capsule(s)', 'patch(es)', 'drop(s)', 'puff(s)']
@@ -1069,9 +1070,12 @@ export default function HospitalView({ stays, activeStay }) {
               {testResults.length === 0 ? (
                 <div className="doc-section-empty">No results uploaded yet.</div>
               ) : (
-                testResults.map(r => (
-                  <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
-                ))
+                <>
+                  <LabTrendsPanel testResults={testResults} />
+                  {testResults.map(r => (
+                    <DocCard key={r.id} doc={r} isNote={false} stayId={activeStay.id} onAfterDelete={handleAfterDelete} />
+                  ))}
+                </>
               )}
             </div>
           )}

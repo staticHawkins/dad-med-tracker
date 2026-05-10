@@ -2470,6 +2470,30 @@ tbody tr:hover{background:rgba(50,20,20,.028)}
 .doc-card-actions{display:flex;gap:12px;padding-top:8px}
 .doc-card-toggle{background:none;border:none;cursor:pointer;font-size:12px;color:var(--accent,#5C8CFF);padding:0;opacity:.8}
 .doc-card-toggle:hover{opacity:1}
+.lab-preview{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:8px;display:flex;flex-direction:column;gap:12px}
+.lab-preview-title{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;opacity:.45;margin-bottom:2px}
+.lab-preview-row{display:flex;flex-direction:column;gap:4px}
+.lab-preview-meta{display:flex;align-items:baseline;gap:8px}
+.lab-preview-name{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lab-preview-val{font-size:13px;font-weight:700;flex-shrink:0}
+.lab-preview-flag{font-size:11px;font-weight:600;flex-shrink:0;opacity:.85}
+.lab-preview-bar-track{position:relative;height:6px;background:var(--border);border-radius:99px;overflow:visible;margin-bottom:18px}
+.lab-preview-bar-normal{position:absolute;top:0;bottom:0;background:rgba(76,175,128,.25);border-radius:99px}
+.lab-preview-bar-dot{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid var(--panel2)}
+.lab-preview-bar-label{position:absolute;top:10px;font-size:10px;opacity:.45;transform:translateX(-50%);white-space:nowrap}
+.lab-preview-bar-label--right{transform:translateX(-50%)}
+.lab-preview-range{font-size:11px;opacity:.4}
+.lab-trends-panel{margin-bottom:16px}
+.lab-trends-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;opacity:.45;margin-bottom:12px}
+.lab-trends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.metric-chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 10px 8px}
+.metric-chart-title{font-size:12px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric-chart-unit{font-weight:400;opacity:.5}
+.lab-tooltip{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.lab-tooltip-date{opacity:.5;font-size:11px;margin-bottom:2px}
+.lab-tooltip-value{font-weight:600;font-size:14px}
+.lab-tooltip-range{opacity:.5;font-size:11px;margin-top:2px}
+.lab-tooltip-flag{font-size:11px;font-weight:600;margin-top:2px}
 .doc-raw-text{margin-top:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.5;white-space:pre-wrap;max-height:240px;overflow-y:auto;font-family:monospace}
 .doc-upload-btn{display:flex;align-items:center;gap:6px;width:100%;padding:10px 12px;background:var(--panel2);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);text-align:left;transition:border-color .15s}
 .doc-upload-btn:hover{border-color:var(--accent,#5C8CFF);color:var(--text)}

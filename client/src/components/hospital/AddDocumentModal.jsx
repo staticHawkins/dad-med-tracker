@@ -7,6 +7,8 @@ import { generateTreatmentSummary } from '../../lib/treatmentPlan'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../../firebase'
 
+const NOTE_TYPES = ['Progress Note', 'Consult Note', 'Discharge Summary', 'H&P', 'Operative Note', 'Nursing Note', 'Social Work Note', 'Other']
+
 export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved }) {
   const isNote = type === 'note'
   const [date, setDate] = useState(todayStr())
@@ -18,6 +20,7 @@ export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved 
   const [fallbackText, setFallbackText] = useState('')
   const [needsFallback, setNeedsFallback] = useState(false)
   const [interpretation, setInterpretation] = useState('')
+  const [labValues, setLabValues] = useState([])
   const [interpreting, setInterpreting] = useState(false)
   const [interpretError, setInterpretError] = useState(null)
   const [showRaw, setShowRaw] = useState(false)
@@ -32,6 +35,7 @@ export default function AddDocumentModal({ stayId, stay, type, onClose, onSaved 
     setFileObj(file)
     setFileName(file.name)
     setInterpretation('')
+    setLabValues([])
     setInterpretError(null)
     setNeedsFallback(false)
     setExtractedText('')
@@ -64,7 +68,17 @@ ROLE: <their role or specialty in 3-5 words max, e.g., Attending Nephrologist, R
 DATE: <service or note date in YYYY-MM-DD format — look for "Service date:", "Signed", or a date in the header — if not found, omit this line>
 
 Then on a new line, translate the note into plain English. Focus on: what the doctor observed or assessed, any key decisions made, current treatment status, and what to expect next. Write 3-5 clear bullet points, each starting with a dash (-). No markdown headers, no bold text, no medical jargon.`
-        : `You are helping a family understand medical test results for their father. Extract and explain the key findings from this report in plain English. Flag anything outside normal range and explain what it means clinically. Write 3-5 clear bullet points, each starting with a dash (-). No markdown headers, no bold text, no medical jargon.`
+        : `You are helping a family understand medical test results for their father.
+
+First, output the following metadata on their own lines:
+TEST_NAME: <name of the test or report, e.g., CBC Panel, CT Chest — if not found, use the file title>
+DATE: <result date in YYYY-MM-DD format — if not found, omit>
+
+If this is a quantitative lab report (CBC, BMP, CMP, metabolic panel, liver function, renal function, lipid panel, thyroid, coagulation, urinalysis), also output exactly one line:
+LAB_VALUES: [{"name":"HGB","value":7.1,"unit":"g/dL","refLow":12,"refHigh":17,"flag":"L"},...]
+Use flag values: "N" = normal, "H" = high, "L" = low, "C" = critical. Only include numeric values with known reference ranges. If not a quantitative lab, omit this line entirely.
+
+Then explain the key findings in plain English. Write 3-5 clear bullet points, each starting with a dash (-). Flag anything outside normal range and explain what it means. No markdown headers, no bold text, no medical jargon.`
       const { data } = await fn({
         messages: [{ role: 'user', content: text }],
         systemContext,
@@ -89,7 +103,23 @@ Then on a new line, translate the note into plain English. Focus on: what the do
         }
         setInterpretation(rest.join('\n').trimStart())
       } else {
-        setInterpretation(data.content)
+        const lines = data.content.split('\n')
+        const testMetaKeys = ['TEST_NAME:', 'DATE:', 'LAB_VALUES:']
+        const contentLines = []
+        for (const line of lines) {
+          if (line.startsWith('TEST_NAME:')) {
+            const val = line.replace('TEST_NAME:', '').trim()
+            if (val && !testName) setTestName(val)
+          } else if (line.startsWith('DATE:')) {
+            const val = line.replace('DATE:', '').trim()
+            if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) setDate(val)
+          } else if (line.startsWith('LAB_VALUES:')) {
+            try { setLabValues(JSON.parse(line.replace('LAB_VALUES:', '').trim())) } catch {}
+          } else if (!testMetaKeys.some(k => line.startsWith(k))) {
+            contentLines.push(line)
+          }
+        }
+        setInterpretation(contentLines.join('\n').replace(/^[\s\-*_]+\n/, '').trimStart())
       }
     } catch {
       setInterpretError('Could not interpret this document. You can still save it without an interpretation.')
@@ -124,7 +154,7 @@ Then on a new line, translate the note into plain English. Focus on: what the do
           }
         }
       } else {
-        savedEntry = await addTestResult(stayId, { ...base, testName: testName.trim() })
+        savedEntry = await addTestResult(stayId, { ...base, testName: testName.trim(), labValues })
       }
 
       // Fire-and-forget: regenerate treatment summary with updated documents
@@ -241,6 +271,45 @@ Then on a new line, translate the note into plain English. Focus on: what the do
 
           {interpretError && (
             <div className="daily-log-ai-error" style={{ marginTop: 8 }}>{interpretError}</div>
+          )}
+
+          {labValues.length > 0 && !interpreting && (
+            <div className="lab-preview">
+              <div className="lab-preview-title">Extracted values</div>
+              {labValues.map((lv, i) => {
+                const color = lv.flag === 'N' ? '#4caf80' : lv.flag === 'C' ? '#c0605a' : '#d4872a'
+                const flagLabel = { N: 'Normal', H: 'High', L: 'Low', C: 'Critical' }[lv.flag] || ''
+                const hasRange = lv.refLow != null && lv.refHigh != null
+                let dotPct = null, greenLeft = 30, greenRight = 70
+                if (hasRange) {
+                  const range = lv.refHigh - lv.refLow || 1
+                  const buffer = range * 0.75
+                  const scaleMin = lv.refLow - buffer
+                  const scaleMax = lv.refHigh + buffer
+                  const total = scaleMax - scaleMin
+                  dotPct = Math.min(97, Math.max(3, ((lv.value - scaleMin) / total) * 100))
+                  greenLeft = ((lv.refLow - scaleMin) / total) * 100
+                  greenRight = ((lv.refHigh - scaleMin) / total) * 100
+                }
+                return (
+                  <div key={i} className="lab-preview-row">
+                    <div className="lab-preview-meta">
+                      <span className="lab-preview-name">{lv.name}</span>
+                      <span className="lab-preview-val" style={{ color }}>{lv.value} {lv.unit}</span>
+                      <span className="lab-preview-flag" style={{ color }}>{flagLabel}</span>
+                    </div>
+                    {dotPct != null && (
+                      <div className="lab-preview-bar-track">
+                        <div className="lab-preview-bar-normal" style={{ left: `${greenLeft}%`, right: `${100 - greenRight}%` }} />
+                        <div className="lab-preview-bar-dot" style={{ left: `${dotPct}%`, background: color }} />
+                        <span className="lab-preview-bar-label" style={{ left: `${greenLeft}%` }}>{lv.refLow}</span>
+                        <span className="lab-preview-bar-label lab-preview-bar-label--right" style={{ left: `${greenRight}%` }}>{lv.refHigh}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
 
           {interpretation && !interpreting && (
