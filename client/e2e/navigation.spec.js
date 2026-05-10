@@ -55,4 +55,12 @@ test.describe('navigation', () => {
     await page.getByRole('button', { name: 'Doctors' }).click();
     await expect(page.locator('.back-bar')).toContainText('Care Team');
   });
+
+  test('navigate to Hospital Stay and back', async ({ page }) => {
+    await page.getByRole('button', { name: 'Hospital' }).click();
+    await page.waitForSelector('.hospital-page', { timeout: 10_000 });
+    await expect(page.locator('.back-bar')).toContainText('Hospital Stay');
+    await page.getByRole('button', { name: '← Dashboard' }).click();
+    await expect(page.locator('.dashboard-page')).toBeVisible();
+  });
 });
