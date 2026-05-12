@@ -3,6 +3,7 @@ import { supplyStatus, fmtShortDate } from '../lib/medUtils'
 import { aptStatus, fmtAptDateBlock, fmtAptTime } from '../lib/aptUtils'
 import DiseaseTimelineCard from './timeline/DiseaseTimelineCard'
 import PersonChip from './PersonChip'
+import { isFeatureEnabled } from '../lib/featureFlags'
 
 function getTaskStatus(task) {
   return task.status || (task.done ? 'done' : 'todo')
@@ -649,13 +650,15 @@ export default function DashboardView({ meds, filteredMeds, apts, filteredApts, 
         <AptsCard apts={filteredApts} allApts={apts} onClick={() => onNavigate('apts')} />
         <TasksCard tasks={filteredTasks} allTasks={tasks} onClick={() => onNavigate('tasks')} />
         <FilesCard apts={apts} onNavigate={onNavigate} />
-        <div className="dash-card-timeline-wrap">
-          <DiseaseTimelineCard
-            milestones={milestones}
-            phases={phases}
-            onViewTimeline={() => onNavigate('timeline')}
-          />
-        </div>
+        {isFeatureEnabled('diseaseTimeline') && (
+          <div className="dash-card-timeline-wrap">
+            <DiseaseTimelineCard
+              milestones={milestones}
+              phases={phases}
+              onViewTimeline={() => onNavigate('timeline')}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

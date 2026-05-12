@@ -23,6 +23,7 @@ import AskAiSheet from './chat/AskAiSheet'
 import HospitalView from './hospital/HospitalView'
 import NotificationBanner from './NotificationBanner'
 import BottomNav from './BottomNav'
+import { isFeatureEnabled } from '../lib/featureFlags'
 
 export function filterByPerson(items, personFilter) {
   if (personFilter === 'all') return items
@@ -50,7 +51,7 @@ const SIDEBAR_ITEMS = [
   { id: 'meds',      label: 'Medications',  icon: '💊' },
   { id: 'apts',      label: 'Appointments', icon: '📅' },
   { id: 'tasks',     label: 'Tasks',        icon: '✓'  },
-  { id: 'timeline',  label: 'Timeline',     icon: '⏱' },
+  ...(isFeatureEnabled('diseaseTimeline') ? [{ id: 'timeline', label: 'Timeline', icon: '⏱' }] : []),
   { id: 'care-team', label: 'Care Team',    icon: '👥' },
   { id: 'hospital',  label: 'Hospital',     icon: '🏥' },
 ]
@@ -231,7 +232,7 @@ export default function MainApp({ user }) {
               <CareTeamPanel careTeam={careTeam} />
             </>
           )}
-          {activeTab === 'timeline' && (
+          {activeTab === 'timeline' && isFeatureEnabled('diseaseTimeline') && (
             <>
               <BackBar label="Disease Timeline" onBack={() => setActiveTab('dashboard')} />
               <TimelineView milestones={milestones} phases={phases} />

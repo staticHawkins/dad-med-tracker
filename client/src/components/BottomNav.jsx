@@ -1,9 +1,11 @@
+import { isFeatureEnabled } from '../lib/featureFlags'
+
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Home',  icon: '⊞' },
   { id: 'meds',      label: 'Meds',  icon: '💊' },
   { id: 'apts',      label: 'Appts', icon: '📅' },
   { id: 'tasks',     label: 'Tasks', icon: '✓'  },
-  { id: 'timeline',  label: 'Timeline', icon: '⏱' },
+  ...(isFeatureEnabled('diseaseTimeline') ? [{ id: 'timeline', label: 'Timeline', icon: '⏱' }] : []),
   { id: 'hospital',  label: 'Hospital', icon: '🏥' },
 ]
 
