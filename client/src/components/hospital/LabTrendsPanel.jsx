@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceArea, ResponsiveContainer, ReferenceLine,
@@ -22,9 +22,10 @@ function fmtDateFull(str) {
   return parseInt(y, 10) !== new Date().getFullYear() ? `${label}, ${y}` : label
 }
 
-function CustomDot({ cx, cy, payload }) {
+function CustomDot({ cx, cy, payload, selectedDate }) {
   const color = FLAG_COLOR[payload.flag] || '#5C8CFF'
-  return <circle cx={cx} cy={cy} r={5} fill={color} stroke="var(--panel)" strokeWidth={2} />
+  const selected = selectedDate && payload.date === selectedDate
+  return <circle cx={cx} cy={cy} r={selected ? 9 : 5} fill={color} stroke="var(--panel)" strokeWidth={selected ? 3 : 2} style={{ filter: selected ? `drop-shadow(0 0 4px ${color})` : 'none' }} />
 }
 
 function CustomTooltip({ active, payload }) {
@@ -65,8 +66,15 @@ function buildDomain(points) {
   }
 }
 
-function Chart({ name, unit, points, height, margin, onExpand }) {
+function Chart({ name, unit, points, height, margin, onExpand, selectedDate, onPointClick }) {
   const { yMin, yMax, showBand, bandY1, bandY2, refLow, refHigh, showRefLowLine, showRefHighLine } = buildDomain(points)
+
+  function handleChartClick(data) {
+    if (!onPointClick) return
+    const date = data?.activePayload?.[0]?.payload?.date
+    if (date) onPointClick(date)
+  }
+
   return (
     <div className="metric-chart-wrap" onClick={onExpand} style={{ cursor: onExpand ? 'pointer' : 'default' }}>
       <div className="metric-chart-title">
@@ -74,7 +82,7 @@ function Chart({ name, unit, points, height, margin, onExpand }) {
         {onExpand && <span className="metric-chart-expand">⤢</span>}
       </div>
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={points} margin={margin}>
+        <LineChart data={points} margin={margin} onClick={handleChartClick} style={{ cursor: onPointClick ? 'crosshair' : undefined }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           {showBand && <ReferenceArea y1={bandY1} y2={bandY2} fill="#4caf80" fillOpacity={0.1} stroke="none" />}
           {showRefLowLine && (
@@ -88,7 +96,8 @@ function Chart({ name, unit, points, height, margin, onExpand }) {
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 10, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
           <YAxis domain={[yMin, yMax]} tick={{ fontSize: 10, fill: 'var(--text3)' }} axisLine={false} tickLine={false} width={40} />
           <Tooltip content={<CustomTooltip />} />
-          <Line type="monotone" dataKey="value" stroke="#5C8CFF" strokeWidth={2} dot={<CustomDot />} activeDot={false} isAnimationActive={false} />
+          <Line type="monotone" dataKey="value" stroke="#5C8CFF" strokeWidth={2}
+            dot={<CustomDot selectedDate={selectedDate} />} activeDot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -99,6 +108,16 @@ function ExpandedModal({ metric, onClose }) {
   const refLow = metric.points.find(p => p.refLow != null)?.refLow
   const refHigh = metric.points.find(p => p.refHigh != null)?.refHigh
   const unit = metric.unit
+  const [selectedDate, setSelectedDate] = useState(null)
+  const rowRefs = useRef({})
+
+  useEffect(() => {
+    if (!selectedDate) return
+    const el = rowRefs.current[selectedDate]
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedDate])
+
+  const reversedPoints = [...metric.points].reverse()
 
   return (
     <div className="lab-modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -112,15 +131,26 @@ function ExpandedModal({ metric, onClose }) {
             Normal range: <strong>{refLow}–{refHigh} {unit}</strong>
           </div>
         )}
-        <Chart name={metric.name} unit={metric.unit} points={metric.points} height={280} margin={{ top: 12, right: 16, bottom: 4, left: -8 }} />
+        <Chart
+          name={metric.name} unit={metric.unit} points={metric.points}
+          height={280} margin={{ top: 12, right: 16, bottom: 4, left: -8 }}
+          selectedDate={selectedDate} onPointClick={setSelectedDate}
+        />
         <div className="lab-modal-table">
           <div className="lab-modal-row lab-modal-row--head">
             <span>Date</span><span>Value</span><span>Status</span><span>Source</span>
           </div>
-          {[...metric.points].reverse().map((p, i) => {
+          {reversedPoints.map((p, i) => {
             const color = FLAG_COLOR[p.flag] || '#888'
+            const isSelected = selectedDate === p.date
             return (
-              <div key={i} className="lab-modal-row">
+              <div
+                key={i}
+                ref={el => { if (el && !rowRefs.current[p.date]) rowRefs.current[p.date] = el }}
+                className={`lab-modal-row${isSelected ? ' lab-modal-row--selected' : ''}`}
+                onClick={() => setSelectedDate(isSelected ? null : p.date)}
+                style={{ cursor: 'pointer' }}
+              >
                 <span>{fmtDateFull(p.date)}</span>
                 <span style={{ fontWeight: 600 }}>{p.value} {p.unit}</span>
                 <span style={{ color, fontWeight: 600 }}>{FLAG_LABEL[p.flag] || '—'}</span>
@@ -149,7 +179,8 @@ export default function LabTrendsPanel({ testResults }) {
       const key = normalizeKey(lv.name)
       if (!metricMap[key]) metricMap[key] = { name: lv.name, unit: lv.unit || '', points: [] }
       else if (lv.name.length < metricMap[key].name.length) metricMap[key].name = lv.name
-      metricMap[key].points.push({
+      const alreadyExists = metricMap[key].points.some(p => p.date === result.date && p.value === lv.value)
+      if (!alreadyExists) metricMap[key].points.push({
         date: result.date,
         value: lv.value,
         unit: lv.unit || '',
