@@ -14,6 +14,14 @@ function fmtDate(str) {
   return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`
 }
 
+function fmtDateFull(str) {
+  if (!str) return ''
+  const [y, m, d] = str.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const label = `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`
+  return parseInt(y, 10) !== new Date().getFullYear() ? `${label}, ${y}` : label
+}
+
 function CustomDot({ cx, cy, payload }) {
   const color = FLAG_COLOR[payload.flag] || '#5C8CFF'
   return <circle cx={cx} cy={cy} r={5} fill={color} stroke="var(--panel)" strokeWidth={2} />
@@ -107,15 +115,16 @@ function ExpandedModal({ metric, onClose }) {
         <Chart name={metric.name} unit={metric.unit} points={metric.points} height={280} margin={{ top: 12, right: 16, bottom: 4, left: -8 }} />
         <div className="lab-modal-table">
           <div className="lab-modal-row lab-modal-row--head">
-            <span>Date</span><span>Value</span><span>Status</span>
+            <span>Date</span><span>Value</span><span>Status</span><span>Source</span>
           </div>
           {[...metric.points].reverse().map((p, i) => {
             const color = FLAG_COLOR[p.flag] || '#888'
             return (
               <div key={i} className="lab-modal-row">
-                <span>{fmtDate(p.date)}</span>
+                <span>{fmtDateFull(p.date)}</span>
                 <span style={{ fontWeight: 600 }}>{p.value} {p.unit}</span>
                 <span style={{ color, fontWeight: 600 }}>{FLAG_LABEL[p.flag] || '—'}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{p.source || '—'}</span>
               </div>
             )
           })}
@@ -147,6 +156,7 @@ export default function LabTrendsPanel({ testResults }) {
         refLow: lv.refLow ?? null,
         refHigh: lv.refHigh ?? null,
         flag: lv.flag || 'N',
+        source: result.interpretation?.startsWith('Lab values extracted from') ? 'Doctor Note' : 'Test Result',
       })
     }
   }
