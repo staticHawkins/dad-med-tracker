@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const Anthropic = require("@anthropic-ai/sdk");
@@ -23,6 +23,17 @@ function parseCookies(rawArray) {
   return (rawArray || []).map((h) => h.split(";")[0]).join("; ");
 }
 
+// Merge cookie strings, with later values overwriting earlier ones for the same name.
+function mergeCookies(existing, fresh) {
+  if (!fresh) return existing;
+  const jar = new Map();
+  for (const pair of `${existing}; ${fresh}`.split(/;\s*/)) {
+    const eq = pair.indexOf("=");
+    if (eq > 0) jar.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim());
+  }
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
 function stripHtml(raw) {
   return (raw || "")
     .replace(/<[^>]+>/g, " ")
@@ -37,76 +48,148 @@ function stripHtml(raw) {
 
 // ── BSW auth ─────────────────────────────────────────────────────────────────
 
+// Follow a redirect chain manually, accumulating cookies at each hop.
+// Returns { text, finalUrl, allCookies } after the chain resolves to a 200 (or maxHops).
+async function followRedirects(startUrl, initCookies, maxHops = 8) {
+  let url = startUrl;
+  let allCookies = initCookies;
+  for (let hop = 0; hop < maxHops; hop++) {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "manual",
+      headers: { Cookie: allCookies, "User-Agent": UA, Accept: "text/html,application/xhtml+xml,*/*" },
+    });
+    const hopCookies = parseCookies(res.headers.getSetCookie());
+    if (hopCookies) allCookies = mergeCookies(allCookies, hopCookies);
+    const loc = res.headers.get("location") || "";
+    console.log(`  redirect hop${hop + 1}: ${res.status} ${url.split("?")[0]} → ${loc.split("?")[0]} cookies+=${res.headers.getSetCookie().length}`);
+    if (res.status === 200) {
+      const text = await res.text();
+      return { text, finalUrl: res.url || url, allCookies };
+    }
+    if (res.status < 300 || res.status >= 400 || !loc) {
+      // Non-redirect, non-200 — surface it
+      const text = await res.text();
+      return { text, finalUrl: url, allCookies };
+    }
+    url = loc.startsWith("http") ? loc : `${BASE}${loc}`;
+  }
+  return { text: "", finalUrl: url, allCookies };
+}
+
 async function bswAuth(username, password) {
   const corrId = randomUUID();
   const reqId  = randomUUID();
   const sessId = randomUUID();
-  const bswHdrs = {
-    Accept:                "application/json",
-    "Content-Type":        "application/json",
-    Origin:                BASE,
-    Referer:               `${BASE}/login`,
-    "x-bsw-language":     "en",
-    "x-bsw-timezone-offset": "300",
-    "bsw-CorrelationId":  corrId,
-    "bsw-RequestId":      reqId,
-    "bsw-SessionId":      sessId,
-  };
 
-  // Step 1 — OAuth token
+  // ── Step 1: OAuth token ──────────────────────────────────────────────────────
   const tokenRes = await fetch("https://sso.bswhealth.com/OAuth/Token", {
     method: "POST",
-    headers: bswHdrs,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": UA,
+      Origin: BASE,
+      Referer: `${BASE}/login`,
+      "x-bsw-language": "en",
+      "x-bsw-timezone-offset": "300",
+      "bsw-CorrelationId": corrId,
+      "bsw-RequestId": reqId,
+      "bsw-SessionId": sessId,
+    },
     body: JSON.stringify({ username, password, grant_type: "password", uniqueDeviceId: DEVICE_ID }),
   });
-  if (!tokenRes.ok) throw new HttpsError("unavailable", `BSW auth step 1 failed: ${tokenRes.status}`);
-  const { access_token } = await tokenRes.json();
-  if (!access_token) throw new HttpsError("unavailable", "BSW auth step 1: no access_token in response");
+  if (!tokenRes.ok) throw new HttpsError("unavailable", `BSW OAuth failed: ${tokenRes.status}`);
+  const tokenData = await tokenRes.json();
+  const { access_token } = tokenData;
+  if (!access_token) throw new HttpsError("unavailable", "BSW OAuth: no access_token");
+  let allCookies = parseCookies(tokenRes.headers.getSetCookie());
+  console.log(`bswAuth step1 OK: cookieLen=${allCookies.length}`);
 
-  // Step 2 — initialize MyChart session, capture cookies
+  // ── Step 2: init/fromToken — follow ALL redirect hops manually ────────────────
+  // Native fetch's redirect:'follow' only surfaces Set-Cookie from the FINAL response;
+  // intermediate redirect hops that set cookies are silently dropped. We use
+  // redirect:'manual' and follow the chain ourselves to capture every Set-Cookie.
   const initRes = await fetch("https://aspen-api-prod.bswapi.com/api/v1/init/fromToken", {
     method: "POST",
+    redirect: "manual",
     headers: {
-      ...bswHdrs,
-      "x-environment":   "prod",
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": UA,
+      Origin: BASE,
+      Referer: `${BASE}/login`,
+      "x-environment": "prod",
       "x-health-system": "baylor",
       "bsw-correlationid": corrId,
-      "bsw-requestid":     reqId,
-      "bsw-sessionid":     sessId,
+      "bsw-requestid": reqId,
+      "bsw-sessionid": sessId,
     },
     body: JSON.stringify({ token: access_token }),
   });
-  if (!initRes.ok) throw new HttpsError("unavailable", `BSW auth step 2 failed: ${initRes.status}`);
-  const cookies = parseCookies(initRes.headers.getSetCookie());
+  const initSetCookies = initRes.headers.getSetCookie();
+  const initBodyText   = await initRes.text();
+  const initLocation   = initRes.headers.get("location") || "";
+  console.log(`bswAuth step2: status=${initRes.status} setCookies=${initSetCookies.length} location=${initLocation.split("?")[0]} body=${initBodyText.slice(0, 300)}`);
+  if (initSetCookies.length > 0) allCookies = mergeCookies(allCookies, parseCookies(initSetCookies));
 
-  // Step 3 — load DT page to harvest CSRF token
-  const pageRes = await fetch(`${BASE}/DT/app/test-results`, {
-    headers: { Cookie: cookies, Accept: "text/html" },
-  });
-  if (!pageRes.ok) throw new HttpsError("unavailable", `BSW auth step 3 failed: ${pageRes.status}`);
-  const html = await pageRes.text();
+  // Follow redirects from init/fromToken
+  if (initLocation) {
+    const startUrl = initLocation.startsWith("http") ? initLocation : `${BASE}${initLocation}`;
+    const { allCookies: redirectCookies } = await followRedirects(startUrl, allCookies);
+    allCookies = redirectCookies;
+  } else if (initRes.status === 200) {
+    // Some portal versions return JSON with a redirect URL in the body
+    try {
+      const parsed = JSON.parse(initBodyText);
+      const redirectUrl = parsed.redirectUrl || parsed.url || parsed.redirect || "";
+      if (redirectUrl) {
+        console.log(`bswAuth step2: body has redirectUrl=${redirectUrl.split("?")[0]}`);
+        const startUrl = redirectUrl.startsWith("http") ? redirectUrl : `${BASE}${redirectUrl}`;
+        const { allCookies: redirectCookies } = await followRedirects(startUrl, allCookies);
+        allCookies = redirectCookies;
+      }
+    } catch {}
+  }
+
+  console.log(`bswAuth step2 done: allCookiesLen=${allCookies.length}`);
+
+  // ── Step 3: GET DT test-results page for CSRF ─────────────────────────────────
+  // Capture allCookies from followRedirects — each hop may set new session cookies
+  // that are required for subsequent DT API calls.
+  const { text: pageHtml, finalUrl, allCookies: step3Cookies } = await followRedirects(`${BASE}/DT/app/test-results`, allCookies);
+  allCookies = step3Cookies;
+  console.log(`bswAuth step3: finalUrl=${finalUrl.split("?")[0]} cookiesLen=${allCookies.length} htmlLen=${pageHtml.length}`);
+
+  if (finalUrl.includes("/reset") || finalUrl.includes("/login") || pageHtml.length < 1000) {
+    console.error("bswAuth step3: not authenticated — redirected to login or got tiny page. HTML preview:", pageHtml.slice(0, 500));
+    throw new HttpsError("unavailable", `BSW session not established — landed on ${finalUrl.split("?")[0]}. Check credentials and device ID.`);
+  }
 
   let csrf = "";
   const m =
-    html.match(/<input[^>]*name="__RequestVerificationToken"[^>]*value="([^"]+)"/i) ||
-    html.match(/<input[^>]*value="([^"]+)"[^>]*name="__RequestVerificationToken"/i);
+    pageHtml.match(/<input[^>]*name="__RequestVerificationToken"[^>]*value="([^"]+)"/i) ||
+    pageHtml.match(/<input[^>]*value="([^"]+)"[^>]*name="__RequestVerificationToken"/i);
   if (m) csrf = m[1];
-  if (!csrf) console.warn("bswSync: CSRF token not found in page HTML — requests may fail");
+  if (!csrf) console.warn("bswSync: CSRF token not found — requests may fail");
 
-  return { cookies, csrf };
+  return { cookies: allCookies, csrf };
 }
 
 // ── DT API wrapper ────────────────────────────────────────────────────────────
+
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 async function dtPost(cookies, csrf, path, body, referer = `${BASE}/DT/app/test-results`) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: {
-      "Content-Type":              "application/json",
-      Accept:                      "application/json",
-      Origin:                      BASE,
-      Referer:                     referer,
-      Cookie:                      cookies,
+      "Content-Type":               "application/json",
+      Accept:                       "application/json",
+      Origin:                       BASE,
+      Referer:                      referer,
+      Cookie:                       cookies,
+      "User-Agent":                 UA,
       "__requestverificationtoken": csrf,
     },
     body: JSON.stringify(body),
@@ -215,7 +298,15 @@ async function fetchTestResults(cookies, csrf) {
   return results;
 }
 
-// ── Claude prompts (exact copy from AddDocumentModal.jsx) ─────────────────────
+// ── Claude prompts ────────────────────────────────────────────────────────────
+
+// Identical to handleReprocessLabs in HospitalView.jsx
+const LAB_EXTRACT_SYSTEM = `Extract quantitative lab panels from this clinical note.
+Output only this line (or nothing if no quantitative labs are present):
+LAB_PANELS: [{"testName":"CBC Panel","date":"YYYY-MM-DD","labValues":[{"name":"HGB","value":7.1,"unit":"g/dL","refLow":12,"refHigh":17,"flag":"L"},...]}]
+Use flag values: "N"=normal, "H"=high, "L"=low, "C"=critical. Only numeric values with known reference ranges.`;
+
+// ── (original AddDocumentModal.jsx prompts below) ─────────────────────────────
 
 const NOTE_SYSTEM = `You are helping a family understand their father's clinical notes from his hospital care team.
 
@@ -309,13 +400,21 @@ exports.syncBswData = onCall(
     const client = new Anthropic({ apiKey: anthropicKey.value() });
 
     // 1. Auth
-    const { cookies, csrf } = await bswAuth(bswUsername.value(), bswPassword.value());
+    let cookies, csrf;
+    try {
+      ({ cookies, csrf } = await bswAuth(bswUsername.value(), bswPassword.value()));
+    } catch (err) {
+      throw err instanceof HttpsError ? err : new HttpsError("unavailable", `BSW auth failed: ${err.message}`);
+    }
 
-    // 2. Fetch notes + results in parallel
-    const [rawNotes, rawResults] = await Promise.all([
-      fetchVisitNotes(cookies, csrf),
-      fetchTestResults(cookies, csrf),
-    ]);
+    // 2. Fetch notes then results sequentially — BSW session rejects concurrent CSRF usage
+    let rawNotes, rawResults;
+    try {
+      rawNotes   = await fetchVisitNotes(cookies, csrf);
+      rawResults = await fetchTestResults(cookies, csrf);
+    } catch (err) {
+      throw new HttpsError("unavailable", `BSW data fetch failed: ${err.message}`);
+    }
 
     // 3. Load existing stay for deduplication
     const stayRef  = db.collection("hospitalStays").doc(stayId);
@@ -323,22 +422,24 @@ exports.syncBswData = onCall(
     if (!staySnap.exists) throw new HttpsError("not-found", `Hospital stay ${stayId} not found.`);
     const stayData = staySnap.data();
 
-    const existingNoteKeys = new Set(
-      (stayData.doctorNotes || [])
-        .filter((n) => n.bswImported)
-        .map((n) => `${n.date}|${(n.author || "").toLowerCase()}`),
+    // Dedup by stable IDs (hnoID / groupKey) with date|name fallback for old entries.
+    const existingNoteHnoIds = new Set(
+      (stayData.doctorNotes || []).filter((n) => n.bswImported && n.hnoID).map((n) => n.hnoID),
     );
-    const existingResultKeys = new Set(
-      (stayData.testResults || [])
-        .filter((r) => r.bswImported)
-        .map((r) => `${r.date}|${(r.testName || "").toLowerCase()}`),
+    const existingNoteDateAuthors = new Set(
+      (stayData.doctorNotes || []).filter((n) => n.bswImported).map((n) => `${n.date}|${(n.author || "").toLowerCase()}`),
+    );
+    const existingResultGroupKeys = new Set(
+      (stayData.testResults || []).filter((r) => r.bswImported && r.groupKey).map((r) => r.groupKey),
+    );
+    const existingResultDateNames = new Set(
+      (stayData.testResults || []).filter((r) => r.bswImported).map((r) => `${r.date}|${(r.testName || "").toLowerCase()}`),
     );
 
     // 4. Interpret notes with Claude
     const newNoteEntries = [];
     for (const raw of rawNotes) {
-      const dedupKey = `${raw.date}|${raw.author.toLowerCase()}`;
-      if (existingNoteKeys.has(dedupKey)) continue;
+      if (existingNoteHnoIds.has(raw.hnoID) || existingNoteDateAuthors.has(`${raw.date}|${raw.author.toLowerCase()}`)) continue;
 
       let author         = raw.author;
       let date           = raw.date;
@@ -360,6 +461,7 @@ exports.syncBswData = onCall(
 
       newNoteEntries.push({
         id:            newId(),
+        hnoID:         raw.hnoID,
         date,
         author,
         noteType:      raw.noteType,
@@ -376,6 +478,8 @@ exports.syncBswData = onCall(
     // 5. Interpret test results with Claude
     const newResultEntries = [];
     for (const raw of rawResults) {
+      if (existingResultGroupKeys.has(raw.groupKey)) continue;
+
       let testName       = `BSW Result ${raw.formattedDate}`;
       let date           = raw.date;
       let labValues      = [];
@@ -395,11 +499,12 @@ exports.syncBswData = onCall(
         }
       }
 
-      const dedupKey = `${date}|${testName.toLowerCase()}`;
-      if (existingResultKeys.has(dedupKey)) continue;
+      // Also skip if a prior run wrote this result under a different groupKey (using date|name)
+      if (existingResultDateNames.has(`${date}|${testName.toLowerCase()}`)) continue;
 
       newResultEntries.push({
         id:            newId(),
+        groupKey:      raw.groupKey,
         date,
         testName,
         extractedText: raw.extractedText,
@@ -410,6 +515,52 @@ exports.syncBswData = onCall(
       });
     }
 
+    // 5.5 — Extract embedded lab panels from new notes, add as additional test results
+    // Unified dedup set covers both BSW-synced results and existing ones
+    const allResultDateNames = new Set([
+      ...existingResultDateNames,
+      ...newResultEntries.map((r) => `${r.date}|${r.testName.toLowerCase()}`),
+    ]);
+    let labsExtracted = 0;
+    for (const noteEntry of newNoteEntries) {
+      if (!noteEntry.extractedText || noteEntry.extractedText.length < 50) continue;
+      try {
+        const resp = await client.messages.create({
+          model:      "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          system:     LAB_EXTRACT_SYSTEM,
+          messages:   [{ role: "user", content: noteEntry.extractedText.slice(0, 8000) }],
+        });
+        let labPanels = [];
+        for (const line of resp.content[0].text.split("\n")) {
+          if (line.startsWith("LAB_PANELS:")) {
+            try { labPanels = JSON.parse(line.replace("LAB_PANELS:", "").trim()); } catch {}
+          }
+        }
+        for (const panel of labPanels) {
+          if (!panel.testName || !panel.labValues?.length) continue;
+          const panelDate = panel.date || noteEntry.date;
+          const dedupKey  = `${panelDate}|${panel.testName.toLowerCase()}`;
+          if (allResultDateNames.has(dedupKey)) continue;
+          allResultDateNames.add(dedupKey);
+          newResultEntries.push({
+            id:            newId(),
+            date:          panelDate,
+            testName:      panel.testName,
+            labValues:     panel.labValues,
+            interpretation: `Lab values extracted from ${noteEntry.noteType || "doctor note"}${noteEntry.author ? ` by ${noteEntry.author}` : ""}`,
+            extractedText: "",
+            uploadedAt:    new Date().toISOString(),
+            bswImported:   true,
+          });
+          labsExtracted++;
+        }
+      } catch (err) {
+        console.warn(`bswSync: lab extract failed for note ${noteEntry.hnoID}:`, err.message);
+      }
+    }
+    if (labsExtracted > 0) console.log(`bswSync: extracted ${labsExtracted} lab panel(s) from notes`);
+
     // 6. Write to Firestore in one update
     if (newNoteEntries.length > 0 || newResultEntries.length > 0) {
       const updatePayload = { updatedAt: new Date().toISOString() };
@@ -418,7 +569,171 @@ exports.syncBswData = onCall(
       await stayRef.update(updatePayload);
     }
 
-    console.log(`bswSync: stayId=${stayId} notesAdded=${newNoteEntries.length} resultsAdded=${newResultEntries.length}`);
+    console.log(`bswSync: stayId=${stayId} notesAdded=${newNoteEntries.length} resultsAdded=${newResultEntries.length} labsExtracted=${labsExtracted}`);
     return { notesAdded: newNoteEntries.length, resultsAdded: newResultEntries.length };
+  },
+);
+
+// Full sync test trigger — no Firebase auth required, stayId hardcoded.
+// DELETE after sync is confirmed working.
+exports.testBswSync = onRequest(
+  { secrets: [bswUsername, bswPassword, anthropicKey], timeoutSeconds: 540, memory: "512MiB" },
+  async (req, res) => {
+    const stayId = "mow8y2hrxqt55x04hq";
+    try {
+      const db = getFirestore();
+      const client = new Anthropic({ apiKey: anthropicKey.value() });
+
+      const { cookies, csrf } = await bswAuth(bswUsername.value(), bswPassword.value());
+      console.log("testBswSync: auth OK, csrf length:", csrf.length);
+
+      const rawNotes = await fetchVisitNotes(cookies, csrf);
+      console.log("testBswSync: visit notes fetched:", rawNotes.length);
+
+      const rawResults = await fetchTestResults(cookies, csrf);
+      console.log("testBswSync: test results fetched:", rawResults.length);
+
+      const stayRef  = db.collection("hospitalStays").doc(stayId);
+      const staySnap = await stayRef.get();
+      if (!staySnap.exists) return res.status(404).json({ error: "stay not found" });
+      let stayData = staySnap.data();
+
+      // ?reset=true — wipe all bswImported entries so re-import starts fresh
+      if (req.query.reset === "true") {
+        const cleanNotes   = (stayData.doctorNotes  || []).filter((n) => !n.bswImported);
+        const cleanResults = (stayData.testResults  || []).filter((r) => !r.bswImported);
+        await stayRef.update({ doctorNotes: cleanNotes, testResults: cleanResults, updatedAt: new Date().toISOString() });
+        const freshSnap = await stayRef.get();
+        stayData = freshSnap.data();
+        console.log("testBswSync: reset — cleared old bswImported entries");
+      }
+
+      const existingNoteHnoIds = new Set(
+        (stayData.doctorNotes || []).filter((n) => n.bswImported && n.hnoID).map((n) => n.hnoID),
+      );
+      const existingNoteDateAuthors = new Set(
+        (stayData.doctorNotes || []).filter((n) => n.bswImported).map((n) => `${n.date}|${(n.author || "").toLowerCase()}`),
+      );
+      const existingResultGroupKeys = new Set(
+        (stayData.testResults || []).filter((r) => r.bswImported && r.groupKey).map((r) => r.groupKey),
+      );
+      const existingResultDateNames = new Set(
+        (stayData.testResults || []).filter((r) => r.bswImported).map((r) => `${r.date}|${(r.testName || "").toLowerCase()}`),
+      );
+
+      const newNoteEntries = [];
+      for (const raw of rawNotes) {
+        if (existingNoteHnoIds.has(raw.hnoID) || existingNoteDateAuthors.has(`${raw.date}|${raw.author.toLowerCase()}`)) continue;
+        let author = raw.author, date = raw.date, interpretation = "";
+        if (raw.extractedText.length > 20) {
+          try {
+            const resp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001", max_tokens: 1024,
+              system: NOTE_SYSTEM, messages: [{ role: "user", content: raw.extractedText.slice(0, 8000) }],
+            });
+            ({ author, date, interpretation } = parseNoteResponse(resp.content[0].text, raw));
+          } catch (err) { console.warn("Claude note error:", err.message); }
+        }
+        newNoteEntries.push({ id: newId(), hnoID: raw.hnoID, date, author, noteType: raw.noteType, extractedText: raw.extractedText, interpretation, pdfUrl: "", storagePath: "", fileName: `${raw.noteType} - ${author} - ${date}`, uploadedAt: new Date().toISOString(), bswImported: true });
+      }
+
+      const newResultEntries = [];
+      for (const raw of rawResults) {
+        if (existingResultGroupKeys.has(raw.groupKey)) continue;
+        let testName = `BSW Result ${raw.formattedDate}`, date = raw.date, labValues = [], interpretation = "";
+        if (raw.extractedText.length > 20) {
+          try {
+            const resp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001", max_tokens: 1024,
+              system: RESULT_SYSTEM, messages: [{ role: "user", content: raw.extractedText.slice(0, 8000) }],
+            });
+            ({ testName, date, labValues, interpretation } = parseResultResponse(resp.content[0].text, raw));
+          } catch (err) { console.warn("Claude result error:", err.message); }
+        }
+        if (existingResultDateNames.has(`${date}|${testName.toLowerCase()}`)) continue;
+        newResultEntries.push({ id: newId(), groupKey: raw.groupKey, date, testName, extractedText: raw.extractedText, interpretation, labValues, uploadedAt: new Date().toISOString(), bswImported: true });
+      }
+
+      // Extract embedded lab panels from new notes
+      const allResultDateNames = new Set([
+        ...existingResultDateNames,
+        ...newResultEntries.map((r) => `${r.date}|${r.testName.toLowerCase()}`),
+      ]);
+      let labsExtracted = 0;
+      for (const noteEntry of newNoteEntries) {
+        if (!noteEntry.extractedText || noteEntry.extractedText.length < 50) continue;
+        try {
+          const resp = await client.messages.create({
+            model: "claude-haiku-4-5-20251001", max_tokens: 1024,
+            system: LAB_EXTRACT_SYSTEM, messages: [{ role: "user", content: noteEntry.extractedText.slice(0, 8000) }],
+          });
+          let labPanels = [];
+          for (const line of resp.content[0].text.split("\n")) {
+            if (line.startsWith("LAB_PANELS:")) {
+              try { labPanels = JSON.parse(line.replace("LAB_PANELS:", "").trim()); } catch {}
+            }
+          }
+          for (const panel of labPanels) {
+            if (!panel.testName || !panel.labValues?.length) continue;
+            const panelDate = panel.date || noteEntry.date;
+            const dedupKey = `${panelDate}|${panel.testName.toLowerCase()}`;
+            if (allResultDateNames.has(dedupKey)) continue;
+            allResultDateNames.add(dedupKey);
+            newResultEntries.push({ id: newId(), date: panelDate, testName: panel.testName, labValues: panel.labValues, interpretation: `Lab values extracted from ${noteEntry.noteType || "doctor note"}${noteEntry.author ? ` by ${noteEntry.author}` : ""}`, extractedText: "", uploadedAt: new Date().toISOString(), bswImported: true });
+            labsExtracted++;
+          }
+        } catch (err) { console.warn("Lab extract error:", err.message); }
+      }
+
+      if (newNoteEntries.length > 0 || newResultEntries.length > 0) {
+        const updatePayload = { updatedAt: new Date().toISOString() };
+        if (newNoteEntries.length > 0)   updatePayload.doctorNotes  = FieldValue.arrayUnion(...newNoteEntries);
+        if (newResultEntries.length > 0) updatePayload.testResults  = FieldValue.arrayUnion(...newResultEntries);
+        await stayRef.update(updatePayload);
+      }
+
+      res.json({ ok: true, notesAdded: newNoteEntries.length, resultsAdded: newResultEntries.length, labsExtracted });
+    } catch (err) {
+      console.error("testBswSync error:", err.message, err.stack);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  },
+);
+
+// Connectivity test — hit BSW OAuth step only, no Firestore writes, no data fetch.
+// DELETE after confirming connectivity.
+exports.testBswConn = onRequest(
+  { secrets: [bswUsername, bswPassword] },
+  async (req, res) => {
+    const corrId = randomUUID();
+    try {
+      const tokenRes = await fetch("https://sso.bswhealth.com/OAuth/Token", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Origin: "https://my.bswhealth.com",
+          "x-bsw-language": "en",
+          "x-bsw-timezone-offset": "300",
+          "bsw-CorrelationId": corrId,
+          "bsw-RequestId": randomUUID(),
+          "bsw-SessionId": randomUUID(),
+        },
+        body: JSON.stringify({
+          username: bswUsername.value(),
+          password: bswPassword.value(),
+          grant_type: "password",
+          uniqueDeviceId: DEVICE_ID,
+        }),
+      });
+      const body = await tokenRes.json();
+      if (body.access_token) {
+        res.json({ ok: true, step: "oauth", tokenLength: body.access_token.length });
+      } else {
+        res.status(401).json({ ok: false, step: "oauth", response: body });
+      }
+    } catch (err) {
+      res.status(500).json({ ok: false, step: "oauth", error: err.message });
+    }
   },
 );

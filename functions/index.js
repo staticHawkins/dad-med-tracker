@@ -133,3 +133,5 @@ exports.checkMedSupply = onSchedule(
 );
 
 exports.syncBswData = require("./bswSync").syncBswData;
+exports.testBswSync = require("./bswSync").testBswSync;
+exports.testBswConn = require("./bswSync").testBswConn;
