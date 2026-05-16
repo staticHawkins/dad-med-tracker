@@ -612,6 +612,61 @@ export async function updateStayTeamMember(stayId, oldMember, updates) {
   await updateDoc(ref, { stayTeam: arrayUnion(updated), updatedAt: new Date().toISOString() })
 }
 
+// Collections whose documents carry a `person` field (default 'dad' when absent).
+export const PERSON_COLLECTIONS = ['medications', 'appointments', 'tasks', 'careTeam', 'hospitalStays']
+
+function docPerson(data) {
+  return data.person || 'dad'
+}
+
+async function forEachPersonDoc(person, fn) {
+  for (const name of PERSON_COLLECTIONS) {
+    const snap = await getDocs(collection(db, name))
+    const matches = snap.docs.filter(d => docPerson(d.data()) === person)
+    for (let i = 0; i < matches.length; i += 400) {
+      const batch = writeBatch(db)
+      matches.slice(i, i + 400).forEach(d => fn(batch, name, d))
+      await batch.commit()
+    }
+  }
+}
+
+// Returns { collection: { active, deleted } } counts for the given person.
+export async function countPersonData(person) {
+  const result = {}
+  for (const name of PERSON_COLLECTIONS) {
+    const snap = await getDocs(collection(db, name))
+    const mine = snap.docs.filter(d => docPerson(d.data()) === person)
+    result[name] = {
+      active: mine.filter(d => !d.data().deletedAt).length,
+      deleted: mine.filter(d => d.data().deletedAt).length,
+    }
+  }
+  return result
+}
+
+// Soft delete: mark every active record for `person` with a deletedAt timestamp.
+export async function softDeletePersonData(person) {
+  const ts = new Date().toISOString()
+  await forEachPersonDoc(person, (batch, name, d) => {
+    if (!d.data().deletedAt) batch.update(doc(db, name, d.id), { deletedAt: ts })
+  })
+}
+
+// Restore: clear deletedAt on every soft-deleted record for `person`.
+export async function restorePersonData(person) {
+  await forEachPersonDoc(person, (batch, name, d) => {
+    if (d.data().deletedAt) batch.update(doc(db, name, d.id), { deletedAt: deleteField() })
+  })
+}
+
+// Hard delete: permanently remove every record for `person` (active or soft-deleted).
+export async function hardDeletePersonData(person) {
+  await forEachPersonDoc(person, (batch, name, d) => {
+    batch.delete(doc(db, name, d.id))
+  })
+}
+
 export async function importMeds(file, existingMeds) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

@@ -23,6 +23,7 @@ import AskAiSheet from './chat/AskAiSheet'
 import HospitalView from './hospital/HospitalView'
 import NotificationBanner from './NotificationBanner'
 import BottomNav from './BottomNav'
+import DataManagementView from './DataManagementView'
 import { isFeatureEnabled } from '../lib/featureFlags'
 
 export function filterByPerson(items, personFilter) {
@@ -180,6 +181,10 @@ export default function MainApp({ user }) {
                       <span className="menu-item-label">Doctors</span>
                     </button>
                     <div className="menu-divider" />
+                    <button className="menu-item" onClick={() => { setActiveTab('data-admin'); setUserMenuOpen(false) }}>
+                      <span className="menu-item-label">Manage Dad&rsquo;s Data</span>
+                    </button>
+                    <div className="menu-divider" />
                     <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
                       Sign out
                     </button>
@@ -242,6 +247,12 @@ export default function MainApp({ user }) {
             <>
               <BackBar label="Hospital Stay" onBack={() => setActiveTab('dashboard')} />
               <HospitalView stays={stays} activeStay={activeStay} />
+            </>
+          )}
+          {activeTab === 'data-admin' && (
+            <>
+              <BackBar label="Manage Dad's Data" onBack={() => setActiveTab('dashboard')} />
+              <DataManagementView />
             </>
           )}
         </div>

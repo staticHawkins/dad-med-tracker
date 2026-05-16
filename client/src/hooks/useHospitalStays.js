@@ -7,7 +7,9 @@ export function useHospitalStays() {
   useEffect(() => {
     return onSnapshot(collection(db, 'hospitalStays'), snap => {
       const all = snap.docs
-        .map(d => ({ ...d.data(), person: d.data().person || 'dad' }))
+        .map(d => d.data())
+        .filter(data => !data.deletedAt)
+        .map(data => ({ ...data, person: data.person || 'dad' }))
         .sort((a, b) => b.admissionDate.localeCompare(a.admissionDate))
       setStays(all)
     }, err => console.error('Firestore hospitalStays error:', err))
