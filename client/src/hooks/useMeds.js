@@ -7,7 +7,7 @@ export function useMeds() {
   const [meds, setMeds] = useState([])
   useEffect(() => {
     return onSnapshot(collection(db, 'medications'), snap => {
-      const docs = snap.docs.map(d => { const data = d.data(); return { ...data, person: data.person || 'dad' } })
+      const docs = snap.docs.map(d => d.data()).filter(data => !data.deletedAt).map(data => ({ ...data, person: data.person || 'dad' }))
       setMeds(docs)
 
       // One-time migration: seed fills[] from top-level fields for pre-feature meds
