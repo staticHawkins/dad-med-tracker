@@ -182,7 +182,7 @@ export default function MainApp({ user }) {
                     </button>
                     <div className="menu-divider" />
                     <button className="menu-item" onClick={() => { setActiveTab('data-admin'); setUserMenuOpen(false) }}>
-                      <span className="menu-item-label">Manage Dad&rsquo;s Data</span>
+                      <span className="menu-item-label">Manage Data</span>
                     </button>
                     <div className="menu-divider" />
                     <button className="menu-item" onClick={() => { signOut(auth); setUserMenuOpen(false) }}>
@@ -251,7 +251,7 @@ export default function MainApp({ user }) {
           )}
           {activeTab === 'data-admin' && (
             <>
-              <BackBar label="Manage Dad's Data" onBack={() => setActiveTab('dashboard')} />
+              <BackBar label="Manage Data" onBack={() => setActiveTab('dashboard')} />
               <DataManagementView />
             </>
           )}

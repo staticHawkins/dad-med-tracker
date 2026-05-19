@@ -7,7 +7,10 @@ import {
   hardDeletePersonData,
 } from '../lib/firestore'
 
-const PERSON = 'dad'
+const PEOPLE = [
+  { id: 'dad', label: 'Dad' },
+  { id: 'mom', label: 'Mom' },
+]
 
 const COLLECTION_LABELS = {
   medications: 'Medications',
@@ -18,25 +21,34 @@ const COLLECTION_LABELS = {
 }
 
 export default function DataManagementView() {
+  const [person, setPerson] = useState('dad')
   const [counts, setCounts] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
   const [confirmText, setConfirmText] = useState('')
 
+  const personLabel = PEOPLE.find(p => p.id === person)?.label ?? person
+
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      setCounts(await countPersonData(PERSON))
+      setCounts(await countPersonData(person))
     } catch (err) {
       console.error('countPersonData error:', err)
       setMessage({ type: 'error', text: 'Could not load data counts.' })
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [person])
 
   useEffect(() => { refresh() }, [refresh])
+
+  function onPersonChange(newPerson) {
+    setPerson(newPerson)
+    setMessage(null)
+    setConfirmText('')
+  }
 
   const totals = counts
     ? Object.values(counts).reduce(
@@ -49,7 +61,7 @@ export default function DataManagementView() {
     setBusy(true)
     setMessage(null)
     try {
-      await fn(PERSON)
+      await fn(person)
       await refresh()
       setMessage({ type: 'ok', text: successText })
     } catch (err) {
@@ -62,25 +74,48 @@ export default function DataManagementView() {
   }
 
   function onSoftDelete() {
-    if (!window.confirm(`Soft delete all of Dad's data (${totals.active} active records)? This hides it everywhere but can be restored from this screen.`)) return
-    run('Soft delete', softDeletePersonData, 'Soft deleted. Records are hidden but recoverable below.')
+    if (!window.confirm(`Soft delete all of ${personLabel}’s data (${totals.active} active records)? This hides it everywhere but can be restored from this screen.`)) return
+    run(‘Soft delete’, softDeletePersonData, ‘Soft deleted. Records are hidden but recoverable below.’)
   }
 
   function onRestore() {
-    run('Restore', restorePersonData, 'Restored. Records are visible in the app again.')
+    run(‘Restore’, restorePersonData, ‘Restored. Records are visible in the app again.’)
   }
 
   function onHardDelete() {
-    if (confirmText !== 'DELETE') return
-    if (!window.confirm(`Permanently delete ALL of Dad's data (${totals.active + totals.deleted} records)? This CANNOT be undone.`)) return
-    run('Hard delete', hardDeletePersonData, 'Permanently deleted all of Dad’s data.')
+    if (confirmText !== ‘DELETE’) return
+    if (!window.confirm(`Permanently delete ALL of ${personLabel}’s data (${totals.active + totals.deleted} records)? This CANNOT be undone.`)) return
+    run(‘Hard delete’, hardDeletePersonData, `Permanently deleted all of ${personLabel}’s data.`)
   }
 
   return (
     <div className="page">
-      <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700 }}>Manage Dad&rsquo;s Data</h2>
+      <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 700 }}>Manage Data</h2>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {PEOPLE.map(p => (
+          <button
+            key={p.id}
+            onClick={() => onPersonChange(p.id)}
+            style={{
+              fontFamily: 'var(--ff)',
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '6px 18px',
+              borderRadius: 20,
+              border: '1px solid var(--border2)',
+              background: person === p.id ? 'var(--accent)' : 'transparent',
+              color: person === p.id ? '#fff' : 'var(--text2)',
+              cursor: 'pointer',
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <p style={{ margin: '0 0 24px', color: 'var(--text2)', fontSize: 14, maxWidth: 560 }}>
-        Soft delete hides every record tagged to Dad across medications, appointments, tasks,
+        Soft delete hides every record tagged to {personLabel} across medications, appointments, tasks,
         care team, and hospital stays &mdash; it can be undone here. Hard delete removes those
         records permanently and cannot be undone.
       </p>
@@ -166,7 +201,7 @@ export default function DataManagementView() {
               Danger zone
             </div>
             <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text2)' }}>
-              Permanently delete all {totals.active + totals.deleted} of Dad&rsquo;s records
+              Permanently delete all {totals.active + totals.deleted} of {personLabel}&rsquo;s records
               (including soft-deleted). This cannot be undone. Type{' '}
               <strong>DELETE</strong> to enable the button.
             </p>
